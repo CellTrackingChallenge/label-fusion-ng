@@ -7,53 +7,79 @@
  *
  * Copyright (C) 2017 Vladimír Ulman
  */
-package de.mpicbg.ulman.ctc.workers;
-
-import org.scijava.log.LogService;
-import net.imagej.ops.OpService;
+package de.mpicbg.ulman.ctc.silverGT;
 
 import net.imagej.ImgPlus;
 import net.imglib2.img.Img;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 
+import org.scijava.log.LogService;
 import sc.fiji.simplifiedio.SimplifiedIO;
 
 import java.util.Vector;
 
-public class machineGTViaMarkers_Worker
+/**
+ * This class essentially takes care of the IO burden. One provides it with
+ * a weighted voting fusion algorithm and a "formatted" job specification
+ * as a list of strings:
+ *
+ * image1_asPathAndFilename, image1_asWeightAsRealNumber,
+ * image2_asPathAndFilename, image2_asWeightAsRealNumber,
+ * ...
+ * imageN_asPathAndFilename, imageN_asWeightAsRealNumber,
+ * imageMarker_PathAndFilename, ThresholdAsRealNumber,
+ * imageOutput_asPathAndFilename
+ *
+ * The class then reads the respective images, complements them with
+ * extracted weights and the threshold, calls the fusion algorithm,
+ * and saves the output image.
+ */
+public
+class WeightedVotingFusionFeeder<IT extends RealType<IT>, LT extends IntegerType<LT>>
 {
-	///shortcuts to some Fiji services
-	final LogService log;
-
-	///shortcut to future mainstream imagej-ops function
-	final DefaultCombineGTsViaMarkers<?> myOps;
-
-	///a convenience constructor requiring connection to some Fiji services
-	@SuppressWarnings("rawtypes")
-	public machineGTViaMarkers_Worker(final OpService _ops, final LogService _log)
-	{
-		if (_ops == null || _log == null)
-			throw new RuntimeException("Please, give me existing OpService and LogService.");
-
-		log = _log;
-		myOps = new DefaultCombineGTsViaMarkers(_ops);
-	}
-
 	///prevent from creating the class without any connection
 	@SuppressWarnings("unused")
-	private machineGTViaMarkers_Worker()
-	{ log = null; myOps = null; } //this is to get rid of some warnings
+	private WeightedVotingFusionFeeder()
+	{ log = null; } //this is to get rid of some warnings
+
+	private final LogService log;
+
+	public
+	WeightedVotingFusionFeeder(final LogService _log)
+	{
+		if (_log == null)
+			throw new RuntimeException("Please, give me existing LogService.");
+
+		log = _log;
+	}
+
+	public
+	WeightedVotingFusionFeeder<IT,LT> setAlgorithm(final WeightedVotingFusionAlgorithm<IT,LT> alg)
+	{
+		if (alg == null)
+			throw new RuntimeException("Please, give me an existing weighted voting algorithm.");
+
+		algorithm = alg;
+		return this;
+	}
+
+	private WeightedVotingFusionAlgorithm<IT,LT> algorithm;
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public void work(final String... args)
+	public
+	void processJob(final String... args)
 	{
+		if (algorithm == null)
+			throw new RuntimeException("Cannot work without an algorithm.");
+
 		//check the minimum number of input parameters, should be odd number
 		if (args.length < 5 || (args.length&1)==0)
 		{
 			//print help
-			log.info("Usage: img1 weight1 ... TRAimg threshold outImg");
+			log.info("Usage: img1 weight1 ... imgN weightN TRAimg threshold outImg");
 			log.info("All img1 (path to an image file) are TRA marker-wise combined into output outImg.");
 			throw new RuntimeException("At least one input image, exactly one marker image and one treshold plus one output image are expected.");
 		}
@@ -62,16 +88,16 @@ public class machineGTViaMarkers_Worker
 		final int inputImagesCount = (args.length-3) / 2;
 
 		//container to store the input images
-		final Vector<RandomAccessibleInterval<?>> inImgs = new Vector<>(inputImagesCount);
+		final Vector<RandomAccessibleInterval<IT>> inImgs = new Vector<>(inputImagesCount);
 
 		//container to store the input weights
-		final Vector<Float> inWeights = new Vector<>(inputImagesCount);
+		final Vector<Double> inWeights = new Vector<>(inputImagesCount);
 
 		//marker image
-		Img<UnsignedShortType> markerImg = null;
+		Img<LT> markerImg = null;
 
 		//now, try to load the input images
-		Img<?> img = null;
+		Img<IT> img = null;
 		Object firstImgVoxelType = null;
 		String firstImgVoxelTypeString = null;
 
@@ -112,14 +138,14 @@ public class machineGTViaMarkers_Worker
 			//or, if loading the last image, remember it as the marker image
 			else
 			{
-				if (!(img.firstElement() instanceof UnsignedShortType))
-					throw new RuntimeException("Markers must be stored in 16bits gray image.");
-				markerImg = (Img<UnsignedShortType>)img;
+				if (!(img.firstElement() instanceof IntegerType<?>))
+					throw new RuntimeException("Markers must be stored in an integer-type image, e.g., 8bits or 16bits gray image.");
+				markerImg = (Img<LT>)img;
 			}
 
 			//also parse and store the weight
 			if (i < inputImagesCount)
-				inWeights.add( Float.parseFloat(args[2*i +1]) );
+				inWeights.add( Double.parseDouble(args[2*i +1]) );
 		}
 
 		//parse threshold value
@@ -128,7 +154,7 @@ public class machineGTViaMarkers_Worker
 		//since the simplifiedIO() returns actually always ImgPlus,
 		//we better strip away the "plus" extras to make it pure Img<>
 		if (markerImg instanceof ImgPlus)
-			markerImg = ((ImgPlus<UnsignedShortType>) markerImg).getImg();
+			markerImg = ((ImgPlus<LT>)markerImg).getImg();
 
 		//setup the debug image filename
 		/*
@@ -136,17 +162,11 @@ public class machineGTViaMarkers_Worker
 		final int dotSeparatorIdx = newName.lastIndexOf(".");
 		newName = new String(newName.substring(0, dotSeparatorIdx)+"__DBG"+newName.substring(dotSeparatorIdx));
 		*/
-		final String newName = null;
 
-		//NB: we have checked that images are of RealType<?> in the loading loop,
-		//    so we know we can cast to raw type to be able to call the combineGTs()
-		System.out.println("calling CombineGTsViaMarkers with threshold="+threshold);
-		//ops.images().combineGTsViaMarkers((Vector)inImgs, markerImg, threshold, outImg);
-		//ops.images().combineGTsViaMarkers((Vector)inImgs, markerImg, threshold, outImg, newName);
-		myOps.setParams(inWeights, threshold, newName);
-
-		//obtain an output image (that happens to be of the same size and type as the markerImg)
-		Img<UnsignedShortType> outImg = myOps.compute((Vector)inImgs, markerImg);
+		log.info("calling weighted voting algorithm with threshold="+threshold);
+		algorithm.setWeights(inWeights);
+		algorithm.setThreshold(threshold);
+		final Img<LT> outImg = algorithm.fuse(inImgs, markerImg);
 
 		log.info("Saving file: "+args[args.length-1]);
 		SimplifiedIO.saveImage(outImg, args[args.length-1]);
