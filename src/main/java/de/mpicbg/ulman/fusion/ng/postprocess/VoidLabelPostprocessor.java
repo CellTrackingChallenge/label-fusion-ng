@@ -1,4 +1,4 @@
-package de.mpicbg.ulman.ctc.silverGT.postprocess;
+package de.mpicbg.ulman.fusion.ng.postprocess;
 
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.IntegerType;

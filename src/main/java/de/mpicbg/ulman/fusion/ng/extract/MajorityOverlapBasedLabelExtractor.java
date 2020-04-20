@@ -1,4 +1,4 @@
-package de.mpicbg.ulman.ctc.silverGT.extract;
+package de.mpicbg.ulman.fusion.ng.extract;
 
 import net.imglib2.Cursor;
 import net.imglib2.IterableInterval;

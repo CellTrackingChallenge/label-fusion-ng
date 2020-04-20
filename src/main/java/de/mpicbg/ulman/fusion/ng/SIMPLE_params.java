@@ -7,7 +7,7 @@
  *
  * Copyright (C) 2018 Vladimír Ulman
  */
-package de.mpicbg.ulman.ctc.silverGT;
+package de.mpicbg.ulman.fusion.ng;
 
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;

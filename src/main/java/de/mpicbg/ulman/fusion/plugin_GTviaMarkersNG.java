@@ -7,7 +7,7 @@
  *
  * Copyright (C) 2017 Vladimír Ulman
  */
-package de.mpicbg.ulman.ctc;
+package de.mpicbg.ulman.fusion;
 
 import net.imglib2.type.numeric.RealType;
 import org.scijava.ItemVisibility;
@@ -37,20 +37,22 @@ import java.text.ParseException;
 import javax.swing.BoxLayout;
 import javax.swing.JFrame;
 import org.jhotdraw.samples.svg.gui.ProgressIndicator;
-import de.mpicbg.ulman.ctc.Mastodon.util.ButtonHandler;
+
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 import java.awt.Button;
 import java.awt.Dimension;
 
-import de.mpicbg.ulman.ctc.silverGT.WeightedVotingFusionFeeder;
-import de.mpicbg.ulman.ctc.silverGT.WeightedVotingFusionAlgorithm;
-import de.mpicbg.ulman.ctc.silverGT.BIC;
-import de.mpicbg.ulman.ctc.silverGT.SIMPLE;
-import de.mpicbg.ulman.ctc.silverGT.SIMPLE_params;
-import de.mpicbg.ulman.ctc.util.NumberSequenceHandler;
+import de.mpicbg.ulman.fusion.ng.WeightedVotingFusionFeeder;
+import de.mpicbg.ulman.fusion.ng.WeightedVotingFusionAlgorithm;
+import de.mpicbg.ulman.fusion.ng.BIC;
+import de.mpicbg.ulman.fusion.ng.SIMPLE;
+import de.mpicbg.ulman.fusion.ng.SIMPLE_params;
+import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
 
 @Plugin(type = Command.class, menuPath = "Plugins>Annotations Merging Tool")
-public class plugin_GTviaMarkers implements Command
+public class plugin_GTviaMarkersNG implements Command
 {
 	@Parameter
 	private LogService log;
@@ -540,5 +542,20 @@ public class plugin_GTviaMarkers implements Command
 				frame.dispose();
 			}
 		}
+	}
+
+
+	///a single-purpose, button-event-handler, aux class
+	class ButtonHandler implements ActionListener
+	{
+			  //whitnessed the event already?
+			  private boolean buttonPressed = false;
+
+			  @Override
+			  public void actionPerformed(ActionEvent e)
+			  { buttonPressed = true; }
+
+			  public boolean buttonPressed()
+			  { return buttonPressed; }
 	}
 }

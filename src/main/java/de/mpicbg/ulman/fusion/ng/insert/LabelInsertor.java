@@ -1,4 +1,4 @@
-package de.mpicbg.ulman.ctc.silverGT.insert;
+package de.mpicbg.ulman.fusion.ng.insert;
 
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.RealType;

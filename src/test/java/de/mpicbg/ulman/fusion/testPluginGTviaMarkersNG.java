@@ -7,11 +7,11 @@
  *
  * Copyright (C) 2017 Vladimír Ulman
  */
-package de.mpicbg.ulman.ctc;
+package de.mpicbg.ulman.fusion;
 
 import net.imagej.ImageJ;
 
-public class testPluginGTviaMarkers
+public class testPluginGTviaMarkersNG
 {
 	public static void main(final String... args)
 	{
@@ -20,6 +20,6 @@ public class testPluginGTviaMarkers
 		ij.ui().showUI();
 
 		//run this class as if from GUI
-		ij.command().run(plugin_GTviaMarkers.class, true);
+		ij.command().run(plugin_GTviaMarkersNG.class, true);
 	}
 }

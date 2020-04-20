@@ -9,17 +9,17 @@
  *
  * @author Vladimír Ulman
  */
-package de.mpicbg.ulman.ctc.silverGT;
+package de.mpicbg.ulman.fusion.ng;
 
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.real.DoubleType;
 import org.scijava.log.LogService;
 
-import de.mpicbg.ulman.ctc.silverGT.extract.MajorityOverlapBasedLabelExtractor;
-import de.mpicbg.ulman.ctc.silverGT.fuse.SIMPLELabelFuser;
-import de.mpicbg.ulman.ctc.silverGT.postprocess.KeepLargestCCALabelPostprocessor;
-import de.mpicbg.ulman.ctc.silverGT.insert.CollisionsAwareLabelInsertor;
+import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
+import de.mpicbg.ulman.fusion.ng.fuse.SIMPLELabelFuser;
+import de.mpicbg.ulman.fusion.ng.postprocess.KeepLargestCCALabelPostprocessor;
+import de.mpicbg.ulman.fusion.ng.insert.CollisionsAwareLabelInsertor;
 
 public
 class SIMPLE<IT extends RealType<IT>, LT extends IntegerType<LT>>

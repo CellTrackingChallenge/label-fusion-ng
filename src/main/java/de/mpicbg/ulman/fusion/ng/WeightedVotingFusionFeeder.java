@@ -7,14 +7,13 @@
  *
  * Copyright (C) 2017 Vladimír Ulman
  */
-package de.mpicbg.ulman.ctc.silverGT;
+package de.mpicbg.ulman.fusion.ng;
 
 import net.imagej.ImgPlus;
 import net.imglib2.img.Img;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
-import net.imglib2.type.numeric.integer.UnsignedShortType;
 
 import org.scijava.log.LogService;
 import sc.fiji.simplifiedio.SimplifiedIO;

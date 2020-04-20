@@ -1,11 +1,11 @@
-package de.mpicbg.ulman.ctc.silverGT.fuse;
+package de.mpicbg.ulman.fusion.ng.fuse;
 
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
 import net.imglib2.loops.LoopBuilder;
 import java.util.Vector;
-import de.mpicbg.ulman.ctc.silverGT.extract.LabelExtractor;
+import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 
 public class WeightedVotingLabelFuser<IT extends RealType<IT>, ET extends RealType<ET>>
 implements LabelFuser<IT,ET>

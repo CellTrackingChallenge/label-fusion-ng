@@ -1,4 +1,4 @@
-package de.mpicbg.ulman.ctc.silverGT;
+package de.mpicbg.ulman.fusion.ng;
 
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.loops.LoopBuilder;
@@ -19,12 +19,12 @@ import java.util.Vector;
 import java.util.HashSet;
 import net.imglib2.type.numeric.IntegerType;
 
-import de.mpicbg.ulman.ctc.silverGT.extract.LabelExtractor;
-import de.mpicbg.ulman.ctc.silverGT.extract.MajorityOverlapBasedLabelExtractor;
-import de.mpicbg.ulman.ctc.silverGT.fuse.LabelFuser;
-import de.mpicbg.ulman.ctc.silverGT.insert.LabelInsertor;
-import de.mpicbg.ulman.ctc.silverGT.insert.CollisionsAwareLabelInsertor;
-import de.mpicbg.ulman.ctc.silverGT.postprocess.LabelPostprocessor;
+import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
+import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
+import de.mpicbg.ulman.fusion.ng.fuse.LabelFuser;
+import de.mpicbg.ulman.fusion.ng.insert.LabelInsertor;
+import de.mpicbg.ulman.fusion.ng.insert.CollisionsAwareLabelInsertor;
+import de.mpicbg.ulman.fusion.ng.postprocess.LabelPostprocessor;
 
 /**
  * Skeleton that iterates over the individual markers from the marker image,

@@ -1,4 +1,4 @@
-package de.mpicbg.ulman.ctc.silverGT.postprocess;
+package de.mpicbg.ulman.fusion.ng.postprocess;
 
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.Cursor;
@@ -10,7 +10,7 @@ import net.imglib2.view.IntervalView;
 import net.imglib2.algorithm.labeling.ConnectedComponents;
 
 import java.util.HashMap;
-import de.mpicbg.ulman.ctc.silverGT.extract.MajorityOverlapBasedLabelExtractor;
+import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 
 /**
  * @author Vladimír Ulman

@@ -1,12 +1,12 @@
-package de.mpicbg.ulman.ctc.silverGT.fuse;
+package de.mpicbg.ulman.fusion.ng.fuse;
 
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.RealType;
 import java.util.Vector;
-import de.mpicbg.ulman.ctc.silverGT.extract.LabelExtractor;
-import de.mpicbg.ulman.ctc.util.Jaccard;
+import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
+import de.mpicbg.ulman.fusion.util.Jaccard;
 import net.imglib2.type.operators.SetZero;
 
 public class SIMPLELabelFuser<IT extends RealType<IT>, ET extends RealType<ET>>

@@ -1,10 +1,10 @@
-package de.mpicbg.ulman.ctc.silverGT.fuse;
+package de.mpicbg.ulman.fusion.ng.fuse;
 
 import java.util.Vector;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.RealType;
-import de.mpicbg.ulman.ctc.silverGT.extract.LabelExtractor;
+import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 
 /**
  * Fuses selected labels from input images (of voxel type IT -- Input Type)

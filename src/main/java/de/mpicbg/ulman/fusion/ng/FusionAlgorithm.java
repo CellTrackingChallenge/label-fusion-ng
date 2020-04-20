@@ -1,4 +1,4 @@
-package de.mpicbg.ulman.ctc.silverGT;
+package de.mpicbg.ulman.fusion.ng;
 
 import net.imglib2.img.Img;
 import net.imglib2.RandomAccessibleInterval;
