@@ -62,8 +62,8 @@ import java.awt.event.ActionListener;
 import java.awt.Button;
 import java.awt.Dimension;
 
+import de.mpicbg.ulman.fusion.ng.LabelSync;
 import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionFeeder;
-import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionAlgorithm;
 import de.mpicbg.ulman.fusion.ng.BIC;
 import de.mpicbg.ulman.fusion.ng.SIMPLE;
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
@@ -96,7 +96,8 @@ public class plugin_GTviaMarkersNG implements Command
 			choices = {"Threshold - flat weights",
 			           "Threshold - user weights",
 			           "Majority - flat weights",
-			           "SIMPLE"}, //,"STAPLE"},
+			           "SIMPLE",
+			           "Label Syncer"}, //,"STAPLE"},
 			callback = "mergeModelChanged")
 	private String mergeModel;
 
@@ -169,6 +170,13 @@ public class plugin_GTviaMarkersNG implements Command
 			fileInfoC = "Threshold value is NOT required now.";
 			fileInfoD = "This model has own configuration dialog.";
 		}
+		else
+		if (mergeModel.startsWith("Label"))
+		{
+			fileInfoA = "The job file should list one input filename pattern per line.";
+			fileInfoB = "The job file should end with tracking markers filename pattern.";
+			fileInfoC = "Threshold value is NOT required now.";
+			fileInfoD = "The output filename needs to include placeholders TTs, IIs and LLs.";
 		}
 		else
 		{
@@ -197,8 +205,62 @@ public class plugin_GTviaMarkersNG implements Command
 	}
 
 	//will be also used for sanity checking, thus returns boolean
+	private boolean syncOutputFilenameOKAY()
+	{
+		final String name = outputPath.getAbsolutePath();
+
+		pos[0] = name.indexOf(     lbl[0] );  //begining of Ts
+		pos[1] = name.lastIndexOf( lbl[0] );  //end of them
+		pos[2] = name.indexOf(     lbl[2] );  //begining of Ss
+		pos[3] = name.lastIndexOf( lbl[2] );  //end of them
+		pos[4] = name.indexOf(     lbl[4] );  //begining of Ls
+		pos[5] = name.lastIndexOf( lbl[4] );  //end of them
+
+		//found every letter?
+		if (pos[0] == -1 || pos[2] == -1 || pos[4] == -1)
+		{
+			log.warn("missing some of the letter T or S or L");
+			return false;
+		}
+
+		//do they intervine?
+		for (int t = 0; t < 5; t += 2) //goes over 0,2,4
+		for (int i = 0; i < 5; i += 2)
+		{
+			//don't test "me against me"
+			if (t == i) continue;
+
+			if (pos[t] < pos[i] && pos[i] < pos[t+1])
+			{
+				log.warn("beginning of "+lbl[i]+"s is inside "+lbl[t]+"s");
+				return false;
+			}
+			if (pos[t] < pos[i+1] && pos[i+1] < pos[t+1])
+			{
+				log.warn("end of "+lbl[i]+"s is inside "+lbl[t]+"s");
+				return false;
+			}
+		}
+
+		//are sequences without interrupts?
+		for (int t = 0; t < 5; t += 2) //goes over 0,2,4
+		for (int i = pos[t]; i <= pos[t+1]; ++i)
+		if (name.charAt(i) != lbl[t])
+		{
+			log.warn("the sequence of "+lbl[t]+"s is interrupted at character "+i);
+			return false;
+		}
+
+		return true;
+	}
+	final private int[]  pos = new int[6];
+	final private char[] lbl = new char[] {'T',' ', 'S',' ', 'L'};
+
+	//will be also used for sanity checking, thus returns boolean
 	private boolean outFileOKAY()
 	{
+		if (mergeModel.startsWith("Label")) return syncOutputFilenameOKAY();
+
 		//check the pattern
 		final String name = outputPath.getName();
 		if (name == null)
@@ -334,6 +396,13 @@ public class plugin_GTviaMarkersNG implements Command
 		return res;
 	}
 
+	private void updateSyncerOutputFilename(final LabelSync ls, final int p, final int tagPos, final LabelSync.nameFormatTags tagVal)
+	{
+		ls.outputFilenameFormat = ls.outputFilenameFormat.substring(0,pos[p])
+		                        + "%0"+(pos[p+1]-pos[p]+1)+"d"
+		                        + ls.outputFilenameFormat.substring(pos[p+1]+1);
+		ls.outputFilenameOrder[tagPos] = tagVal;
+	}
 
 	//the GUI path entry function:
 	@Override
@@ -354,7 +423,8 @@ public class plugin_GTviaMarkersNG implements Command
 		}
 		if (!mergeModel.startsWith("Threshold")
 		 && !mergeModel.startsWith("Majority")
-		 && !mergeModel.startsWith("SIMPLE"))
+		 && !mergeModel.startsWith("SIMPLE")
+		 && !mergeModel.startsWith("Label"))
 		{
 			log.error("plugin_GTviaMarkers error: Unsupported merging model.");
 			if (!uiService.isHeadless())
@@ -439,8 +509,47 @@ public class plugin_GTviaMarkersNG implements Command
 		ProgressIndicator pbar = null;
 		ButtonHandler pbtnHandler = null;
 
-		//start up the worker class
-		final WeightedVotingFusionAlgorithm<? extends RealType<?>, UnsignedShortType> fuser;
+		//key players (the main worker classes) in this plugin
+		final WeightedVotingFusionFeeder<?, UnsignedShortType> feeder;
+		final LabelSync<? extends RealType<?>, UnsignedShortType> syncer;
+
+		//start up (some of) the worker class
+		if (mergeModel.startsWith("Label"))
+		{
+			if (!syncOutputFilenameOKAY())
+				throw new RuntimeException("Output filename is not formated for Label syncer");
+
+			feeder = null;
+			syncer = new LabelSync<>(log);
+
+			//TODO setup its output file format, etc...
+			//replace the Ts, Is and Ls patterns with %0Xd
+			int minPos = Math.min(pos[0], Math.min(pos[2],pos[4]));
+			int maxPos = Math.max(pos[0], Math.max(pos[2],pos[4]));
+
+			//replace from the end
+			syncer.outputFilenameFormat = outputPath.getAbsolutePath();
+			if (maxPos == pos[0])       updateSyncerOutputFilename(syncer, 0,2,LabelSync.nameFormatTags.time);
+			else if (maxPos == pos[2])  updateSyncerOutputFilename(syncer, 2,2,LabelSync.nameFormatTags.source);
+			else /* pos[4] */           updateSyncerOutputFilename(syncer, 4,2,LabelSync.nameFormatTags.label);
+
+			//the middle one
+			if (minPos != pos[0] && maxPos != pos[0])      updateSyncerOutputFilename(syncer, 0,1,LabelSync.nameFormatTags.time);
+			else if (minPos != pos[2] && maxPos != pos[2]) updateSyncerOutputFilename(syncer, 2,1,LabelSync.nameFormatTags.source);
+			else /* pos[4] */                              updateSyncerOutputFilename(syncer, 4,1,LabelSync.nameFormatTags.label);
+
+			//the first one
+			if (minPos == pos[0])       updateSyncerOutputFilename(syncer, 0,0,LabelSync.nameFormatTags.time);
+			else if (minPos == pos[2])  updateSyncerOutputFilename(syncer, 2,0,LabelSync.nameFormatTags.source);
+			else /* pos[4] */           updateSyncerOutputFilename(syncer, 4,0,LabelSync.nameFormatTags.label);
+
+			System.out.println("show me format: "+syncer.outputFilenameFormat);
+			System.out.println("show me seman1: "+syncer.outputFilenameOrder[0]);
+			System.out.println("show me seman2: "+syncer.outputFilenameOrder[1]);
+			System.out.println("show me seman3: "+syncer.outputFilenameOrder[2]);
+			return;
+		}
+		else
 		if (mergeModel.startsWith("SIMPLE"))
 		{
 			//yield additional SIMPLE-specific parameters
@@ -467,13 +576,15 @@ public class plugin_GTviaMarkersNG implements Command
 			}
 
 			log.info("SIMPLE alg params: "+fuser_SIMPLE.getFuserReference().reportSettings());
-			fuser = fuser_SIMPLE;
+			feeder = new WeightedVotingFusionFeeder(log).setAlgorithm(fuser_SIMPLE);
+			syncer = null;
 		}
 		else
-			fuser = new BIC(log);
+		{
+			feeder = new WeightedVotingFusionFeeder(log).setAlgorithm(new BIC(log));
+			syncer = null;
+		}
 
-		final WeightedVotingFusionFeeder<?, UnsignedShortType> feeder
-			= new WeightedVotingFusionFeeder(log).setAlgorithm(fuser);
 
 		try {
 			//parse out the list of timepoints
