@@ -134,15 +134,6 @@ public class plugin_GTviaMarkersNG implements Command
 	private File outputPath = new File("CHANGE THIS PATH/mergedXXX.tif");
 
 
-	//citation footer...
-	@Parameter(visibility = ItemVisibility.MESSAGE, persist = false, required = false, label = "Please, refer to:")
-	private final String citationFooterA
-		= "http://www.fi.muni.cz/~xulman/LABELS/abstract.pdf";
-	@Parameter(visibility = ItemVisibility.MESSAGE, persist = false, required = false, label = ":")
-	private final String citationFooterB
-		= "http://www.fi.muni.cz/~xulman/LABELS/poster.pdf";
-
-
 	//callbacks:
 	@SuppressWarnings("unused")
 	private void mergeModelChanged()
@@ -151,8 +142,8 @@ public class plugin_GTviaMarkersNG implements Command
 		{
 			fileInfoA = "The job file should list one input filename pattern per line.";
 			fileInfoB = "The job file should end with tracking markers filename pattern.";
-			fileInfoC = " ";
-			fileInfoD = "Threshold value is required now.";
+			fileInfoC = "Threshold value is required now.";
+			fileInfoD = " ";
 		}
 		else
 		if (mergeModel.startsWith("Threshold - user"))
@@ -167,16 +158,17 @@ public class plugin_GTviaMarkersNG implements Command
 		{
 			fileInfoA = "The job file should list one input filename pattern per line.";
 			fileInfoB = "The job file should end with tracking markers filename pattern.";
-			fileInfoC = " ";
-			fileInfoD = "Threshold value is NOT required now.";
+			fileInfoC = "Threshold value is NOT required now.";
+			fileInfoD = " ";
 		}
 		else
 		if (mergeModel.startsWith("SIMPLE"))
 		{
-			fileInfoA = " ";
-			fileInfoB = "This model has own configuration dialog.";
-			fileInfoC = " ";
-			fileInfoD = " ";
+			fileInfoA = "The job file should list one input filename pattern per line.";
+			fileInfoB = "The job file should end with tracking markers filename pattern.";
+			fileInfoC = "Threshold value is NOT required now.";
+			fileInfoD = "This model has own configuration dialog.";
+		}
 		}
 		else
 		{
