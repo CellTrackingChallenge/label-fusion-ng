@@ -28,6 +28,7 @@
 package de.mpicbg.ulman.fusion.ng;
 
 import de.mpicbg.ulman.fusion.ng.insert.OverwriteLabelInsertor;
+import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.type.numeric.RealType;
@@ -36,10 +37,8 @@ import net.imglib2.type.numeric.IntegerType;
 import org.scijava.log.LogService;
 import sc.fiji.simplifiedio.SimplifiedIO;
 
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Enumeration;
+import java.util.Vector;
 
 /**
  * This class essentially takes care of the IO burden. One provides it with
@@ -128,12 +127,50 @@ extends JobIO<IT,LT>
 	final OverwriteLabelInsertor<LT,LT> insertor = new OverwriteLabelInsertor<>();
 
 	public
-	void syncAllInputsAndSaveAllToDisk(final String... args)
+	void syncAllInputsAndSaveAllToDisk(final String... jobSpec)
+	{
+		saveStreamedImages( syncAllInputsAndStreamIt(jobSpec) );
+	}
+
+
+	public
+	ImagesWithOrigin syncAllInputsAndStreamIt(final String... jobSpec)
+	{
+		//load the image data
+		super.processJob(jobSpec);
+
+		//return the data fetching object
+		return new ImagesWithOrigin();
+	}
+
+
+	public
+	void syncAllInputsAndSaveAllToDisk(final Vector<RandomAccessibleInterval<IT>> inImgs,
+	                                   final Img<LT> markerImg)
+	{
+		saveStreamedImages( syncAllInputsAndStreamIt(inImgs,markerImg) );
+	}
+
+
+	public
+	ImagesWithOrigin syncAllInputsAndStreamIt(final Vector<RandomAccessibleInterval<IT>> inImgs,
+	                                          final Img<LT> markerImg)
+	{
+		//use the provided images instead
+		this.inImgs = inImgs;
+		this.markerImg = markerImg;
+
+		//return the data fetching object
+		return new ImagesWithOrigin();
+	}
+
+
+	// ----------- output helpers -----------
+	void saveStreamedImages(final ImagesWithOrigin images)
 	{
 		int currentSource = -1;
 		Img<LT> outImg = null;
 
-		final ImagesWithOrigin images = syncAllInputsAndStreamIt(args);
 		while (images.hasMoreElements())
 		{
 			final ImgWithOrigin img = images.nextElement();
@@ -183,24 +220,13 @@ extends JobIO<IT,LT>
 	}
 
 
-	public
-	ImagesWithOrigin syncAllInputsAndStreamIt(final String... args)
-	{
-		//load the image data
-		super.processJob(args);
-
-		//return the data fetching object
-		return new ImagesWithOrigin();
-	}
-
-
+	// ----------- output data provider -----------
 	public class ImgWithOrigin
 	{
 		public Img<LT> singleLabelImg;
 		public int sourceNo;
 		public int markerLabel;
 	}
-
 
 	public class ImagesWithOrigin
 	implements Enumeration<ImgWithOrigin>
@@ -285,6 +311,7 @@ extends JobIO<IT,LT>
 		{
 			worker.interrupt();
 		}
+
 
 		void run()
 		{
