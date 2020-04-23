@@ -30,7 +30,6 @@ package de.mpicbg.ulman.fusion.ng;
 import net.imglib2.Cursor;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
-import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
@@ -42,7 +41,6 @@ import sc.fiji.simplifiedio.SimplifiedIO;
 import java.util.*;
 
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
-import de.mpicbg.ulman.fusion.ng.insert.OverwriteLabelInsertor;
 
 /**
  * This class essentially takes care of the IO burden. One provides it with
@@ -84,7 +82,7 @@ extends JobIO<IT,LT>
 
 
 	// ----------- output filename pattern -----------
-	enum nameFormatTags { time, source, label };
+	public enum nameFormatTags { time, source, label }
 
 	public String outputFilenameFormat          = "mask%04d__input%02d__label%d.tif";
 	public nameFormatTags[] outputFilenameOrder = { nameFormatTags.time, nameFormatTags.source, nameFormatTags.label };
@@ -180,8 +178,6 @@ extends JobIO<IT,LT>
 
 
 	// ----------- output regimes -----------
-	final OverwriteLabelInsertor<LT,LT> labelInsertor = new OverwriteLabelInsertor<>();
-
 	public
 	void syncAllInputsAndSaveAllToDisk(final String... jobSpec)
 	{
@@ -224,9 +220,6 @@ extends JobIO<IT,LT>
 	// ----------- output helpers -----------
 	void saveStreamedImages(final ImagesWithOrigin images)
 	{
-		int currentSource = -1;
-		Img<LT> outImg = null;
-
 		while (images.hasMoreElements())
 		{
 			final ImgWithOrigin img = images.nextElement();
@@ -241,37 +234,11 @@ extends JobIO<IT,LT>
 			}
 			else
 			{
-				//still the same source?
-				//  yes, add it to the currently built file
-				//  no, save this old one and start a new one
-				if (currentSource == img.sourceNo)
-				{
-					//the "yes" branch
-					labelInsertor.insertLabel(img.singleLabelImg,outImg,img.markerLabel,null);
-				}
-				else
-				{
-					//the "no" branch,
-					//but don't save if nothing has been prepared yet...
-					if (currentSource != -1)
-					{
-						final String filename = instantiateFilename(currentSource);
-						log.info("Saving file: "+filename);
-						SimplifiedIO.saveImage(outImg, filename);
-					}
-
-					currentSource = img.sourceNo;
-					outImg = img.singleLabelImg.copy();
-				}
+				//save per fully processed image
+				final String filename = instantiateFilename(img.sourceNo);
+				log.info("Saving file: "+filename);
+				SimplifiedIO.saveImage(img.singleLabelImg, filename);
 			}
-		}
-
-		if (!wantPerLabelProcessing)
-		{
-			//save the last image
-			final String filename = instantiateFilename(currentSource);
-			log.info("Saving file: "+filename);
-			SimplifiedIO.saveImage(outImg, filename);
 		}
 	}
 
@@ -292,6 +259,8 @@ extends JobIO<IT,LT>
 
 		public ImagesWithOrigin()
 		{
+			markerPixel = markerImg.firstElement().createVariable();
+
 			//create a new thread that will serve on-demand the images,
 			//and that will block/unblock it on this.data
 			worker = new Thread(this::run, "label syncer for timepoint "+currentTime);
@@ -310,6 +279,9 @@ extends JobIO<IT,LT>
 		    the synchronization between this and the 'worker" thread occurs (so that
 		    a caller initiates request for data and waits until it is available) */
 		final ImgWithOrigin data = new ImgWithOrigin();
+
+		/** the pixel value that will be (adjusted and then) used to fill the data.singleLabelImg */
+		final LT markerPixel;
 
 		/** flag set by run() (the 'worker' thread, the label extracting thread)
 		    to indicate if it is waiting to process next image */
@@ -377,36 +349,36 @@ extends JobIO<IT,LT>
 
 		void run()
 		{
+			if (inImgs.size() == 0)
+				throw new RuntimeException("Cannot operate on no input images!");
+
 		 synchronized (data)
 		 {
 			log.trace("run() entered");
 
-			//da plan:
-			//iterate over all voxels of the input marker image and look for not
-			//yet found marker, and for every such new discovered, do:
-			//from all input images extract all labelled components that intersect
-			//with the marker in more than half of the total marker voxels, combine
-			//these components and threshold according to the given input threshold
-			//(the 3rd param), save this thresholded component under the discovered marker
-			//
-			//while saving the marker, it might overlap with some other already
-			//saved marker; mark such voxels specifically in the output image for
-			//later post-processing
-
 			//create the output image (of the same iteration order as the markerImg),
 			data.singleLabelImg = markerImg.factory().create(markerImg);
 
-			//the pixel value that will be (adjusted and then) used to fill the data.singleLabelImg
-			final LT markerPixel = data.singleLabelImg.firstElement().createVariable();
-
 			//set to remember already discovered TRA markers
 			//(with initial capacity set for 100 markers)
-			HashSet<Integer> mDiscovered = new HashSet<>(100);
+			final int expectedNoOfTRAmarkers = 300;
+			final HashSet<Integer> mDiscovered = new HashSet<>(expectedNoOfTRAmarkers);
+
+			//cache for bbox corners of discovered TRA markers
+			final Map<Integer,long[]> minBounds = new HashMap<>(expectedNoOfTRAmarkers);
+			final Map<Integer,long[]> maxBounds = new HashMap<>(expectedNoOfTRAmarkers);
 
 			//also prepare the positions holding aux array, and bbox corners
-			final long[] minBound = new long[markerImg.numDimensions()];
-			final long[] maxBound = new long[markerImg.numDimensions()];
+			long[] minBound = new long[markerImg.numDimensions()];
+			long[] maxBound = new long[markerImg.numDimensions()];
 
+			//shortcut: the total number of all input images
+			final int I = inImgs.size();
+			//NB: I >= 1
+
+			stoppedOnThisSource = -1;
+
+			//the run over the first input image is special (it fills the caches)
 			//sweep over the marker image
 			final Cursor<LT> mCursor = markerImg.localizingCursor();
 			while (mCursor.hasNext())
@@ -431,59 +403,86 @@ extends JobIO<IT,LT>
 						System.out.print(maxBound[d]+",");
 					System.out.println(maxBound[maxBound.length-1]+")");
 */
-					//sweep over all input images
-					int noOfMatchingImages = 0;
-					for (int i = 0; i < inImgs.size(); ++i)
+					//does it pay off to fill caches?
+					if (I > 1)
 					{
-						//find the corresponding label in the input image (in the restricted interval)
-						final float matchingLabel = labelExtractor.findMatchingLabel(
-								Views.interval(inImgs.get(i), minBound,maxBound),
-								Views.interval(markerImg,     minBound,maxBound),
-								curMarker);
-						//System.out.println(i+". image: found label "+matchingLabel);
-
-						if (matchingLabel > 0)
-						{
-							try {
-								//found some new data, signal it and wait until we're told to extract it
-								waitingForSomeNextProcessing = true;
-
-								log.trace("run() ready to extract label "+curMarker+" from source "+i);
-								//block myself allowing another thread to unblock me when fresh data is desired
-								data.wait();
-								log.trace("run() extracting label "+curMarker+" from source "+i+" started");
-
-								//init/zero the output image
-								LoopBuilder.setImages(data.singleLabelImg).forEachPixel( (a) -> a.setZero() );
-								//copy out the label
-								markerPixel.setInteger(curMarker);
-								labelExtractor.isolateGivenLabel(inImgs.get(i),matchingLabel, data.singleLabelImg,markerPixel);
-
-								data.sourceNo = i;
-								data.markerLabel = curMarker;
-								log.trace("run() extracting label "+curMarker+" from source "+i+" finished");
-								data.notify(); //unblock anyone waiting for the data
-							} catch (InterruptedException e) {
-								log.trace("run() interrupted");
-								return;
-							}
-
-							++noOfMatchingImages;
-						}
+						minBounds.put(curMarker,minBound.clone());
+						maxBounds.put(curMarker,maxBound.clone());
 					}
 
-					//some per marker report:
-					log.info("TRA marker: "+curMarker+" , images matching: "+noOfMatchingImages);
+					//now the first input image
+					findAndExtractLabel(curMarker,minBound,maxBound, 0);
 
 					//finally, mark we have processed this marker
 					mDiscovered.add(curMarker);
 				} //after marker processing
 			} //after all voxel looping
 
-			waitingForSomeNextProcessing = false;
+			//now over the remaining images, in order; and over all TRA markers
+			for (int i = 1; i < I; ++i)
+				for (Integer curMarker : minBounds.keySet())
+				{
+					minBound = minBounds.get(curMarker);
+					maxBound = maxBounds.get(curMarker);
+					findAndExtractLabel(curMarker,minBound,maxBound, i);
+				}
 
+			waitingForSomeNextProcessing = false;
 			log.trace("run() is finished");
 		 }
+		}
+
+		int stoppedOnThisSource;
+
+		private
+		void findAndExtractLabel(final int curMarker,
+		                         final long[] minBound,
+		                         final long[] maxBound,
+		                         final int i)
+		{
+			//find the corresponding label in the input image (in the restricted interval)
+			final float matchingLabel = labelExtractor.findMatchingLabel(
+					Views.interval(inImgs.get(i), minBound,maxBound),
+					Views.interval(markerImg,     minBound,maxBound),
+					curMarker);
+			//System.out.println(i+". image: found label "+matchingLabel);
+
+			if (matchingLabel > 0)
+			{
+				try {
+					//found some new data, signal it and wait until we're told to extract it
+					waitingForSomeNextProcessing = true;
+
+					if (wantPerLabelProcessing || i != stoppedOnThisSource)
+					{
+						stoppedOnThisSource = i;
+						log.trace("run() ready to extract label "+curMarker+" from source "+i+", but now waits");
+						//block myself allowing another thread to unblock me when fresh data is desired
+						data.wait();
+						//unblock anyone waiting for the data, but that code won't run until 'data' is
+						//"released" here (which is the end of run() or the data.wait() right above here)
+						data.notify();
+
+						//init/zero the output image
+						LoopBuilder.setImages(data.singleLabelImg).forEachPixel( (a) -> a.setZero() );
+					}
+
+					log.trace("run() extracting label "+curMarker+" from source "+i+" started");
+
+					//copy out the label
+					markerPixel.setInteger(curMarker);
+					labelExtractor.addGivenLabel(inImgs.get(i),matchingLabel, data.singleLabelImg,markerPixel);
+
+					//setup the "origin" of the data
+					data.sourceNo = i;
+					data.markerLabel = wantPerLabelProcessing? curMarker : -1;
+					//
+					log.trace("run() extracting label "+curMarker+" from source "+i+" finished");
+
+				} catch (InterruptedException e) {
+					log.trace("run() interrupted");
+				}
+			}
 		}
 	} // end of public class ImagesWithOrigin
 }
