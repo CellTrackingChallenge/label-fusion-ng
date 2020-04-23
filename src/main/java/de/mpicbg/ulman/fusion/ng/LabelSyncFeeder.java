@@ -27,18 +27,22 @@
  */
 package de.mpicbg.ulman.fusion.ng;
 
-import de.mpicbg.ulman.fusion.ng.insert.OverwriteLabelInsertor;
+import net.imglib2.Cursor;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgs;
+import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
 
+import net.imglib2.view.Views;
 import org.scijava.log.LogService;
 import sc.fiji.simplifiedio.SimplifiedIO;
 
-import java.util.Enumeration;
-import java.util.Vector;
+import java.util.*;
+
+import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
+import de.mpicbg.ulman.fusion.ng.insert.OverwriteLabelInsertor;
 
 /**
  * This class essentially takes care of the IO burden. One provides it with
@@ -123,8 +127,60 @@ extends JobIO<IT,LT>
 	}
 
 
+	// ----------- input regimes: manage label match detection -----------
+	final MajorityOverlapBasedLabelExtractor<IT,LT,LT> labelExtractor = new MajorityOverlapBasedLabelExtractor<>();
+
+	public
+	void setMinOverlapOverTRA(final float overlapRatio)
+	{
+		if (overlapRatio < 0 || overlapRatio > 1)
+			throw new RuntimeException("Ratio must be between 0 and 1 inclusive.");
+
+		labelExtractor.minFractionOfMarker = overlapRatio;
+	}
+
+	public
+	float getCurrentMinOverlapOverTRA()
+	{
+		return labelExtractor.minFractionOfMarker;
+	}
+
+
+	// ----------- input regimes: manage labels of interest -----------
+	/** collection of labels to be exported when fuse() is called;
+	    setting it to null means to export all labels */
+	Collection<Integer> syncedLabels = null;
+
+	public
+	void syncAllLabels()
+	{
+		syncedLabels = null;
+	}
+
+	public
+	void syncLabels(int... labels)
+	{
+		syncedLabels = new TreeSet<>();
+		for (int l : labels) syncedLabels.add(l);
+	}
+
+	public
+	void syncLabels(LT... labels)
+	{
+		syncedLabels = new TreeSet<>();
+		for (LT l : labels)  syncedLabels.add( l.getInteger() );
+	}
+
+	public
+	void syncLabels(final Collection<LT> labels)
+	{
+		syncedLabels = new TreeSet<>();
+		for (LT l : labels)  syncedLabels.add( l.getInteger() );
+	}
+
+
 	// ----------- output regimes -----------
-	final OverwriteLabelInsertor<LT,LT> insertor = new OverwriteLabelInsertor<>();
+	final OverwriteLabelInsertor<LT,LT> labelInsertor = new OverwriteLabelInsertor<>();
 
 	public
 	void syncAllInputsAndSaveAllToDisk(final String... jobSpec)
@@ -191,7 +247,7 @@ extends JobIO<IT,LT>
 				if (currentSource == img.sourceNo)
 				{
 					//the "yes" branch
-					insertor.insertLabel(img.singleLabelImg,outImg,img.markerLabel,null);
+					labelInsertor.insertLabel(img.singleLabelImg,outImg,img.markerLabel,null);
 				}
 				else
 				{
@@ -250,61 +306,67 @@ extends JobIO<IT,LT>
 		}
 
 
-		/** one reusable container with the current data,
-		    this is the object on which we block/unblock the label syncing progress */
+		/** one reusable container with the current data, this is the object on which
+		    the synchronization between this and the 'worker" thread occurs (so that
+		    a caller initiates request for data and waits until it is available) */
 		final ImgWithOrigin data = new ImgWithOrigin();
 
-		/** flag set by run() to indicate if run's thread is waiting to process next image */
+		/** flag set by run() (the 'worker' thread, the label extracting thread)
+		    to indicate if it is waiting to process next image */
 		Boolean waitingForSomeNextProcessing = false;
 
 
 		@Override
 		public boolean hasMoreElements()
 		{
-			synchronized (waitingForSomeNextProcessing)
-			{
-				log.trace("hasMoreElements() returns status: "+waitingForSomeNextProcessing);
-				return waitingForSomeNextProcessing;
-			}
+		 synchronized (data)
+		 {
+			log.trace("hasMoreElements() returns status: "+waitingForSomeNextProcessing);
+			return waitingForSomeNextProcessing;
+		 }
 		}
 
 		/** starts preparing the next synced image, waits for it and returns it
 		    (yes, the image syncing is implementing lazy processing);
 		    important note: the method keeps returning the same ImgWithOrigin object
-		    whose content is updated with every new call */
+		    whose content is updated with every new call; it however does return
+		    null if there's nothing to return (hasMoreElements() would return
+		    with false) or the syncing got interrupted */
 		@Override
 		public ImgWithOrigin nextElement()
 		{
+		 synchronized (data)
+		 {
 			try
 			{
-				synchronized (waitingForSomeNextProcessing)
+				log.trace("nextElement() entered");
+				if (!waitingForSomeNextProcessing)
 				{
-					log.trace("nextElement() entered");
-					if (!waitingForSomeNextProcessing)
-					{
-						log.warn("nextElement(): No data is ready to be synced.");
-						return null;
-					}
+					log.warn("nextElement(): No data is ready to be synced.");
+					return null;
+				}
 
-					synchronized (data) { data.notify(); } //unblock run()
-					waitingForSomeNextProcessing.wait();   //put myself into waiting queue
+				log.trace("nextElement() notifies and waits");
+				data.notify(); //unblock run() which does not run until we "release" the 'data'
+				data.wait();   //block myself "releasing" the 'data'
+				log.trace("nextElement() continues");
 
-					if (!worker.isInterrupted())
-					{
-						log.trace("nextElement() is finished and returns data");
-						return data;
-					}
-					else
-					{
-						log.trace("nextElement() noticed worker couldn't finish, returns null");
-						return null;
-					}
+				if (!worker.isInterrupted())
+				{
+					log.trace("nextElement() is finished and returns data");
+					return data;
+				}
+				else
+				{
+					log.trace("nextElement() noticed worker couldn't finish, returns null");
+					return null;
 				}
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 				log.trace("nextElement() is interrupted and returns null");
 			}
 			return null;
+		 }
 		}
 
 		public void interruptGettingMoreElements()
@@ -315,48 +377,113 @@ extends JobIO<IT,LT>
 
 		void run()
 		{
+		 synchronized (data)
+		 {
 			log.trace("run() entered");
 
-			//this is simulation for now!
-			int counter = 10;
-			System.out.println("W: preprocessing images");
-			while (counter > 0)
+			//da plan:
+			//iterate over all voxels of the input marker image and look for not
+			//yet found marker, and for every such new discovered, do:
+			//from all input images extract all labelled components that intersect
+			//with the marker in more than half of the total marker voxels, combine
+			//these components and threshold according to the given input threshold
+			//(the 3rd param), save this thresholded component under the discovered marker
+			//
+			//while saving the marker, it might overlap with some other already
+			//saved marker; mark such voxels specifically in the output image for
+			//later post-processing
+
+			//create the output image (of the same iteration order as the markerImg),
+			data.singleLabelImg = markerImg.factory().create(markerImg);
+
+			//the pixel value that will be (adjusted and then) used to fill the data.singleLabelImg
+			final LT markerPixel = data.singleLabelImg.firstElement().createVariable();
+
+			//set to remember already discovered TRA markers
+			//(with initial capacity set for 100 markers)
+			HashSet<Integer> mDiscovered = new HashSet<>(100);
+
+			//also prepare the positions holding aux array, and bbox corners
+			final long[] minBound = new long[markerImg.numDimensions()];
+			final long[] maxBound = new long[markerImg.numDimensions()];
+
+			//sweep over the marker image
+			final Cursor<LT> mCursor = markerImg.localizingCursor();
+			while (mCursor.hasNext())
 			{
-				synchronized (data)
+				final int curMarker = mCursor.next().getInteger();
+
+				//scan for not yet observed markers (and ignore background values...),
+				//furthermore, if there is a list of wanted ones, check it
+				if ( curMarker > 0 && (!mDiscovered.contains(curMarker))
+				   && (syncedLabels == null || syncedLabels.contains(curMarker)) )
 				{
-					try {
-						//found some new data, signal it and wait until we're told to extract it
-						waitingForSomeNextProcessing = true;
+					//found a new marker, determine its size and the AABB it spans
+					MajorityOverlapBasedLabelExtractor.findAABB(mCursor, minBound,maxBound);
+/*
+					//report detected markers just for debug
+					System.out.print("marker "+mCursor.get().getInteger()+": lower corner: (");
+					for (int d=0; d < minBound.length-1; ++d)
+						System.out.print(minBound[d]+",");
+					System.out.println(minBound[minBound.length-1]+")");
+					System.out.print("marker "+mCursor.get().getInteger()+": upper corner: (");
+					for (int d=0; d < maxBound.length-1; ++d)
+						System.out.print(maxBound[d]+",");
+					System.out.println(maxBound[maxBound.length-1]+")");
+*/
+					//sweep over all input images
+					int noOfMatchingImages = 0;
+					for (int i = 0; i < inImgs.size(); ++i)
+					{
+						//find the corresponding label in the input image (in the restricted interval)
+						final float matchingLabel = labelExtractor.findMatchingLabel(
+								Views.interval(inImgs.get(i), minBound,maxBound),
+								Views.interval(markerImg,     minBound,maxBound),
+								curMarker);
+						//System.out.println(i+". image: found label "+matchingLabel);
 
-						//wait here until we're told to continue syncing
-						System.out.println("W: ready to yield fake image #" + counter);
-						data.wait();
+						if (matchingLabel > 0)
+						{
+							try {
+								//found some new data, signal it and wait until we're told to extract it
+								waitingForSomeNextProcessing = true;
 
-						//now continue syncing = produce another content for this.data
-						System.out.println("W: creating fake image #" + counter);
-						Thread.sleep((int)(Math.random()*5000));
+								log.trace("run() ready to extract label "+curMarker+" from source "+i);
+								//block myself allowing another thread to unblock me when fresh data is desired
+								data.wait();
+								log.trace("run() extracting label "+curMarker+" from source "+i+" started");
 
-						data.singleLabelImg = (Img<LT>) ArrayImgs.unsignedShorts(100, 100);
-						data.sourceNo = 5;
-						data.markerLabel = counter;
+								//init/zero the output image
+								LoopBuilder.setImages(data.singleLabelImg).forEachPixel( (a) -> a.setZero() );
+								//copy out the label
+								markerPixel.setInteger(curMarker);
+								labelExtractor.isolateGivenLabel(inImgs.get(i),matchingLabel, data.singleLabelImg,markerPixel);
 
-						--counter;
-					} catch (InterruptedException e) {
-						log.trace("run() interrupted");
-						return;
+								data.sourceNo = i;
+								data.markerLabel = curMarker;
+								log.trace("run() extracting label "+curMarker+" from source "+i+" finished");
+								data.notify(); //unblock anyone waiting for the data
+							} catch (InterruptedException e) {
+								log.trace("run() interrupted");
+								return;
+							}
+
+							++noOfMatchingImages;
+						}
 					}
 
-					//new data is hopefully fully extracted, or waiting for it was interrupted;
-					//in any case don't hold the called anymore -> notify the caller
-					synchronized (waitingForSomeNextProcessing) { waitingForSomeNextProcessing.notify(); }
+					//some per marker report:
+					log.info("TRA marker: "+curMarker+" , images matching: "+noOfMatchingImages);
 
-					//and update the waitingForSomeNextProcessing "here":
-					// when "here" is either beginning of this loop or right after it ends
-				}
-			}
+					//finally, mark we have processed this marker
+					mDiscovered.add(curMarker);
+				} //after marker processing
+			} //after all voxel looping
+
 			waitingForSomeNextProcessing = false;
 
 			log.trace("run() is finished");
+		 }
 		}
-	}
+	} // end of public class ImagesWithOrigin
 }
