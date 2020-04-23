@@ -28,6 +28,7 @@
 package de.mpicbg.ulman.fusion;
 
 import de.mpicbg.ulman.fusion.ng.BIC;
+import de.mpicbg.ulman.fusion.ng.SIMPLE;
 import de.mpicbg.ulman.fusion.ng.WeightedVotingFusionAlgorithm;
 import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
@@ -89,16 +90,32 @@ public class testMergingAPI
 		//local logger
 		final LogService localLogger = new Context(LogService.class).getService(LogService.class);
 
+		// ----------------- BIC -----------------
 		//fusion params:
 		final WeightedVotingFusionAlgorithm<UnsignedByteType, UnsignedShortType> fuser = new BIC<>(localLogger);
 		fuser.setThreshold(2);
 		fuser.setWeights(segWeights);
 
 		//fusion itself:
-		final Img<UnsignedShortType> fusedRes = fuser.fuse(segImgs, traImg);
+		Img<UnsignedShortType> fusedRes = fuser.fuse(segImgs, traImg);
 
 		if (saveOutputsForInspection)
-			SimplifiedIO.saveImage(fusedRes,"fused.tif");
+			SimplifiedIO.saveImage(fusedRes,"fused_byBIC.tif");
+
+		// ----------------- SIMPLE -----------------
+		final SIMPLE<UnsignedByteType, UnsignedShortType> SIMPLEfuser = new SIMPLE<>(localLogger);
+		//_additional_ fusion params:
+		SIMPLEfuser.getFuserReference().maxIters=4;
+		SIMPLEfuser.getFuserReference().noOfNoUpdateIters=2;
+		SIMPLEfuser.getFuserReference().initialQualityThreshold=0.7;
+		SIMPLEfuser.getFuserReference().stepDownInQualityThreshold=0.1;
+		SIMPLEfuser.getFuserReference().minimalQualityThreshold=0.3;
+
+		//fusion itself:
+		fusedRes = SIMPLEfuser.fuse(segImgs, traImg);
+
+		if (saveOutputsForInspection)
+			SimplifiedIO.saveImage(fusedRes,"fused_bySIMPLE.tif");
 	}
 
 
