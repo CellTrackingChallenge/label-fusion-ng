@@ -2,18 +2,31 @@ package de.mpicbg.ulman.fusion;
 
 import de.mpicbg.ulman.fusion.ng.LabelSync;
 import de.mpicbg.ulman.fusion.ng.LabelSync.nameFormatTags;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.img.Img;
+import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import org.scijava.Context;
 import org.scijava.log.LogService;
+import sc.fiji.simplifiedio.SimplifiedIO;
+
+import java.util.Vector;
+
+import static de.mpicbg.ulman.fusion.testMergingAPI.createFakeSegmentation;
+import static de.mpicbg.ulman.fusion.testMergingAPI.createFakeTRA;
 
 public class testLabelSyncing {
+    //debug params...
+    static final boolean saveInputsForInspection = true;
+    static final boolean saveOutputsForInspection = true;
+
     public static void main(String[] args) {
         final LogService myLog = new Context(LogService.class).getService(LogService.class);
         //myLog.setLevel(LogService.TRACE);
 
         //create the label sync, for the last param decide
         //if perLabel (true) or perImage (false) regime
-        LabelSync<UnsignedShortType,UnsignedShortType> labelSync = new LabelSync<>(myLog);
+        LabelSync<UnsignedByteType,UnsignedShortType> labelSync = new LabelSync<>(myLog);
 
         //decide on exported images: if perLabel (which is default) or perImage
         labelSync.wantPerLabelProcessing = false;
@@ -39,8 +52,36 @@ public class testLabelSyncing {
             labelSync.outputFilenameOrder = new nameFormatTags[] { nameFormatTags.source, nameFormatTags.time};
         }
 
+        // ---------------- fake input data ----------------
+        //storage for tra markers for their x,y centre coordinates (so array must be twice the number of markers)
+        final int segInputsCnt = 3;
+        final int traMarkersCnt = 5;
+        final int[] centres = new int[2*traMarkersCnt];
+
+        //the TRA markers image (fills also the 'centres')
+        final Img<UnsignedShortType> traImg = createFakeTRA(centres);
+
+        //the collections of input instance segmentations and their weights
+        Vector<RandomAccessibleInterval<UnsignedByteType>> segImgs = new Vector<>(segInputsCnt);
+        for (int i = 0; i < segInputsCnt; ++i)
+        {
+            //creates a fake cell segments around the tra centres with some "random" shift
+            //(so that not all seg inputs are the same)
+            segImgs.add( createFakeSegmentation( new int[] {(i*3)%5, (i*4)%5}, centres) );
+        }
+
+        if (saveInputsForInspection)
+        {
+            SimplifiedIO.saveImage(traImg,"tra.tif");
+            int cnt = 0;
+            for (RandomAccessibleInterval<?> segImg : segImgs)
+                SimplifiedIO.saveImage(segImg,"seg"+(++cnt)+".tif");
+        }
+
+
         //the "job file" (provided as params) is processed and synced results are saved to disk,
         //this is all-in-one method that exits only after it is completely done
+/*
         labelSync.syncAllInputsAndSaveAllToDisk(
                 "/Users/ulman/devel/measures/seg1.tif", "1",
                 "/Users/ulman/devel/measures/seg2.tif", "1",
@@ -48,14 +89,21 @@ public class testLabelSyncing {
                 "/Users/ulman/devel/measures/tra.tif",
                 "0",
                 "/Users/ulman/devel/measures/synced.tif" );
-
-        System.out.println("-------------------------------------------------------");
+*/
+        if (saveOutputsForInspection)
+        {
+            labelSync.syncAllInputsAndSaveAllToDisk(segImgs,traImg);
+            System.out.println("-------------------------------------------------------");
+        }
 
         //example of how obtain and process individual images iteratively (in contrast to the all-in-one approach):
         //needless to say, one should not change any of the parameters above while in the middle of this process
         //
+        //but here the process hasn't started yet, so we can change (last minute) change it here :-)
+        labelSync.wantPerLabelProcessing = true;
+
         //get a reference on ImagesWithOrigin object
-        LabelSync<UnsignedShortType, UnsignedShortType>.ImagesWithOrigin images;
+        LabelSync<UnsignedByteType, UnsignedShortType>.ImagesWithOrigin images;
         images = labelSync.syncAllInputsAndStreamIt(labelSync.inImgs,labelSync.markerImg);
         //NB: this has only initiated the iterative syncing, no image has been processed yet
 
@@ -63,7 +111,7 @@ public class testLabelSyncing {
         System.out.println("Caller: Start getting images");
         while (images.hasMoreElements())
         {
-            LabelSync<UnsignedShortType, UnsignedShortType>.ImgWithOrigin img = images.nextElement();
+            LabelSync<UnsignedByteType, UnsignedShortType>.ImgWithOrigin img = images.nextElement();
 /*
             //whenever one gets bored, you can stop the syncing process like this:
             if (img.markerLabel == 4)
