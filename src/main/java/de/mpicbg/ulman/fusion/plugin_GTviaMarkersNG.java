@@ -66,7 +66,6 @@ import de.mpicbg.ulman.fusion.ng.WeightedVotingFusionFeeder;
 import de.mpicbg.ulman.fusion.ng.WeightedVotingFusionAlgorithm;
 import de.mpicbg.ulman.fusion.ng.BIC;
 import de.mpicbg.ulman.fusion.ng.SIMPLE;
-import de.mpicbg.ulman.fusion.ng.SIMPLE_params;
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
 
 @Plugin(type = Command.class, menuPath = "Plugins>Annotations Merging Tool")
@@ -575,5 +574,32 @@ public class plugin_GTviaMarkersNG implements Command
 
 			  public boolean buttonPressed()
 			  { return buttonPressed; }
+	}
+
+
+	/** A no-op plugin existing here only to harvest parameter values for
+		the SIMPLE algorithm. The parameters here should be mirrored in
+		the SIMPLE public attributes. */
+	@Plugin(type = Command.class)
+	public static class SIMPLE_params implements Command
+	{
+		@Parameter
+		int maxIters = 4;
+
+		@Parameter
+		int noOfNoUpdateIters = 2;
+
+		@Parameter
+		double initialQualityThreshold = 0.7;
+
+		@Parameter
+		double stepDownInQualityThreshold = 0.1;
+
+		@Parameter
+		double minimalQualityThreshold = 0.3;
+
+		@Override
+		public void run()
+		{ /* intenionally empty */ }
 	}
 }
