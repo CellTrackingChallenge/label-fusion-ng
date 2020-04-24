@@ -246,7 +246,7 @@ extends JobIO<IT,LT>
 	public class ImagesWithOrigin
 	implements Enumeration<ImgWithOrigin>
 	{
-		/** the thread in which this::run() is executed */
+		/** the thread in which this::generateSyncedImagesIteratively() is executed */
 		private final Thread worker;
 
 		public ImagesWithOrigin()
@@ -255,7 +255,7 @@ extends JobIO<IT,LT>
 
 			//create a new thread that will serve on-demand the images,
 			//and that will block/unblock it on this.data
-			worker = new Thread(this::run, "label syncer for timepoint "+currentTime);
+			worker = new Thread(this::generateSyncedImagesIteratively, "label syncer for timepoint "+currentTime);
 
 			//start this worker thread, it needs to start crunching the data
 			//in order to see what to answer in hasMoreElements()
@@ -275,8 +275,8 @@ extends JobIO<IT,LT>
 		/** the pixel value that will be (adjusted and then) used to fill the data.singleLabelImg */
 		final LT markerPixel;
 
-		/** flag set by run() (the 'worker' thread, the label extracting thread)
-		    to indicate if it is waiting to process next image */
+		/** flag set by generateSyncedImagesIteratively() (the 'worker' thread, the label
+		    extracting thread) to indicate if it is waiting to process next image */
 		Boolean waitingForSomeNextProcessing = false;
 
 
@@ -311,7 +311,7 @@ extends JobIO<IT,LT>
 				}
 
 				log.trace("nextElement() notifies and waits");
-				data.notify(); //unblock run() which does not run until we "release" the 'data'
+				data.notify(); //unblock generateSyncedImagesIteratively() which does not run until we "release" the 'data'
 				data.wait();   //block myself "releasing" the 'data'
 				log.trace("nextElement() continues");
 
@@ -339,14 +339,14 @@ extends JobIO<IT,LT>
 		}
 
 
-		void run()
+		void generateSyncedImagesIteratively()
 		{
 			if (inImgs.size() == 0)
 				throw new RuntimeException("Cannot operate on no input images!");
 
 		 synchronized (data)
 		 {
-			log.trace("run() entered");
+			log.trace("generateSyncedImagesIteratively() entered");
 
 			//create the output image (of the same iteration order as the markerImg),
 			data.singleLabelImg = markerImg.factory().create(markerImg);
@@ -420,7 +420,7 @@ extends JobIO<IT,LT>
 				}
 
 			waitingForSomeNextProcessing = false;
-			log.trace("run() is finished");
+			log.trace("generateSyncedImagesIteratively() is finished");
 		 }
 		}
 
@@ -448,18 +448,18 @@ extends JobIO<IT,LT>
 					if (wantPerLabelProcessing || i != stoppedOnThisSource)
 					{
 						stoppedOnThisSource = i;
-						log.trace("run() ready to extract label "+curMarker+" from source "+i+", but now waits");
+						log.trace("generateSyncedImagesIteratively() ready to extract label "+curMarker+" from source "+i+", but now waits");
 						//block myself allowing another thread to unblock me when fresh data is desired
 						data.wait();
 						//unblock anyone waiting for the data, but that code won't run until 'data' is
-						//"released" here (which is the end of run() or the data.wait() right above here)
+						//"released" here (which is the end of generateSyncedImagesIteratively() or the data.wait() right above here)
 						data.notify();
 
 						//init/zero the output image
 						LoopBuilder.setImages(data.singleLabelImg).forEachPixel( (a) -> a.setZero() );
 					}
 
-					log.trace("run() extracting label "+curMarker+" from source "+i+" started");
+					log.trace("generateSyncedImagesIteratively() extracting label "+curMarker+" from source "+i+" started");
 
 					//copy out the label
 					markerPixel.setInteger(curMarker);
@@ -469,10 +469,10 @@ extends JobIO<IT,LT>
 					data.sourceNo = i;
 					data.markerLabel = wantPerLabelProcessing? curMarker : -1;
 					//
-					log.trace("run() extracting label "+curMarker+" from source "+i+" finished");
+					log.trace("generateSyncedImagesIteratively() extracting label "+curMarker+" from source "+i+" finished");
 
 				} catch (InterruptedException e) {
-					log.trace("run() interrupted");
+					log.trace("generateSyncedImagesIteratively() interrupted");
 				}
 			}
 		}
