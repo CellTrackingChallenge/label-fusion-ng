@@ -65,7 +65,7 @@ implements LabelExtractor<IT,LT,ET>
 	                        final int markerValue)
 	{
 		//keep frequencies of labels discovered across the marker volume
-		HashMap<Float,Integer> labelCounter = new HashMap<>();
+		final HashMap<Float,Integer> labelCounter = new HashMap<>();
 
 		final Cursor<IT> inCursor = inII.cursor();
 		final Cursor<LT> markerCursor = markerII.cursor();

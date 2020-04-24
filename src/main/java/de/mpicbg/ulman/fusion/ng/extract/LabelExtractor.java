@@ -31,6 +31,8 @@ import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
+import net.imglib2.Cursor;
+import java.util.HashMap;
 
 /**
  * Detects labels in input images (of voxel type IT -- Input Type) that match given marker,
@@ -54,6 +56,57 @@ public interface LabelExtractor<IT extends RealType<IT>, LT extends IntegerType<
 	float findMatchingLabel(final IterableInterval<IT> inII,
 	                        final IterableInterval<LT> markerII,
 	                        final int markerValue);
+
+	/**
+	 * Just returns the all matching labels together with their overlap ratios.
+	 *
+	 * The default implementation works as follows:
+	 * Sweeps over 'markerValue' labelled voxels inside the marker image
+	 * 'markerII', checks labels found in the corresponding voxels in the
+	 * input image 'inII', and returns all labels that overlap in at least
+	 * one voxel. The function returns -1 if no such label is found.
+	 *
+	 * @param inII          Sweeper of the input image (from which label is to be returned)
+	 * @param markerII      Sweeper of the input marker image
+	 * @param markerValue   Marker (from the input marker image) in question...
+	 */
+	static <IT extends RealType<IT>, LT extends IntegerType<LT>>
+	HashMap<Float,Float> findAllMatchingLabels(final IterableInterval<IT> inII,
+	                                           final IterableInterval<LT> markerII,
+	                                           final int markerValue)
+	{
+		//keep frequencies of labels discovered across the marker volume
+		final HashMap<Float,Float> labelCounter = new HashMap<>();
+
+		final Cursor<IT> inCursor = inII.cursor();
+		final Cursor<LT> markerCursor = markerII.cursor();
+		int markerSize = 0;
+
+		//find relevant label(s), if any
+		while (markerCursor.hasNext())
+		{
+			//advance both cursors in synchrony
+			inCursor.next();
+			if (markerCursor.next().getInteger() == markerValue)
+			{
+				//we are over the original marker in the marker image,
+				++markerSize;
+
+				//check what value is in the input image
+				//and update the counter of found values
+				final float inVal = inCursor.get().getRealFloat();
+				labelCounter.put(inVal, labelCounter.getOrDefault(inVal,0.f)+1);
+			}
+		}
+
+		//now, compute the ratios
+		//(except for the background..., NB: remove() does not comlain if key does not exist)
+		labelCounter.remove(0.f);
+		for (float lbl : labelCounter.keySet())
+			labelCounter.put(lbl, labelCounter.get(lbl)/(float)markerSize);
+
+		return labelCounter;
+	}
 
 	/**
 	 * Just finds pixels of 'wantedLabel' value and sets the corresponding pixels
