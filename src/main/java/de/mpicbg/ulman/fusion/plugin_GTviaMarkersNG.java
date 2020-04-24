@@ -62,8 +62,8 @@ import java.awt.event.ActionListener;
 import java.awt.Button;
 import java.awt.Dimension;
 
-import de.mpicbg.ulman.fusion.ng.WeightedVotingFusionFeeder;
-import de.mpicbg.ulman.fusion.ng.WeightedVotingFusionAlgorithm;
+import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionFeeder;
+import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionAlgorithm;
 import de.mpicbg.ulman.fusion.ng.BIC;
 import de.mpicbg.ulman.fusion.ng.SIMPLE;
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;

@@ -46,6 +46,7 @@ import java.util.Vector;
 import java.util.HashSet;
 import net.imglib2.type.numeric.IntegerType;
 
+import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionAlgorithm;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 import de.mpicbg.ulman.fusion.ng.fuse.LabelFuser;

@@ -1,7 +1,7 @@
 package de.mpicbg.ulman.fusion;
 
-import de.mpicbg.ulman.fusion.ng.LabelSyncFeeder;
-import de.mpicbg.ulman.fusion.ng.LabelSyncFeeder.nameFormatTags;
+import de.mpicbg.ulman.fusion.ng.LabelSync;
+import de.mpicbg.ulman.fusion.ng.LabelSync.nameFormatTags;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import org.scijava.Context;
 import org.scijava.log.LogService;
@@ -11,34 +11,37 @@ public class testLabelSyncing {
         final LogService myLog = new Context(LogService.class).getService(LogService.class);
         //myLog.setLevel(LogService.TRACE);
 
-        //create the sync feeder, for the last param decide
+        //create the label sync, for the last param decide
         //if perLabel (true) or perImage (false) regime
-        LabelSyncFeeder<UnsignedShortType,UnsignedShortType> feeder
-                = new LabelSyncFeeder<>(myLog,false);
+        LabelSync<UnsignedShortType,UnsignedShortType> labelSync = new LabelSync<>(myLog);
+
+        //decide on exported images: if perLabel (which is default) or perImage
+        labelSync.wantPerLabelProcessing = false;
 
         //tell timepoint and start it,
         //this needs to be updated every time prior *ToDisk() calls
-        feeder.currentTime = 99;
+        labelSync.currentTime = 99;
 
         //optional param: if not set, all labels are used
-        feeder.syncLabels(2,5);
+        labelSync.syncOnlyLabels(2,5);
 
         //optional param: if not set, default overlap ratio of 0.5 is used
-        feeder.setMinOverlapOverTRA(0.9f);
+        labelSync.setMinOverlapOverTRA(0.9f);
 
         //optional param: if perImage regime, reset the output filename patter
-        if (!feeder.wantPerLabelProcessing)
+        if (!labelSync.wantPerLabelProcessing)
         {
             //filename string, may (should...) include path,
             //must include %d placeholders, or %0Xd for 0-padded X-wide numbers
-            feeder.outputFilenameFormat = "source%d__time%03d.tif";
+            labelSync.outputFilenameFormat = "source%d__time%03d.tif";
             //
             //define the semantics of the %d placeholders, in the left->right order
-            feeder.outputFilenameOrder = new nameFormatTags[] { nameFormatTags.source, nameFormatTags.time};
+            labelSync.outputFilenameOrder = new nameFormatTags[] { nameFormatTags.source, nameFormatTags.time};
         }
 
-        //the "job file" (provided as params) is processed and synced results are saved to disk
-        feeder.syncAllInputsAndSaveAllToDisk(
+        //the "job file" (provided as params) is processed and synced results are saved to disk,
+        //this is all-in-one method that exits only after it is completely done
+        labelSync.syncAllInputsAndSaveAllToDisk(
                 "/Users/ulman/devel/measures/seg1.tif", "1",
                 "/Users/ulman/devel/measures/seg2.tif", "1",
                 "/Users/ulman/devel/measures/seg3.tif", "1",
@@ -48,17 +51,19 @@ public class testLabelSyncing {
 
         System.out.println("-------------------------------------------------------");
 
-        //example of how obtain and process individual images iteratively:
+        //example of how obtain and process individual images iteratively (in contrast to the all-in-one approach):
+        //needless to say, one should not change any of the parameters above while in the middle of this process
         //
         //get a reference on ImagesWithOrigin object
-        LabelSyncFeeder<UnsignedShortType, UnsignedShortType>.ImagesWithOrigin images;
-        images = feeder.syncAllInputsAndStreamIt(feeder.inImgs,feeder.markerImg);
+        LabelSync<UnsignedShortType, UnsignedShortType>.ImagesWithOrigin images;
+        images = labelSync.syncAllInputsAndStreamIt(labelSync.inImgs,labelSync.markerImg);
+        //NB: this has only initiated the iterative syncing, no image has been processed yet
 
         //iteratively process synced images
-        System.out.println("C: start getting images");
+        System.out.println("Caller: Start getting images");
         while (images.hasMoreElements())
         {
-            LabelSyncFeeder<UnsignedShortType, UnsignedShortType>.ImgWithOrigin img = images.nextElement();
+            LabelSync<UnsignedShortType, UnsignedShortType>.ImgWithOrigin img = images.nextElement();
 /*
             //whenever one gets bored, you can stop the syncing process like this:
             if (img.markerLabel == 4)
@@ -68,8 +73,9 @@ public class testLabelSyncing {
                 break;
             }
 */
-            System.out.println("C: got image: "+img.singleLabelImg.toString()+" from source="+img.sourceNo+" with label="+img.markerLabel);
+            System.out.println( "Caller: Got image: "+img.singleLabelImg.toString()+" from source="+img.sourceNo+" with "
+                    +(img.markerLabel == -1 ? "all labels synced" : ("label="+img.markerLabel)) );
         }
-        System.out.println("C: done getting images");
+        System.out.println("Caller: Done getting images");
     }
 }

@@ -25,7 +25,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package de.mpicbg.ulman.fusion.ng;
+package de.mpicbg.ulman.fusion.ng.backbones;
 
 import net.imagej.ImgPlus;
 import net.imglib2.img.Img;
@@ -53,6 +53,7 @@ import java.util.Vector;
  * extracted weights and the threshold, and places all of that in their
  * respective attributes.
  */
+public
 class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 {
 	///prevent from creating the class without any connection

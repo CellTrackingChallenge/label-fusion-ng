@@ -29,7 +29,7 @@ package de.mpicbg.ulman.fusion;
 
 import de.mpicbg.ulman.fusion.ng.BIC;
 import de.mpicbg.ulman.fusion.ng.SIMPLE;
-import de.mpicbg.ulman.fusion.ng.WeightedVotingFusionAlgorithm;
+import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionAlgorithm;
 import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
@@ -90,9 +90,12 @@ public class testMergingAPI
 		//local logger
 		final LogService localLogger = new Context(LogService.class).getService(LogService.class);
 
+		//generic fuser (to be defined below)
+		WeightedVotingFusionAlgorithm<UnsignedByteType, UnsignedShortType> fuser;
+
 		// ----------------- BIC -----------------
 		//fusion params:
-		final WeightedVotingFusionAlgorithm<UnsignedByteType, UnsignedShortType> fuser = new BIC<>(localLogger);
+		fuser = new BIC<>(localLogger);
 		fuser.setThreshold(2);
 		fuser.setWeights(segWeights);
 
@@ -111,8 +114,9 @@ public class testMergingAPI
 		SIMPLEfuser.getFuserReference().stepDownInQualityThreshold=0.1;
 		SIMPLEfuser.getFuserReference().minimalQualityThreshold=0.3;
 
-		//fusion itself:
-		fusedRes = SIMPLEfuser.fuse(segImgs, traImg);
+		//fusion itself (SIMPLE is a generic fuser too):
+		fuser = SIMPLEfuser;
+		fusedRes = fuser.fuse(segImgs, traImg);
 
 		if (saveOutputsForInspection)
 			SimplifiedIO.saveImage(fusedRes,"fused_bySIMPLE.tif");

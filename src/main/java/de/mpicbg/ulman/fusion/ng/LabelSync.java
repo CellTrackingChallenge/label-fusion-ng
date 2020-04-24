@@ -33,13 +33,13 @@ import net.imglib2.img.Img;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
-
 import net.imglib2.view.Views;
+
 import org.scijava.log.LogService;
 import sc.fiji.simplifiedio.SimplifiedIO;
-
 import java.util.*;
 
+import de.mpicbg.ulman.fusion.ng.backbones.JobIO;
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 
 /**
@@ -58,24 +58,16 @@ import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
  * and saves the output image.
  */
 public
-class LabelSyncFeeder<IT extends RealType<IT>, LT extends IntegerType<LT>>
+class LabelSync<IT extends RealType<IT>, LT extends IntegerType<LT>>
 extends JobIO<IT,LT>
 {
-	public
-	LabelSyncFeeder(final LogService _log)
-	{
-		this(_log,true);
-	}
-
-	public
-	LabelSyncFeeder(final LogService _log, final boolean wantPerLabelProcessing)
+	public LabelSync(final LogService _log)
 	{
 		super(_log);
-		this.wantPerLabelProcessing = wantPerLabelProcessing;
 	}
 
 	/** a flag if every output image contains all synced labels, or there is one image per one label */
-	public final boolean wantPerLabelProcessing;
+	public boolean wantPerLabelProcessing = true;
 
 	/** supply (and keep updating) the value of the currently processed time point */
 	public int currentTime = 0;
@@ -156,21 +148,21 @@ extends JobIO<IT,LT>
 	}
 
 	public
-	void syncLabels(int... labels)
+	void syncOnlyLabels(int... labels)
 	{
 		syncedLabels = new TreeSet<>();
 		for (int l : labels) syncedLabels.add(l);
 	}
 
 	public
-	void syncLabels(LT... labels)
+	void syncOnlyLabels(LT... labels)
 	{
 		syncedLabels = new TreeSet<>();
 		for (LT l : labels)  syncedLabels.add( l.getInteger() );
 	}
 
 	public
-	void syncLabels(final Collection<LT> labels)
+	void syncOnlyLabels(final Collection<LT> labels)
 	{
 		syncedLabels = new TreeSet<>();
 		for (LT l : labels)  syncedLabels.add( l.getInteger() );

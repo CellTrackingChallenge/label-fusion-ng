@@ -25,7 +25,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package de.mpicbg.ulman.fusion.ng;
+package de.mpicbg.ulman.fusion.ng.backbones;
 
 import net.imglib2.img.Img;
 import net.imglib2.RandomAccessibleInterval;
