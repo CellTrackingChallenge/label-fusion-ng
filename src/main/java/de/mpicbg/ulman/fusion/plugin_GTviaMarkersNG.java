@@ -111,11 +111,11 @@ public class plugin_GTviaMarkersNG implements Command
 
 	@Parameter(visibility = ItemVisibility.MESSAGE, persist = false, required = false)
 	private final String fileInfoE =
-		 "The filename pattern is a full path to a file that includes XXX or XXXX where "
+		 "The filename pattern is a full path to a file that includes TTT or TTTT where "
 		+"numbers should be substituted.";
 
 	@Parameter(label = "Job file:", style = FileWidget.OPEN_STYLE,
-		description = "Please, make sure that file contains filenames with XXX or XXXX included.",
+		description = "Please, make sure that file contains filenames with TTT or TTTT included.",
 		callback = "inFileOKAY")
 	private File filePath;
 
@@ -129,9 +129,9 @@ public class plugin_GTviaMarkersNG implements Command
 	private String fileIdxStr = "0-9";
 
 	@Parameter(label = "Output filename pattern:", style = FileWidget.SAVE_STYLE,
-		description = "Please, don't forget to include XXX or XXXX into the filename.",
+		description = "Please, don't forget to include TTT or TTTT into the filename.",
 		callback = "outFileOKAY")
-	private File outputPath = new File("CHANGE THIS PATH/mergedXXX.tif");
+	private File outputPath = new File("CHANGE THIS PATH/mergedTTT.tif");
 
 
 	//callbacks:
@@ -207,11 +207,11 @@ public class plugin_GTviaMarkersNG implements Command
 			statusService.showStatus("No output filename is given.");
 			return false;
 		}
-		//does it contain "XXX" and the number of X's is 3 or 4?
-		if (name.indexOf("XXX") == -1 || ( (name.lastIndexOf("XXX") - name.indexOf("XXX")) > 1 ))
+		//does it contain "TTT" and the number of T's is 3 or 4?
+		if (name.indexOf("TTT") == -1 || ( (name.lastIndexOf("TTT") - name.indexOf("TTT")) > 1 ))
 		{
-			log.warn("Filename \""+name+"\" does not contain XXX or XXXX pattern.");
-			statusService.showStatus("Filename \""+name+"\" does not contain XXX or XXXX pattern.");
+			log.warn("Filename \""+name+"\" does not contain TTT or TTTT pattern.");
+			statusService.showStatus("Filename \""+name+"\" does not contain TTT or TTTT pattern.");
 			return false;
 		}
 
@@ -224,8 +224,8 @@ public class plugin_GTviaMarkersNG implements Command
 			return false;
 		}
 
-		log.info("Filename contains XXX or XXXX pattern, parent folder exists, all good.");
-		statusService.showStatus("Filename contains XXX or XXXX pattern, parent folder exists, all good.");
+		log.info("Filename contains TTT or TTTT pattern, parent folder exists, all good.");
+		statusService.showStatus("Filename contains TTT or TTTT pattern, parent folder exists, all good.");
 		return true;
 	}
 
@@ -300,14 +300,14 @@ public class plugin_GTviaMarkersNG implements Command
 				}
 			}
 
-			//test for presence of the expanding pattern XXX or XXXX
-			if (partOne.indexOf("XXX") == -1 || ( (partOne.lastIndexOf("XXX") - partOne.indexOf("XXX")) > 1 ))
+			//test for presence of the expanding pattern TTT or TTTT
+			if (partOne.indexOf("TTT") == -1 || ( (partOne.lastIndexOf("TTT") - partOne.indexOf("TTT")) > 1 ))
 			{
-				log.warn("Filename \""+partOne+"\" does not contain XXX or XXXX pattern on line "+lineNo+".");
+				log.warn("Filename \""+partOne+"\" does not contain TTT or TTTT pattern on line "+lineNo+".");
 				if (!uiService.isHeadless())
 				{
-					statusService.showStatus("Filename \""+partOne+"\" does not contain XXX or XXXX pattern on line "+lineNo+".");
-					uiService.showDialog(    "Filename \""+partOne+"\" does not contain XXX or XXXX pattern on line "+lineNo+".");
+					statusService.showStatus("Filename \""+partOne+"\" does not contain TTT or TTTT pattern on line "+lineNo+".");
+					uiService.showDialog(    "Filename \""+partOne+"\" does not contain TTT or TTTT pattern on line "+lineNo+".");
 				}
 				return false;
 			}
@@ -318,13 +318,13 @@ public class plugin_GTviaMarkersNG implements Command
 		return true;
 	}
 
-	/** populates Xs in the \e pattern with \e idx, and returns result in a new string,
-	    it supports XXX or XXXX */
+	/** populates Ts in the \e pattern with \e idx, and returns result in a new string,
+	    it supports TTT or TTTT */
 	String expandFilenamePattern(final String pattern, final int idx)
 	{
 		//detect position
-		int a = pattern.indexOf("XXX");
-		int b = pattern.lastIndexOf("XXX");
+		int a = pattern.indexOf("TTT");
+		int b = pattern.lastIndexOf("TTT");
 		//and span
 		b = b > a ? 4 : 3;
 
