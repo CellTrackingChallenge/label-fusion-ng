@@ -62,8 +62,8 @@ import java.awt.event.ActionListener;
 import java.awt.Button;
 import java.awt.Dimension;
 
+import de.mpicbg.ulman.fusion.ng.LabelSync;
 import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionFeeder;
-import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionAlgorithm;
 import de.mpicbg.ulman.fusion.ng.BIC;
 import de.mpicbg.ulman.fusion.ng.SIMPLE;
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
@@ -96,7 +96,8 @@ public class plugin_GTviaMarkersNG implements Command
 			choices = {"Threshold - flat weights",
 			           "Threshold - user weights",
 			           "Majority - flat weights",
-			           "SIMPLE"}, //,"STAPLE"},
+			           "SIMPLE",
+			           "Label Syncer"}, //,"STAPLE"},
 			callback = "mergeModelChanged")
 	private String mergeModel;
 
@@ -111,11 +112,11 @@ public class plugin_GTviaMarkersNG implements Command
 
 	@Parameter(visibility = ItemVisibility.MESSAGE, persist = false, required = false)
 	private final String fileInfoE =
-		 "The filename pattern is a full path to a file that includes XXX or XXXX where "
+		 "The filename pattern is a full path to a file that includes TTT or TTTT where "
 		+"numbers should be substituted.";
 
 	@Parameter(label = "Job file:", style = FileWidget.OPEN_STYLE,
-		description = "Please, make sure that file contains filenames with XXX or XXXX included.",
+		description = "Please, make sure that file contains filenames with TTT or TTTT included.",
 		callback = "inFileOKAY")
 	private File filePath;
 
@@ -129,18 +130,9 @@ public class plugin_GTviaMarkersNG implements Command
 	private String fileIdxStr = "0-9";
 
 	@Parameter(label = "Output filename pattern:", style = FileWidget.SAVE_STYLE,
-		description = "Please, don't forget to include XXX or XXXX into the filename.",
+		description = "Please, don't forget to include TTT or TTTT into the filename.",
 		callback = "outFileOKAY")
-	private File outputPath = new File("CHANGE THIS PATH/mergedXXX.tif");
-
-
-	//citation footer...
-	@Parameter(visibility = ItemVisibility.MESSAGE, persist = false, required = false, label = "Please, refer to:")
-	private final String citationFooterA
-		= "http://www.fi.muni.cz/~xulman/LABELS/abstract.pdf";
-	@Parameter(visibility = ItemVisibility.MESSAGE, persist = false, required = false, label = ":")
-	private final String citationFooterB
-		= "http://www.fi.muni.cz/~xulman/LABELS/poster.pdf";
+	private File outputPath = new File("CHANGE THIS PATH/mergedTTT.tif");
 
 
 	//callbacks:
@@ -151,8 +143,8 @@ public class plugin_GTviaMarkersNG implements Command
 		{
 			fileInfoA = "The job file should list one input filename pattern per line.";
 			fileInfoB = "The job file should end with tracking markers filename pattern.";
-			fileInfoC = " ";
-			fileInfoD = "Threshold value is required now.";
+			fileInfoC = "Threshold value is required now.";
+			fileInfoD = " ";
 		}
 		else
 		if (mergeModel.startsWith("Threshold - user"))
@@ -167,16 +159,24 @@ public class plugin_GTviaMarkersNG implements Command
 		{
 			fileInfoA = "The job file should list one input filename pattern per line.";
 			fileInfoB = "The job file should end with tracking markers filename pattern.";
-			fileInfoC = " ";
-			fileInfoD = "Threshold value is NOT required now.";
+			fileInfoC = "Threshold value is NOT required now.";
+			fileInfoD = " ";
 		}
 		else
 		if (mergeModel.startsWith("SIMPLE"))
 		{
-			fileInfoA = " ";
-			fileInfoB = "This model has own configuration dialog.";
-			fileInfoC = " ";
-			fileInfoD = " ";
+			fileInfoA = "The job file should list one input filename pattern per line.";
+			fileInfoB = "The job file should end with tracking markers filename pattern.";
+			fileInfoC = "Threshold value is NOT required now.";
+			fileInfoD = "This model has own configuration dialog.";
+		}
+		else
+		if (mergeModel.startsWith("Label"))
+		{
+			fileInfoA = "The job file should list one input filename pattern per line.";
+			fileInfoB = "The job file should end with tracking markers filename pattern.";
+			fileInfoC = "Threshold value is NOT required now.";
+			fileInfoD = "The output filename needs to include placeholders TTs, SSs and LLs.";
 		}
 		else
 		{
@@ -205,8 +205,62 @@ public class plugin_GTviaMarkersNG implements Command
 	}
 
 	//will be also used for sanity checking, thus returns boolean
+	private boolean syncOutputFilenameOKAY()
+	{
+		final String name = outputPath.getAbsolutePath();
+
+		pos[0] = name.indexOf(     lbl[0] );  //begining of Ts
+		pos[1] = name.lastIndexOf( lbl[0] );  //end of them
+		pos[2] = name.indexOf(     lbl[2] );  //begining of Ss
+		pos[3] = name.lastIndexOf( lbl[2] );  //end of them
+		pos[4] = name.indexOf(     lbl[4] );  //begining of Ls
+		pos[5] = name.lastIndexOf( lbl[4] );  //end of them
+
+		//found every letter?
+		if (pos[0] == -1 || pos[2] == -1 || pos[4] == -1)
+		{
+			log.warn("missing some of the letter T or S or L");
+			return false;
+		}
+
+		//do they intervine?
+		for (int t = 0; t < 5; t += 2) //goes over 0,2,4
+		for (int i = 0; i < 5; i += 2)
+		{
+			//don't test "me against me"
+			if (t == i) continue;
+
+			if (pos[t] < pos[i] && pos[i] < pos[t+1])
+			{
+				log.warn("beginning of "+lbl[i]+"s is inside "+lbl[t]+"s");
+				return false;
+			}
+			if (pos[t] < pos[i+1] && pos[i+1] < pos[t+1])
+			{
+				log.warn("end of "+lbl[i]+"s is inside "+lbl[t]+"s");
+				return false;
+			}
+		}
+
+		//are sequences without interrupts?
+		for (int t = 0; t < 5; t += 2) //goes over 0,2,4
+		for (int i = pos[t]; i <= pos[t+1]; ++i)
+		if (name.charAt(i) != lbl[t])
+		{
+			log.warn("the sequence of "+lbl[t]+"s is interrupted at character "+i);
+			return false;
+		}
+
+		return true;
+	}
+	final private int[]  pos = new int[6];
+	final private char[] lbl = new char[] {'T',' ', 'S',' ', 'L'};
+
+	//will be also used for sanity checking, thus returns boolean
 	private boolean outFileOKAY()
 	{
+		if (mergeModel.startsWith("Label")) return syncOutputFilenameOKAY();
+
 		//check the pattern
 		final String name = outputPath.getName();
 		if (name == null)
@@ -215,11 +269,11 @@ public class plugin_GTviaMarkersNG implements Command
 			statusService.showStatus("No output filename is given.");
 			return false;
 		}
-		//does it contain "XXX" and the number of X's is 3 or 4?
-		if (name.indexOf("XXX") == -1 || ( (name.lastIndexOf("XXX") - name.indexOf("XXX")) > 1 ))
+		//does it contain "TTT" and the number of T's is 3 or 4?
+		if (name.indexOf("TTT") == -1 || ( (name.lastIndexOf("TTT") - name.indexOf("TTT")) > 1 ))
 		{
-			log.warn("Filename \""+name+"\" does not contain XXX or XXXX pattern.");
-			statusService.showStatus("Filename \""+name+"\" does not contain XXX or XXXX pattern.");
+			log.warn("Filename \""+name+"\" does not contain TTT or TTTT pattern.");
+			statusService.showStatus("Filename \""+name+"\" does not contain TTT or TTTT pattern.");
 			return false;
 		}
 
@@ -232,8 +286,8 @@ public class plugin_GTviaMarkersNG implements Command
 			return false;
 		}
 
-		log.info("Filename contains XXX or XXXX pattern, parent folder exists, all good.");
-		statusService.showStatus("Filename contains XXX or XXXX pattern, parent folder exists, all good.");
+		log.info("Filename contains TTT or TTTT pattern, parent folder exists, all good.");
+		statusService.showStatus("Filename contains TTT or TTTT pattern, parent folder exists, all good.");
 		return true;
 	}
 
@@ -308,14 +362,14 @@ public class plugin_GTviaMarkersNG implements Command
 				}
 			}
 
-			//test for presence of the expanding pattern XXX or XXXX
-			if (partOne.indexOf("XXX") == -1 || ( (partOne.lastIndexOf("XXX") - partOne.indexOf("XXX")) > 1 ))
+			//test for presence of the expanding pattern TTT or TTTT
+			if (partOne.indexOf("TTT") == -1 || ( (partOne.lastIndexOf("TTT") - partOne.indexOf("TTT")) > 1 ))
 			{
-				log.warn("Filename \""+partOne+"\" does not contain XXX or XXXX pattern on line "+lineNo+".");
+				log.warn("Filename \""+partOne+"\" does not contain TTT or TTTT pattern on line "+lineNo+".");
 				if (!uiService.isHeadless())
 				{
-					statusService.showStatus("Filename \""+partOne+"\" does not contain XXX or XXXX pattern on line "+lineNo+".");
-					uiService.showDialog(    "Filename \""+partOne+"\" does not contain XXX or XXXX pattern on line "+lineNo+".");
+					statusService.showStatus("Filename \""+partOne+"\" does not contain TTT or TTTT pattern on line "+lineNo+".");
+					uiService.showDialog(    "Filename \""+partOne+"\" does not contain TTT or TTTT pattern on line "+lineNo+".");
 				}
 				return false;
 			}
@@ -326,13 +380,13 @@ public class plugin_GTviaMarkersNG implements Command
 		return true;
 	}
 
-	/** populates Xs in the \e pattern with \e idx, and returns result in a new string,
-	    it supports XXX or XXXX */
+	/** populates Ts in the \e pattern with \e idx, and returns result in a new string,
+	    it supports TTT or TTTT */
 	String expandFilenamePattern(final String pattern, final int idx)
 	{
 		//detect position
-		int a = pattern.indexOf("XXX");
-		int b = pattern.lastIndexOf("XXX");
+		int a = pattern.indexOf("TTT");
+		int b = pattern.lastIndexOf("TTT");
 		//and span
 		b = b > a ? 4 : 3;
 
@@ -342,6 +396,13 @@ public class plugin_GTviaMarkersNG implements Command
 		return res;
 	}
 
+	private void updateSyncerOutputFilename(final LabelSync ls, final int p, final int tagPos, final LabelSync.nameFormatTags tagVal)
+	{
+		ls.outputFilenameFormat = ls.outputFilenameFormat.substring(0,pos[p])
+		                        + "%0"+(pos[p+1]-pos[p]+1)+"d"
+		                        + ls.outputFilenameFormat.substring(pos[p+1]+1);
+		ls.outputFilenameOrder[tagPos] = tagVal;
+	}
 
 	//the GUI path entry function:
 	@Override
@@ -362,7 +423,8 @@ public class plugin_GTviaMarkersNG implements Command
 		}
 		if (!mergeModel.startsWith("Threshold")
 		 && !mergeModel.startsWith("Majority")
-		 && !mergeModel.startsWith("SIMPLE"))
+		 && !mergeModel.startsWith("SIMPLE")
+		 && !mergeModel.startsWith("Label"))
 		{
 			log.error("plugin_GTviaMarkers error: Unsupported merging model.");
 			if (!uiService.isHeadless())
@@ -447,8 +509,48 @@ public class plugin_GTviaMarkersNG implements Command
 		ProgressIndicator pbar = null;
 		ButtonHandler pbtnHandler = null;
 
-		//start up the worker class
-		final WeightedVotingFusionAlgorithm<? extends RealType<?>, UnsignedShortType> fuser;
+		//key players (the main worker classes) in this plugin
+		final WeightedVotingFusionFeeder<?, UnsignedShortType> feeder;
+		final LabelSync<? extends RealType<?>, UnsignedShortType> syncer;
+
+		//start up (some of) the worker class
+		if (mergeModel.startsWith("Label"))
+		{
+			if (!syncOutputFilenameOKAY())
+				throw new RuntimeException("Output filename is not formated for Label syncer");
+
+			feeder = null;
+			syncer = new LabelSync<>(log);
+
+			//replace the Ts, Ss and Ls patterns with %0Xd
+			int minPos = Math.min(pos[0], Math.min(pos[2],pos[4]));
+			int maxPos = Math.max(pos[0], Math.max(pos[2],pos[4]));
+
+			//replace from the end
+			syncer.outputFilenameFormat = outputPath.getAbsolutePath();
+			if (maxPos == pos[0])       updateSyncerOutputFilename(syncer, 0,2,LabelSync.nameFormatTags.time);
+			else if (maxPos == pos[2])  updateSyncerOutputFilename(syncer, 2,2,LabelSync.nameFormatTags.source);
+			else /* pos[4] */           updateSyncerOutputFilename(syncer, 4,2,LabelSync.nameFormatTags.label);
+
+			//the middle one
+			if (minPos != pos[0] && maxPos != pos[0])      updateSyncerOutputFilename(syncer, 0,1,LabelSync.nameFormatTags.time);
+			else if (minPos != pos[2] && maxPos != pos[2]) updateSyncerOutputFilename(syncer, 2,1,LabelSync.nameFormatTags.source);
+			else /* pos[4] */                              updateSyncerOutputFilename(syncer, 4,1,LabelSync.nameFormatTags.label);
+
+			//the first one
+			if (minPos == pos[0])       updateSyncerOutputFilename(syncer, 0,0,LabelSync.nameFormatTags.time);
+			else if (minPos == pos[2])  updateSyncerOutputFilename(syncer, 2,0,LabelSync.nameFormatTags.source);
+			else /* pos[4] */           updateSyncerOutputFilename(syncer, 4,0,LabelSync.nameFormatTags.label);
+
+			log.trace("output filename format: "+syncer.outputFilenameFormat);
+			log.trace("output filename what is at position 1: "+syncer.outputFilenameOrder[0]);
+			log.trace("output filename what is at position 2: "+syncer.outputFilenameOrder[1]);
+			log.trace("output filename what is at position 3: "+syncer.outputFilenameOrder[2]);
+
+			syncer.wantPerLabelProcessing = true;
+			syncer.syncAllLabels();
+		}
+		else
 		if (mergeModel.startsWith("SIMPLE"))
 		{
 			//yield additional SIMPLE-specific parameters
@@ -475,13 +577,15 @@ public class plugin_GTviaMarkersNG implements Command
 			}
 
 			log.info("SIMPLE alg params: "+fuser_SIMPLE.getFuserReference().reportSettings());
-			fuser = fuser_SIMPLE;
+			feeder = new WeightedVotingFusionFeeder(log).setAlgorithm(fuser_SIMPLE);
+			syncer = null;
 		}
 		else
-			fuser = new BIC(log);
+		{
+			feeder = new WeightedVotingFusionFeeder(log).setAlgorithm(new BIC(log));
+			syncer = null;
+		}
 
-		final WeightedVotingFusionFeeder<?, UnsignedShortType> feeder
-			= new WeightedVotingFusionFeeder(log).setAlgorithm(fuser);
 
 		try {
 			//parse out the list of timepoints
@@ -535,7 +639,12 @@ public class plugin_GTviaMarkersNG implements Command
 
 
 				long time = System.currentTimeMillis();
-				feeder.processJob(args);
+				if (feeder != null) feeder.processJob(args);
+				if (syncer != null)
+				{
+					syncer.currentTime = idx;
+					syncer.syncAllInputsAndSaveAllToDisk(args);
+				}
 				time -= System.currentTimeMillis();
 				System.out.println("ELAPSED TIME: "+(-time/1000)+" seconds");
 			}
