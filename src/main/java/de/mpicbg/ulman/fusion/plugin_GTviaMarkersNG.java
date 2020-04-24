@@ -176,7 +176,7 @@ public class plugin_GTviaMarkersNG implements Command
 			fileInfoA = "The job file should list one input filename pattern per line.";
 			fileInfoB = "The job file should end with tracking markers filename pattern.";
 			fileInfoC = "Threshold value is NOT required now.";
-			fileInfoD = "The output filename needs to include placeholders TTs, IIs and LLs.";
+			fileInfoD = "The output filename needs to include placeholders TTs, SSs and LLs.";
 		}
 		else
 		{
@@ -522,8 +522,7 @@ public class plugin_GTviaMarkersNG implements Command
 			feeder = null;
 			syncer = new LabelSync<>(log);
 
-			//TODO setup its output file format, etc...
-			//replace the Ts, Is and Ls patterns with %0Xd
+			//replace the Ts, Ss and Ls patterns with %0Xd
 			int minPos = Math.min(pos[0], Math.min(pos[2],pos[4]));
 			int maxPos = Math.max(pos[0], Math.max(pos[2],pos[4]));
 
@@ -543,11 +542,13 @@ public class plugin_GTviaMarkersNG implements Command
 			else if (minPos == pos[2])  updateSyncerOutputFilename(syncer, 2,0,LabelSync.nameFormatTags.source);
 			else /* pos[4] */           updateSyncerOutputFilename(syncer, 4,0,LabelSync.nameFormatTags.label);
 
-			System.out.println("show me format: "+syncer.outputFilenameFormat);
-			System.out.println("show me seman1: "+syncer.outputFilenameOrder[0]);
-			System.out.println("show me seman2: "+syncer.outputFilenameOrder[1]);
-			System.out.println("show me seman3: "+syncer.outputFilenameOrder[2]);
-			return;
+			log.trace("output filename format: "+syncer.outputFilenameFormat);
+			log.trace("output filename what is at position 1: "+syncer.outputFilenameOrder[0]);
+			log.trace("output filename what is at position 2: "+syncer.outputFilenameOrder[1]);
+			log.trace("output filename what is at position 3: "+syncer.outputFilenameOrder[2]);
+
+			syncer.wantPerLabelProcessing = true;
+			syncer.syncAllLabels();
 		}
 		else
 		if (mergeModel.startsWith("SIMPLE"))
@@ -638,7 +639,12 @@ public class plugin_GTviaMarkersNG implements Command
 
 
 				long time = System.currentTimeMillis();
-				feeder.processJob(args);
+				if (feeder != null) feeder.processJob(args);
+				if (syncer != null)
+				{
+					syncer.currentTime = idx;
+					syncer.syncAllInputsAndSaveAllToDisk(args);
+				}
 				time -= System.currentTimeMillis();
 				System.out.println("ELAPSED TIME: "+(-time/1000)+" seconds");
 			}
