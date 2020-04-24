@@ -460,10 +460,11 @@ extends JobIO<IT,LT>
 					}
 
 					log.trace("generateSyncedImagesIteratively() extracting label "+curMarker+" from source "+i+" started");
+					log.info("TRA marker: "+curMarker+" over source="+i+" is matched with: "+matchingLabel);
 
 					//copy out the label
 					markerPixel.setInteger(curMarker);
-					labelExtractor.addGivenLabel(inImgs.get(i),matchingLabel, data.singleLabelImg,markerPixel);
+					labelExtractor.isolateGivenLabel(inImgs.get(i),matchingLabel, data.singleLabelImg,markerPixel);
 
 					//setup the "origin" of the data
 					data.sourceNo = i;
