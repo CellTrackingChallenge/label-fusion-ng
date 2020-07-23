@@ -78,7 +78,7 @@ implements LabelInsertor<LT,ET>
 
 	/** returns the collision size histogram */
 	public
-	int[] finalize(final Img<LT> outImg,
+	int[] finalize(final Img<LT> outImg, final Img<LT> markerImg,
 	               final float removeMarkersCollisionThreshold,
 	               final boolean removeMarkersAtBoundary)
 	{

@@ -329,7 +329,7 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 
 		final int allMarkers = mDiscovered.size();
 		final int[] collHistogram
-			= labelInsertor.finalize(outImg,removeMarkersCollisionThreshold,removeMarkersAtBoundary);
+			= labelInsertor.finalize(outImg,markerImg,removeMarkersCollisionThreshold,removeMarkersAtBoundary);
 
 		if (dbgImgFileName != null && dbgImgFileName.length() > 0)
 		{
