@@ -407,7 +407,7 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 					final int outLabel = o.getInteger();
 					final int traLabel = m.getInteger();
 					if (outLabel == 0 && (labelInsertor.mColliding.contains(traLabel) || labelInsertor.mNoMatches.contains(traLabel)))
-						outFICursor.get().setInteger(traLabel);
+						o.setInteger(traLabel);
 				} );
 		}
 
