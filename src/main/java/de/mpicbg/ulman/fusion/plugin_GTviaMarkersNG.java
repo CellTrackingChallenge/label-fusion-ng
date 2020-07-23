@@ -28,6 +28,7 @@
 package de.mpicbg.ulman.fusion;
 
 import net.imglib2.type.numeric.RealType;
+import org.scijava.Context;
 import org.scijava.ItemVisibility;
 import org.scijava.widget.FileWidget;
 import org.scijava.command.Command;
@@ -710,5 +711,31 @@ public class plugin_GTviaMarkersNG implements Command
 		@Override
 		public void run()
 		{ /* intenionally empty */ }
+	}
+
+	public static void main(String[] args)
+	{
+		if (args.length != 4)
+		{
+			System.out.println("Usage: jobFile threshold outputFilesPattern timepoint");
+			return;
+		}
+
+		final plugin_GTviaMarkersNG worker = new plugin_GTviaMarkersNG();
+
+		final Context ctx = new Context(UIService.class, StatusService.class, LogService.class);
+		worker.uiService = ctx.getService(UIService.class);
+		worker.log = ctx.getService(LogService.class);
+		worker.statusService = ctx.getService(StatusService.class);
+		worker.commandService = null;
+
+		worker.mergeModel = "Threshold - flat weights";
+		worker.filePath = new File(args[0]);
+		worker.mergeThreshold = Float.parseFloat(args[1]);
+		worker.outputPath = new File(args[2]);
+		worker.fileIdxStr = args[3];
+
+		worker.run();
+		System.out.println("quiting...");
 	}
 }
