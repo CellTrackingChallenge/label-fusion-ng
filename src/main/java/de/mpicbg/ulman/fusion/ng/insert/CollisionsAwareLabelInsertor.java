@@ -59,7 +59,7 @@ implements LabelInsertor<LT,ET>
 	public HashSet<Integer> mNoMatches = new HashSet<>(100);
 
 	/** special label for the voxels in the "collision area" of more labels */
-	private int INTERSECTION;
+	protected int INTERSECTION;
 
 
 	public
