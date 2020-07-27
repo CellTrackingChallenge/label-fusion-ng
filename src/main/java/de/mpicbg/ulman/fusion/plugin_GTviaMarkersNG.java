@@ -66,6 +66,7 @@ import java.awt.Dimension;
 import de.mpicbg.ulman.fusion.ng.LabelSync;
 import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionFeeder;
 import de.mpicbg.ulman.fusion.ng.BIC;
+import de.mpicbg.ulman.fusion.ng.BICenhanced;
 import de.mpicbg.ulman.fusion.ng.SIMPLE;
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
 
@@ -98,6 +99,8 @@ public class plugin_GTviaMarkersNG implements Command
 			           "Threshold - user weights",
 			           "Majority - flat weights",
 			           "SIMPLE",
+			           "BICv2 with FlatVoting, SingleMaskFailSafe and CollisionResolver",
+			           "BICv2 with WeightedVoting, SingleMaskFailSafe and CollisionResolver",
 			           "Label Syncer"}, //,"STAPLE"},
 			callback = "mergeModelChanged")
 	private String mergeModel;
@@ -148,7 +151,7 @@ public class plugin_GTviaMarkersNG implements Command
 			fileInfoD = " ";
 		}
 		else
-		if (mergeModel.startsWith("Threshold - user"))
+		if (mergeModel.startsWith("Threshold - user") || mergeModel.startsWith("BICv2"))
 		{
 			fileInfoA = "The job file should list one input filename pattern per line";
 			fileInfoB = "and space separated single real number weight.";
@@ -305,7 +308,8 @@ public class plugin_GTviaMarkersNG implements Command
 
 		//check it has understandable content:
 		//is there additional column with weights?
-		final boolean weightAvail = mergeModel.startsWith("Threshold - user");
+		final boolean weightAvail = mergeModel.startsWith("Threshold - user") ||
+		                            mergeModel.startsWith("BICv2");
 
 		//read the whole input file
 		List<String> job = null;
@@ -425,6 +429,7 @@ public class plugin_GTviaMarkersNG implements Command
 		if (!mergeModel.startsWith("Threshold")
 		 && !mergeModel.startsWith("Majority")
 		 && !mergeModel.startsWith("SIMPLE")
+		 && !mergeModel.startsWith("BICv2")
 		 && !mergeModel.startsWith("Label"))
 		{
 			log.error("plugin_GTviaMarkers error: Unsupported merging model.");
@@ -436,7 +441,8 @@ public class plugin_GTviaMarkersNG implements Command
 
 		//parses job file (which we know is sane for sure) to prepare an array of strings
 		//is there additional column with weights?
-		final boolean weightAvail = mergeModel.startsWith("Threshold - user");
+		final boolean weightAvail = mergeModel.startsWith("Threshold - user") ||
+		                            mergeModel.startsWith("BICv2");
 
 		//read the whole input file
 		List<String> job = null;
@@ -579,6 +585,14 @@ public class plugin_GTviaMarkersNG implements Command
 
 			log.info("SIMPLE alg params: "+fuser_SIMPLE.getFuserReference().reportSettings());
 			feeder = new WeightedVotingFusionFeeder(log).setAlgorithm(fuser_SIMPLE);
+			syncer = null;
+		}
+		else
+		if (mergeModel.startsWith("BICv2"))
+		{
+			final BICenhanced bic = new BICenhanced(log);
+			bic.setEnforceFlatWeightsVoting( mergeModel.startsWith("BICv2 with FlatVoting") );
+			feeder = new WeightedVotingFusionFeeder(log).setAlgorithm(bic);
 			syncer = null;
 		}
 		else
@@ -729,7 +743,8 @@ public class plugin_GTviaMarkersNG implements Command
 		worker.statusService = ctx.getService(StatusService.class);
 		worker.commandService = null;
 
-		worker.mergeModel = "Threshold - flat weights";
+		worker.mergeModel = "BICv2 with FlatVoting, SingleMaskFailSafe and CollisionResolver";
+		//worker.mergeModel = "BICv2 with WeightedVoting, SingleMaskFailSafe and CollisionResolver";
 		worker.filePath = new File(args[0]);
 		worker.mergeThreshold = Float.parseFloat(args[1]);
 		worker.outputPath = new File(args[2]);
