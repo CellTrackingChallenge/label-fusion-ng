@@ -34,6 +34,7 @@ import org.scijava.log.LogService;
 
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 import de.mpicbg.ulman.fusion.ng.fuse.WeightedVotingLabelFuser;
+import de.mpicbg.ulman.fusion.ng.fuse.WeightedVotingLabelFuserWithFailSafe;
 import de.mpicbg.ulman.fusion.ng.postprocess.KeepLargestCCALabelPostprocessor;
 import de.mpicbg.ulman.fusion.ng.insert.CollisionsManagingLabelInsertor;
 
@@ -64,7 +65,7 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT>
 		final MajorityOverlapBasedLabelExtractor<IT,LT,DoubleType> e = new MajorityOverlapBasedLabelExtractor<>();
 		e.minFractionOfMarker = 0.5f;
 
-		final WeightedVotingLabelFuser<IT,DoubleType> f = new WeightedVotingLabelFuser<>();
+		final WeightedVotingLabelFuserWithFailSafe<IT,DoubleType> f = new WeightedVotingLabelFuserWithFailSafe<>();
 		f.minAcceptableWeight = this.threshold;
 
 		final CollisionsManagingLabelInsertor<LT, DoubleType> i = new CollisionsManagingLabelInsertor<>();
