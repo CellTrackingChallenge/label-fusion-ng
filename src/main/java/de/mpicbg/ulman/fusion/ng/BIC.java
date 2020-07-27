@@ -47,6 +47,15 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT>
 		super(_log);
 	}
 
+	public
+	BIC(final LogService _log, final String dbgImgSuffix)
+	{
+		super(_log);
+
+		//enable debug output
+		this.dbgImgFileName = dbgImgSuffix;
+	}
+
 	@Override
 	protected
 	void setFusionComponents()
