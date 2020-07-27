@@ -34,21 +34,22 @@ import org.scijava.log.LogService;
 
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 import de.mpicbg.ulman.fusion.ng.fuse.WeightedVotingLabelFuser;
+import de.mpicbg.ulman.fusion.ng.fuse.WeightedVotingLabelFuserWithFailSafe;
 import de.mpicbg.ulman.fusion.ng.postprocess.KeepLargestCCALabelPostprocessor;
-import de.mpicbg.ulman.fusion.ng.insert.CollisionsAwareLabelInsertor;
+import de.mpicbg.ulman.fusion.ng.insert.CollisionsManagingLabelInsertor;
 
 public
-class BIC<IT extends RealType<IT>, LT extends IntegerType<LT>>
+class BICenhanced<IT extends RealType<IT>, LT extends IntegerType<LT>>
 extends AbstractWeightedVotingFusionAlgorithm<IT,LT>
 {
 	public
-	BIC(final LogService _log)
+	BICenhanced(final LogService _log)
 	{
 		super(_log);
 	}
 
 	public
-	BIC(final LogService _log, final String dbgImgSuffix)
+	BICenhanced(final LogService _log, final String dbgImgSuffix)
 	{
 		super(_log);
 
@@ -64,10 +65,10 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT>
 		final MajorityOverlapBasedLabelExtractor<IT,LT,DoubleType> e = new MajorityOverlapBasedLabelExtractor<>();
 		e.minFractionOfMarker = 0.5f;
 
-		final WeightedVotingLabelFuser<IT,DoubleType> f = new WeightedVotingLabelFuser<>();
+		final WeightedVotingLabelFuserWithFailSafe<IT,DoubleType> f = new WeightedVotingLabelFuserWithFailSafe<>();
 		f.minAcceptableWeight = this.threshold;
 
-		final CollisionsAwareLabelInsertor<LT, DoubleType> i = new CollisionsAwareLabelInsertor<>();
+		final CollisionsManagingLabelInsertor<LT, DoubleType> i = new CollisionsManagingLabelInsertor<>();
 
 		final KeepLargestCCALabelPostprocessor<LT> p = new KeepLargestCCALabelPostprocessor<>();
 
