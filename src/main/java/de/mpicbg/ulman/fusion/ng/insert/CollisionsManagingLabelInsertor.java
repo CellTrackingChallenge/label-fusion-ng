@@ -32,6 +32,7 @@ import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.Cursor;
 import net.imglib2.RandomAccess;
 import net.imglib2.img.Img;
+//import sc.fiji.simplifiedio.SimplifiedIO;
 
 import java.util.*;
 
@@ -158,6 +159,10 @@ implements LabelInsertor<LT,ET>
 		if (pxInINTERSECTION.size() > 0)
 			pxInINTERSECTION.sort( pxInINTERSECTION.get(0) );
 
+		//debug img:
+		//SimplifiedIO.saveImage(outImg,"/temp/X_before.tif");
+		//int cnt = 0;
+
 		//fill in the intersection region by iterative eroding it,
 		//eroding it with (neighboring) pixels from the 'markersInINTERSECTION'
 		final RandomAccess<LT> oRA = outImg.randomAccess();
@@ -169,6 +174,9 @@ implements LabelInsertor<LT,ET>
 		//resolved means that its label is determined
 		while (pxInINTERSECTION.size() > 0)
 		{
+			//debug:
+			//System.out.println(cnt+": Eroding collision zone of size "+pxInINTERSECTION.size());
+
 			//erosion in two loops:
 			//  first, determine pixels and store them aside so they don't influence the rest of the loop
 			//  second, move the determined pixels into the output image
@@ -206,6 +214,9 @@ implements LabelInsertor<LT,ET>
 					pxIt.remove();
 				}
 			}
+
+			//debug img:
+			//SimplifiedIO.saveImage(outImg, String.format("/temp/X_round%d.tif",++cnt) );
 		}
 
 		// return back the temporarily hidden pixels
