@@ -30,16 +30,13 @@ package de.mpicbg.ulman.fusion.ng;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.loops.LoopBuilder;
 import org.scijava.log.LogService;
+import sc.fiji.simplifiedio.SimplifiedIO;
 
 import net.imglib2.*;
-import net.imglib2.exception.IncompatibleTypeException;
 import net.imglib2.img.Img;
 import net.imglib2.view.Views;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.DoubleType;
-
-import io.scif.img.ImgSaver;
-import io.scif.img.ImgIOException;
 
 import java.util.Iterator;
 import java.util.Vector;
@@ -268,17 +265,10 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 					//fuse the selected labels into it
 					labelFuser.fuseMatchingLabels(selectedInImgs,selectedInLabels,
 					                              labelExtractor,inWeights, tmpImg);
-/*
+
 					//save the debug image
-					try {
-						ImgSaver imgSaver = new ImgSaver();
-						imgSaver.saveImg("/Users/ulman/DATA/dbgMerge__"+curMarker+".tif", tmpImg);
-					}
-					catch (UnsupportedOperationException | ImgIOException | IncompatibleTypeException e) {
-						System.out.println("Unable to write output file.");
-					}
-					//....end save....
-*/
+					//SimplifiedIO.saveImage(tmpImg, "/Users/ulman/DATA/dbgMerge__"+curMarker+".tif");
+
 					//insert the fused segment into the output image
 					labelInsertor.insertLabel(tmpImg, outImg,curMarker, insStatus);
 				}
@@ -332,20 +322,21 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 		} //after all voxel looping
 
 		//save now a debug image
-		try {
-			if (dbgImgFileName != null && dbgImgFileName.length() > 0)
-			{
-				ImgSaver imgSaver = new ImgSaver();
-				imgSaver.saveImg(dbgImgFileName, outImg);
-			}
-		}
-		catch (UnsupportedOperationException | ImgIOException | IncompatibleTypeException e) {
-			System.out.println("Unable to write debug output file.");
+		if (dbgImgFileName != null && dbgImgFileName.length() > 0)
+		{
+			SimplifiedIO.saveImage(outImg, dbgImgFileName);
 		}
 
 		final int allMarkers = mDiscovered.size();
 		final int[] collHistogram
 			= labelInsertor.finalize(outImg,removeMarkersCollisionThreshold,removeMarkersAtBoundary);
+
+		if (dbgImgFileName != null && dbgImgFileName.length() > 0)
+		{
+			int dotPos = dbgImgFileName.lastIndexOf('.');
+			SimplifiedIO.saveImage(outImg,
+			dbgImgFileName.substring(0,dotPos) + "_afterFinalize" + dbgImgFileName.substring(dotPos) );
+		}
 
 		// --------- CCA analyses ---------
 		mDiscovered.clear();
