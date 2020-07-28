@@ -34,8 +34,13 @@ import org.scijava.widget.FileWidget;
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
+import org.scijava.plugin.PluginInfo;
 import org.scijava.app.StatusService;
 import org.scijava.log.LogService;
+import org.scijava.log.LogSource;
+import org.scijava.log.Logger;
+import org.scijava.log.LogListener;
+import org.scijava.log.LogMessage;
 import org.scijava.ui.UIService;
 import org.scijava.command.CommandService;
 import org.scijava.command.CommandModule;
@@ -387,6 +392,7 @@ public class plugin_GTviaMarkersNG implements Command
 
 	/** populates Ts in the \e pattern with \e idx, and returns result in a new string,
 	    it supports TTT or TTTT */
+	static
 	String expandFilenamePattern(final String pattern, final int idx)
 	{
 		//detect position
@@ -727,6 +733,8 @@ public class plugin_GTviaMarkersNG implements Command
 		{ /* intenionally empty */ }
 	}
 
+
+	// ==========================================================================================
 	public static void main(String[] args)
 	{
 		if (args.length != 4)
@@ -735,22 +743,168 @@ public class plugin_GTviaMarkersNG implements Command
 			return;
 		}
 
-		final plugin_GTviaMarkersNG worker = new plugin_GTviaMarkersNG();
+		//read the whole input file
+		List<String> job = null;
+		try {
+			job = Files.readAllLines(Paths.get(args[0]));
+		}
+		catch (IOException e) {
+			System.err.println("plugin_GTviaMarkers error: "+e);
+		}
 
-		final Context ctx = new Context(UIService.class, StatusService.class, LogService.class);
-		worker.uiService = ctx.getService(UIService.class);
-		worker.log = ctx.getService(LogService.class);
-		worker.statusService = ctx.getService(StatusService.class);
-		worker.commandService = null;
+		//prepare the output array
+		String[] argsPattern = new String[2*job.size()+1]; //= 2*(job.size()-1) +1 +2
 
-		worker.mergeModel = "BICv2 with FlatVoting, SingleMaskFailSafe and CollisionResolver";
-		//worker.mergeModel = "BICv2 with WeightedVoting, SingleMaskFailSafe and CollisionResolver";
-		worker.filePath = new File(args[0]);
-		worker.mergeThreshold = Float.parseFloat(args[1]);
-		worker.outputPath = new File(args[2]);
-		worker.fileIdxStr = args[3];
+		//parse the input job specification file (which we know is sane for sure)
+		int lineNo=0;
+		for (String line : job)
+		{
+			//this currently represents the first column/complete line
+			String partOne = line;
 
-		worker.run();
-		System.out.println("quiting...");
+			//should there be the weight column on this line?
+			//are we still on lines where weight column should be handled?
+			if (lineNo < (job.size()-1))
+			{
+					//always expect weights and read them
+					String[] lineTokens = line.split("\\s+");
+
+					//get the first part into the partOne variable
+					partOne = new String(); //NB: could be nice to be able to tell the String how much to reserve as we know it
+					for (int q=0; q < lineTokens.length-1; ++q)
+						partOne += lineTokens[q];
+
+					//the weight itself
+					argsPattern[2*lineNo +1] = lineTokens[lineTokens.length-1];
+			}
+
+			//add the input file item as well
+			argsPattern[2*lineNo +0] = partOne;
+
+			++lineNo;
+		}
+
+		argsPattern[2*lineNo -1] = args[1];
+		argsPattern[2*lineNo +0] = args[2];
+		//generic job specification is done
+
+		//create an array to hold an "expanded"/instantiated job
+		String[] aargs = new String[argsPattern.length];
+
+		//save the threshold value which is constant all the time
+		aargs[aargs.length-2] = argsPattern[aargs.length-2];
+		//
+		//also weights are constant all the time
+		for (int i=1; i < aargs.length-3; i+=2) aargs[i] = argsPattern[i];
+
+		final MyLog myLog = new MyLog();
+		final BICenhanced bic = new BICenhanced(myLog);
+		bic.setEnforceFlatWeightsVoting(true);
+		final WeightedVotingFusionFeeder feeder = new WeightedVotingFusionFeeder(myLog).setAlgorithm(bic);
+
+		try {
+			//parse out the list of timepoints
+			TreeSet<Integer> fileIdxList = new TreeSet<>();
+			NumberSequenceHandler.parseSequenceOfNumbers(args[3],fileIdxList);
+
+			long ttime = System.currentTimeMillis();
+
+			//iterate over all jobs
+			int progresCnt = 0;
+			for (Integer idx : fileIdxList)
+			{
+				//first populate/expand to get a particular instance of a job
+				for (int i=0; i < aargs.length-2; i+=2)
+					aargs[i] = expandFilenamePattern(argsPattern[i],idx);
+				aargs[aargs.length-1] = expandFilenamePattern(argsPattern[aargs.length-1],idx);
+
+				myLog.info("new job:");
+				int i=0;
+				for (; i < aargs.length-3; i+=2)
+					myLog.info(i+": "+aargs[i]+"  "+aargs[i+1]);
+				for (; i < aargs.length; ++i)
+					myLog.info(i+": "+aargs[i]);
+
+
+				long time = System.currentTimeMillis();
+				feeder.processJob(aargs);
+				time -= System.currentTimeMillis();
+				System.out.println("ELAPSED TIME: "+(-time/1000)+" seconds");
+			}
+
+			ttime -= System.currentTimeMillis();
+			System.out.println("TOTAL ELAPSED TIME: "+(-ttime/1000)+" seconds");
+		}
+		catch (UnsupportedOperationException | ImgIOException | ParseException e) {
+			System.err.println("plugin_GTviaMarkers error: "+e);
+		}
+	}
+
+
+	private static
+	class MyLog implements LogService
+	{
+		@Override
+		public void setLevel(int level) { }
+
+		@Override
+		public void setLevel(String classOrPackageName, int level) { }
+
+		@Override
+		public void setLevelForLogger(String source, int level) { }
+
+		@Override
+		public void alwaysLog(int level, Object msg, Throwable t) { }
+
+		@Override
+		public LogSource getSource() { return null; }
+
+		@Override
+		public int getLevel() { return 0; }
+
+		@Override
+		public Logger subLogger(String name, int level) { return null; }
+
+		@Override
+		public void addLogListener(LogListener listener) { }
+
+		@Override
+		public void removeLogListener(LogListener listener) { }
+
+		@Override
+		public void notifyListeners(LogMessage message) { }
+
+		@Override
+		public Context context() { return null; }
+
+		@Override
+		public Context getContext() { return null; }
+
+		@Override
+		public double getPriority() { return 0; }
+
+		@Override
+		public void setPriority(double priority) { }
+
+		@Override
+		public PluginInfo<?> getInfo() { return null; }
+
+		@Override
+		public void setInfo(PluginInfo<?> info) { }
+
+		@Override
+		public void debug(Object msg) { System.out.println(msg); }
+
+		@Override
+		public void error(Object msg) { System.out.println("[ERROR] "+msg); }
+
+		@Override
+		public void info(Object msg) { System.out.println("[INFO] "+msg); }
+
+		@Override
+		public void trace(Object msg) { System.out.println(msg); }
+
+		@Override
+		public void warn(Object msg) { System.out.println("[WARN] "+msg); }
 	}
 }
