@@ -87,7 +87,15 @@ public class FailSafeInsertor
 	                                    final Img<ET> outImg)
 	{
 		int bestWeightIdx = getBestWeightIndex(inImgs, inWeights);
-		if (bestWeightIdx == -1) return;
+		if (bestWeightIdx == -1)
+		{
+			System.out.print("failed: ");
+			return;
+		}
+		else
+		{
+			System.out.print("from "+bestWeightIdx+": ");
+		}
 
 		clearAndInsertGivenMarker(inImgs.get(bestWeightIdx),inLabels.get(bestWeightIdx), le, inWeights.get(bestWeightIdx),outImg);
 	}
