@@ -168,7 +168,7 @@ implements LabelInsertor<LT,ET>
 		final RandomAccess<LT> oRA = outImg.randomAccess();
 		final int[] posMax = new int[3]; //note, it comes zeroed
 		for (int d = 0; d < outImg.numDimensions() && d < posMax.length; ++d)
-			posMax[d] = (int)outImg.dimension(d);
+			posMax[d] = (int)outImg.dimension(d) -1; //to make it a max legal coord
 		//
 		//do as long as all collision pixels are resolved,
 		//resolved means that its label is determined
