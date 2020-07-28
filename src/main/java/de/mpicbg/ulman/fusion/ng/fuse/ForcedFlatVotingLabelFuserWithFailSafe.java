@@ -60,6 +60,10 @@ implements LabelFuser<IT,ET>
 	                        final Img<ET> outImg)
 	{
 		//prepare aux flat weights
+		if (flatWeightsCache.size() != inWeights.size())
+			System.out.println("FLAT weights: adjusting flat weights arrays (from "
+					+flatWeightsCache.size()+" to "+inWeights.size()+")");
+		//
 		while (flatWeightsCache.size() < inWeights.size()) flatWeightsCache.add(1.0);
 		while (flatWeightsCache.size() > inWeights.size()) flatWeightsCache.removeElementAt(flatWeightsCache.size()-1);
 
