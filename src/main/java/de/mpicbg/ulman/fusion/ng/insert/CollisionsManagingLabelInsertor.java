@@ -177,43 +177,7 @@ implements LabelInsertor<LT,ET>
 			//debug:
 			//System.out.println(cnt+": Eroding collision zone of size "+pxInINTERSECTION.size());
 
-			//erosion in two loops:
-			//  first, determine pixels and store them aside so they don't influence the rest of the loop
-			//  second, move the determined pixels into the output image
-			Iterator<PxCoord> pxIt = pxInINTERSECTION.iterator();
-			while (pxIt.hasNext())
-			{
-			    PxCoord px = pxIt.next();
-				//look around pxPos to find first pixel from markersInINTERSECTION, if at all
-			    for (int[] posDelta : posDeltas)
-				{
-					pos[0] = Math.min( Math.max(px.x + posDelta[0],0) , posMax[0] );
-					pos[1] = Math.min( Math.max(px.y + posDelta[1],0) , posMax[1] );
-					pos[2] = Math.min( Math.max(px.z + posDelta[2],0) , posMax[2] );
-					oRA.setPosition(pos);
-					final int surroundingLabel = oRA.get().getInteger();
-					if ( markersInINTERSECTION.contains(surroundingLabel) )
-					{
-						px.color = surroundingLabel;
-						break;
-					}
-				}
-			}
-			pxIt = pxInINTERSECTION.iterator();
-			while (pxIt.hasNext())
-			{
-				PxCoord px = pxIt.next();
-				//is the pixel determined already?
-				if (px.color > -1)
-				{
-				    pos[0] = px.x;
-					pos[1] = px.y;
-					pos[2] = px.z;
-					oRA.setPosition(pos);
-					oRA.get().setReal( px.color );
-					pxIt.remove();
-				}
-			}
+			erodeCollisionRegion(oRA, pos, posMax);
 
 			//debug img:
 			//SimplifiedIO.saveImage(outImg, String.format("/temp/X_round%d.tif",++cnt) );
@@ -230,6 +194,48 @@ implements LabelInsertor<LT,ET>
 		}
 
 		return collHistogram;
+	}
+
+	private
+	void erodeCollisionRegion(RandomAccess<LT> oRA, int[] pos, int[] posMax)
+	{
+		//erosion in two loops:
+		//  first, determine pixels and store them aside so they don't influence the rest of the loop
+		//  second, move the determined pixels into the output image
+		Iterator<PxCoord> pxIt = pxInINTERSECTION.iterator();
+		while (pxIt.hasNext())
+		{
+			PxCoord px = pxIt.next();
+			//look around pxPos to find first pixel from markersInINTERSECTION, if at all
+			for (int[] posDelta : posDeltas)
+			{
+				pos[0] = Math.min( Math.max(px.x + posDelta[0],0) , posMax[0] );
+				pos[1] = Math.min( Math.max(px.y + posDelta[1],0) , posMax[1] );
+				pos[2] = Math.min( Math.max(px.z + posDelta[2],0) , posMax[2] );
+				oRA.setPosition(pos);
+				final int surroundingLabel = oRA.get().getInteger();
+				if ( markersInINTERSECTION.contains(surroundingLabel) )
+				{
+					px.color = surroundingLabel;
+					break;
+				}
+			}
+		}
+		pxIt = pxInINTERSECTION.iterator();
+		while (pxIt.hasNext())
+		{
+			PxCoord px = pxIt.next();
+			//is the pixel determined already?
+			if (px.color > -1)
+			{
+				pos[0] = px.x;
+				pos[1] = px.y;
+				pos[2] = px.z;
+				oRA.setPosition(pos);
+				oRA.get().setReal( px.color );
+				pxIt.remove();
+			}
+		}
 	}
 
 	final static int[][] posDeltas = new int[][] {
