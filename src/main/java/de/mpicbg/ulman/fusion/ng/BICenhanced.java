@@ -92,6 +92,7 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT>
 		f.minAcceptableWeight = this.threshold;
 
 		final CollisionsManagingLabelInsertor<LT, DoubleType> i = new CollisionsManagingLabelInsertor<>();
+		this.removeMarkersCollisionThreshold = 0.2f;
 
 		final KeepLargestCCALabelPostprocessor<LT> p = new KeepLargestCCALabelPostprocessor<>();
 
