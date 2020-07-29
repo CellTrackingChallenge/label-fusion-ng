@@ -171,12 +171,16 @@ implements LabelInsertor<LT,ET>
 			posMax[d] = (int)outImg.dimension(d) -1; //to make it a max legal coord
 		//
 		//do as long as all collision pixels are resolved,
-		//resolved means that its label is determined
-		while (pxInINTERSECTION.size() > 0)
+		//resolved means that its label is determined, or
+		//we cannot determine it under the current circumstances
+		int lastSize = pxInINTERSECTION.size() +1;
+		int safetyCounter = 100;
+		while (pxInINTERSECTION.size() > 0 && pxInINTERSECTION.size() != lastSize && --safetyCounter > 0)
 		{
 			//debug:
 			//System.out.println(cnt+": Eroding collision zone of size "+pxInINTERSECTION.size());
 
+			lastSize = pxInINTERSECTION.size();
 			erodeCollisionRegion(oRA, pos, posMax);
 
 			//debug img:
@@ -192,6 +196,18 @@ implements LabelInsertor<LT,ET>
 			oRA.setPosition(pos);
 			oRA.get().setReal( px.color );
 		}
+
+		//sometimes, when mColliding-label's TRA marker was outside the pxInINTERSECTION,
+		//the "erosion" of INTERSECTION region stalled and we have to restart it now --
+		//now after the pxTemporarilyHidden pixels are back
+		safetyCounter = 100;
+		while (pxInINTERSECTION.size() > 0 && --safetyCounter > 0)
+		{
+			erodeCollisionRegion(oRA, pos, posMax);
+		}
+
+		if (pxInINTERSECTION.size() > 0)
+			System.out.println("WARNING: Collisions resolving failed on "+pxInINTERSECTION.size()+" voxels");
 
 		return collHistogram;
 	}
