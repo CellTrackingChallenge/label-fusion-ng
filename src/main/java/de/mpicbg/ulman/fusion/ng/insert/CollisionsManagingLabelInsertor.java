@@ -57,7 +57,6 @@ implements LabelInsertor<LT,ET>
 		}
 
 		int x, y, z;
-		int color = -1;
 
 		/** assuming pixels are organized row-major in big memory (1D) buffer,
 		    this compares how far are two pixels away from the [0,0,0] in the buffer */
@@ -73,12 +72,43 @@ implements LabelInsertor<LT,ET>
 			}
 			return delta;
 		}
+
+		/** marker color finally decided to be used for this pixel */
+		int color = -1;
+
+		/** list of markers/labels that wanted to be on this pixel */
+		Set<Integer> claimingLabels = new HashSet<>(5);
+	}
+
+	@Override
+	void registerPxInCollision(final int[] pos, final int claimer)
+	{
+		//find coinciding pixel
+		PxCoord p;
+
+		final Iterator<PxCoord> it = pxInINTERSECTION.iterator();
+		while (it.hasNext())
+		{
+			p = it.next();
+			if (p.x == pos[0] && p.y == pos[1] && p.z == pos[2])
+			{
+				//found coinciding pixel, add another claimer
+				p.claimingLabels.add( claimer );
+				return;
+			}
+		}
+
+		//not found, add a brand new pixel with its claimer
+		p = new PxCoord(pos);
+		p.claimingLabels.add( claimer );
+		pxInINTERSECTION.add( p );
 	}
 
 	List<PxCoord> pxInINTERSECTION;
 	Set<Integer> markersInINTERSECTION;
 	List<PxCoord> pxTemporarilyHidden;
 
+	@Override
 	public
 	void initialize(final Img<LT> templateImg)
 	{
@@ -90,6 +120,7 @@ implements LabelInsertor<LT,ET>
 	}
 
 	/** returns the collision size histogram */
+	@Override
 	public
 	int[] finalize(final Img<LT> outImg, final Img<LT> markerImg,
 	               final float removeMarkersCollisionThreshold,
@@ -121,11 +152,9 @@ implements LabelInsertor<LT,ET>
 		}
 
 		//job #1: remove border-touching cells
-		//job #2: collect pxInINTERSECTION
 		//job #3: insert TRA markers for those in mColliding
 		//job #4: move pixels from mColliding to pxTemporarilyHidden
 		//sweep the output image and do the jobs
-		final int[] pos = new int[3];
 		final Cursor<LT> oC = outImg.localizingCursor();
 		final Cursor<LT> mC = markerImg.cursor();
 		//NB: we have to be sweeping explicitly (w/o LoopBuilder) because we need to know
@@ -142,8 +171,6 @@ implements LabelInsertor<LT,ET>
 			}
 			else if (label == INTERSECTION)
 			{
-			    oC.localize(pos);
-				pxInINTERSECTION.add( new PxCoord(pos) ); //job #2
 				final int mLabel = m.getInteger();
 				if (mLabel > 0 && mColliding.contains(mLabel)) o.setReal(mLabel); //job #3
 			}
@@ -181,7 +208,7 @@ implements LabelInsertor<LT,ET>
 			//System.out.println(cnt+": Eroding collision zone of size "+pxInINTERSECTION.size());
 
 			lastSize = pxInINTERSECTION.size();
-			erodeCollisionRegion(oRA, pos, posMax);
+			erodeCollisionRegion(oRA, posMax);
 
 			//debug img:
 			//SimplifiedIO.saveImage(outImg, String.format("/temp/X_round%d.tif",++cnt) );
@@ -203,7 +230,7 @@ implements LabelInsertor<LT,ET>
 		safetyCounter = 100;
 		while (pxInINTERSECTION.size() > 0 && --safetyCounter > 0)
 		{
-			erodeCollisionRegion(oRA, pos, posMax);
+			erodeCollisionRegion(oRA, posMax);
 		}
 
 		if (pxInINTERSECTION.size() > 0)
@@ -213,7 +240,7 @@ implements LabelInsertor<LT,ET>
 	}
 
 	private
-	void erodeCollisionRegion(RandomAccess<LT> oRA, int[] pos, int[] posMax)
+	void erodeCollisionRegion(RandomAccess<LT> oRA, int[] posMax)
 	{
 		//erosion in two loops:
 		//  first, determine pixels and store them aside so they don't influence the rest of the loop
@@ -230,7 +257,7 @@ implements LabelInsertor<LT,ET>
 				pos[2] = Math.min( Math.max(px.z + posDelta[2],0) , posMax[2] );
 				oRA.setPosition(pos);
 				final int surroundingLabel = oRA.get().getInteger();
-				if ( markersInINTERSECTION.contains(surroundingLabel) )
+				if ( px.claimingLabels.contains(surroundingLabel) )
 				{
 					px.color = surroundingLabel;
 					break;
