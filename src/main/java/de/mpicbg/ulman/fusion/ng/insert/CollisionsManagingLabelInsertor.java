@@ -152,7 +152,6 @@ implements LabelInsertor<LT,ET>
 		}
 
 		//job #1: remove border-touching cells
-		//job #2: collect pxInINTERSECTION
 		//job #3: insert TRA markers for those in mColliding
 		//job #4: move pixels from mColliding to pxTemporarilyHidden
 		//sweep the output image and do the jobs
@@ -172,8 +171,6 @@ implements LabelInsertor<LT,ET>
 			}
 			else if (label == INTERSECTION)
 			{
-			    oC.localize(pos);
-				pxInINTERSECTION.add( new PxCoord(pos) ); //job #2
 				final int mLabel = m.getInteger();
 				if (mLabel > 0 && mColliding.contains(mLabel)) o.setReal(mLabel); //job #3
 			}
@@ -260,7 +257,7 @@ implements LabelInsertor<LT,ET>
 				pos[2] = Math.min( Math.max(px.z + posDelta[2],0) , posMax[2] );
 				oRA.setPosition(pos);
 				final int surroundingLabel = oRA.get().getInteger();
-				if ( markersInINTERSECTION.contains(surroundingLabel) )
+				if ( px.claimingLabels.contains(surroundingLabel) )
 				{
 					px.color = surroundingLabel;
 					break;
