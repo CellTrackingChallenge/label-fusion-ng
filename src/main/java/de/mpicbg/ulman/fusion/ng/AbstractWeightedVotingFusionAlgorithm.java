@@ -160,6 +160,11 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 
 	public String dbgImgFileName;
 
+	//------------------ the BICv1 finalizer ------------------
+	public Img<LT> altOutImg;
+	CollisionsAwareLabelInsertor<LT,DoubleType> altLabelInsertor = new CollisionsAwareLabelInsertor<>();
+	//------------------ the BICv1 finalizer ------------------
+
 	@Override
 	public
 	Img<LT> fuse(final Vector<RandomAccessibleInterval<IT>> inImgs,
@@ -203,6 +208,7 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 		//init insertion (includes to create (re-usable) insertion status object)
 		final LabelInsertor.InsertionStatus insStatus = new LabelInsertor.InsertionStatus();
 		labelInsertor.initialize(outImg);
+		altLabelInsertor.initialize(outImg);
 
 		//also prepare the positions holding aux array, and bbox corners
 		final long[] minBound = new long[markerImg.numDimensions()];
@@ -327,6 +333,17 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 			SimplifiedIO.saveImage(outImg, dbgImgFileName);
 		}
 
+		//------------------ the BICv1 finalizer ------------------
+		//duplicate outImg and finalize the "old way" -- the BICv1 way
+		altOutImg = outImg.copy();
+		altLabelInsertor.mCollidingVolume   = labelInsertor.mCollidingVolume;    //these are used read-only
+		altLabelInsertor.mNoCollidingVolume = labelInsertor.mNoCollidingVolume;
+		altLabelInsertor.mNoMatches = new HashSet<>( labelInsertor.mNoMatches ); //these are used "mutably"
+		altLabelInsertor.mBordering = new HashSet<>( labelInsertor.mBordering );
+		altLabelInsertor.mColliding = new HashSet<>( labelInsertor.mColliding );
+		altLabelInsertor.finalize(altOutImg,markerImg,0.1f,removeMarkersAtBoundary);
+		//------------------ the BICv1 finalizer ------------------
+
 		final int allMarkers = mDiscovered.size();
 		final int[] collHistogram
 			= labelInsertor.finalize(outImg,markerImg,removeMarkersCollisionThreshold,removeMarkersAtBoundary);
@@ -339,8 +356,9 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 		}
 
 		// --------- CCA analyses ---------
+		log.info("CCA for v2:");
 		mDiscovered.clear();
-		final Cursor<LT> outFICursor = outImg.cursor();
+		Cursor<LT> outFICursor = outImg.cursor();
 		while (outFICursor.hasNext())
 		{
 			final int curMarker = outFICursor.next().getInteger();
@@ -354,6 +372,25 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 				mDiscovered.add(curMarker);
 			}
 		}
+
+		//------------------ the BICv1 finalizer ------------------
+		log.info("CCA for v1:");
+		mDiscovered.clear();
+		outFICursor = altOutImg.cursor();
+		while (outFICursor.hasNext())
+		{
+			final int curMarker = outFICursor.next().getInteger();
+
+			//scan for not yet observed markers (and ignore background values...)
+			if ( curMarker > 0 && (!mDiscovered.contains(curMarker)) )
+			{
+				labelCleaner.processLabel(altOutImg, curMarker);
+
+				//and mark we have processed this marker
+				mDiscovered.add(curMarker);
+			}
+		}
+		//------------------ the BICv1 finalizer ------------------
 		// --------- CCA analyses ---------
 
 		//report details of colliding markers:

@@ -27,6 +27,7 @@
  */
 package de.mpicbg.ulman.fusion.ng.backbones;
 
+import de.mpicbg.ulman.fusion.ng.AbstractWeightedVotingFusionAlgorithm;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
@@ -88,7 +89,21 @@ extends JobIO<IT,LT>
 		algorithm.setThreshold(threshold);
 		final Img<LT> outImg = algorithm.fuse(inImgs, markerImg);
 
-		log.info("Saving file: "+args[args.length-1]);
-		SimplifiedIO.saveImage(outImg, args[args.length-1]);
+		String fn = insertFolderIntoFilename("v1",args[args.length-1]);
+		log.info("Saving alt file: "+fn);
+		SimplifiedIO.saveImage(((AbstractWeightedVotingFusionAlgorithm)algorithm).altOutImg, fn);
+
+		fn = insertFolderIntoFilename("v2",args[args.length-1]);
+		log.info("Saving main file: "+fn);
+		SimplifiedIO.saveImage(outImg, fn);
+	}
+
+	private
+	String insertFolderIntoFilename(final String insertedFolder, final String filename)
+	{
+		int lastSlashPos = filename.lastIndexOf('/');
+		if (lastSlashPos == -1) return filename;
+
+		return filename.substring(0,lastSlashPos)+"/"+insertedFolder+filename.substring(lastSlashPos);
 	}
 }
