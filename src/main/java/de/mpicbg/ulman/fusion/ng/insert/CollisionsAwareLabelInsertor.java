@@ -61,6 +61,10 @@ implements LabelInsertor<LT,ET>
 	/** special label for the voxels in the "collision area" of more labels */
 	protected int INTERSECTION;
 
+	/** aux temporary storage of position, created to prevent from
+	    iteratively allocating it anywhere in this and derived classes */
+	protected final int[] pos = new int[3];
+
 
 	public
 	void initialize(final Img<LT> templateImg)
@@ -189,9 +193,13 @@ implements LabelInsertor<LT,ET>
 					status.collidingVolume++;
 					status.inCollision = true;
 
+					outFICursor.localize(pos);
+					registerPxInCollision(pos, outMarker);
+
 					if (otherMarker != INTERSECTION)
 					{
 						status.localColliders.add(otherMarker);
+						registerPxInCollision(pos, otherMarker);
 
 						//update also stats of the other guy
 						//because he was not intersecting here previously
@@ -210,4 +218,16 @@ implements LabelInsertor<LT,ET>
 		mCollidingVolume.put(  outMarker,status.collidingVolume);
 		mNoCollidingVolume.put(outMarker,status.notCollidingVolume);
 	}
+
+	/**
+	 * A callback method called from {@link #insertLabel(Img, Img, int, InsertionStatus)} every time
+	 * it creates a pixel (at position 'pos') in collision. Derived classes are expected to override
+	 * this method and use it to store additional information regarding the collision. This class only
+	 * marks the pixels in the output image with the value of {@link #INTERSECTION}.
+	 *
+	 * @param pos      coordinate of the pixel found to be in collision
+	 * @param claimer  label that wanted to place itself at this pixel
+	 */
+	void registerPxInCollision(final int[] pos, final int claimer)
+	{ /* intentionally empty */ }
 }
