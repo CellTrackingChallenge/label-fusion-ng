@@ -125,7 +125,6 @@ implements LabelInsertor<LT,ET>
 		//job #3: insert TRA markers for those in mColliding
 		//job #4: move pixels from mColliding to pxTemporarilyHidden
 		//sweep the output image and do the jobs
-		final int[] pos = new int[3];
 		final Cursor<LT> oC = outImg.localizingCursor();
 		final Cursor<LT> mC = markerImg.cursor();
 		//NB: we have to be sweeping explicitly (w/o LoopBuilder) because we need to know
@@ -181,7 +180,7 @@ implements LabelInsertor<LT,ET>
 			//System.out.println(cnt+": Eroding collision zone of size "+pxInINTERSECTION.size());
 
 			lastSize = pxInINTERSECTION.size();
-			erodeCollisionRegion(oRA, pos, posMax);
+			erodeCollisionRegion(oRA, posMax);
 
 			//debug img:
 			//SimplifiedIO.saveImage(outImg, String.format("/temp/X_round%d.tif",++cnt) );
@@ -203,7 +202,7 @@ implements LabelInsertor<LT,ET>
 		safetyCounter = 100;
 		while (pxInINTERSECTION.size() > 0 && --safetyCounter > 0)
 		{
-			erodeCollisionRegion(oRA, pos, posMax);
+			erodeCollisionRegion(oRA, posMax);
 		}
 
 		if (pxInINTERSECTION.size() > 0)
@@ -213,7 +212,7 @@ implements LabelInsertor<LT,ET>
 	}
 
 	private
-	void erodeCollisionRegion(RandomAccess<LT> oRA, int[] pos, int[] posMax)
+	void erodeCollisionRegion(RandomAccess<LT> oRA, int[] posMax)
 	{
 		//erosion in two loops:
 		//  first, determine pixels and store them aside so they don't influence the rest of the loop
