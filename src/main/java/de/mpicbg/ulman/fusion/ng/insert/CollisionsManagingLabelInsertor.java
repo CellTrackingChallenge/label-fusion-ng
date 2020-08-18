@@ -57,7 +57,6 @@ implements LabelInsertor<LT,ET>
 		}
 
 		int x, y, z;
-		int color = -1;
 
 		/** assuming pixels are organized row-major in big memory (1D) buffer,
 		    this compares how far are two pixels away from the [0,0,0] in the buffer */
@@ -73,12 +72,43 @@ implements LabelInsertor<LT,ET>
 			}
 			return delta;
 		}
+
+		/** marker color finally decided to be used for this pixel */
+		int color = -1;
+
+		/** list of markers/labels that wanted to be on this pixel */
+		Set<Integer> claimingLabels = new HashSet<>(5);
+	}
+
+	@Override
+	void registerPxInCollision(final int[] pos, final int claimer)
+	{
+		//find coinciding pixel
+		PxCoord p;
+
+		final Iterator<PxCoord> it = pxInINTERSECTION.iterator();
+		while (it.hasNext())
+		{
+			p = it.next();
+			if (p.x == pos[0] && p.y == pos[1] && p.z == pos[2])
+			{
+				//found coinciding pixel, add another claimer
+				p.claimingLabels.add( claimer );
+				return;
+			}
+		}
+
+		//not found, add a brand new pixel with its claimer
+		p = new PxCoord(pos);
+		p.claimingLabels.add( claimer );
+		pxInINTERSECTION.add( p );
 	}
 
 	List<PxCoord> pxInINTERSECTION;
 	Set<Integer> markersInINTERSECTION;
 	List<PxCoord> pxTemporarilyHidden;
 
+	@Override
 	public
 	void initialize(final Img<LT> templateImg)
 	{
@@ -90,6 +120,7 @@ implements LabelInsertor<LT,ET>
 	}
 
 	/** returns the collision size histogram */
+	@Override
 	public
 	int[] finalize(final Img<LT> outImg, final Img<LT> markerImg,
 	               final float removeMarkersCollisionThreshold,
