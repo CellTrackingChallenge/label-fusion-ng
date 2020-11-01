@@ -27,8 +27,10 @@
  */
 package de.mpicbg.ulman.fusion.ng.insert;
 
+import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
+import net.imglib2.type.numeric.integer.UnsignedIntType;
 import net.imglib2.Cursor;
 import net.imglib2.RandomAccess;
 import net.imglib2.img.Img;
@@ -86,27 +88,33 @@ implements LabelInsertor<LT,ET>
 		//find coinciding pixel
 		PxCoord p;
 
-		final Iterator<PxCoord> it = pxInINTERSECTION.iterator();
-		while (it.hasNext())
+		//check the map first
+		pxInINTERSECTION_map_RA.setPosition(pos);
+		int pxCoordIdx = pxInINTERSECTION_map_RA.get().getInt();
+
+		if (pxCoordIdx > 0)
 		{
-			p = it.next();
-			if (p.x == pos[0] && p.y == pos[1] && p.z == pos[2])
-			{
-				//found coinciding pixel, add another claimer
-				p.claimingLabels.add( claimer );
-				return;
-			}
+			//found coinciding pixel, add another claimer
+			p = pxInINTERSECTION.get( pxCoordIdx-1 );
+			p.claimingLabels.add( claimer );
+			//TODO remove debug test
+			if (p.x != pos[0] || p.y != pos[1] || p.z != pos[2])
+				System.out.println("WARNING: pxInINTERSECTION map refers to wrong PxCoord!");
+			return;
 		}
 
 		//not found, add a brand new pixel with its claimer
 		p = new PxCoord(pos);
 		p.claimingLabels.add( claimer );
 		pxInINTERSECTION.add( p );
+		pxInINTERSECTION_map_RA.get().setInt( pxInINTERSECTION.size() );
 	}
 
 	List<PxCoord> pxInINTERSECTION;
-	Set<Integer> markersInINTERSECTION;
 	List<PxCoord> pxTemporarilyHidden;
+
+	protected Img<UnsignedIntType> pxInINTERSECTION_map;
+	protected RandomAccess<UnsignedIntType> pxInINTERSECTION_map_RA;
 
 	@Override
 	public
@@ -114,9 +122,13 @@ implements LabelInsertor<LT,ET>
 	{
 		super.initialize(templateImg);
 
-		pxInINTERSECTION = new LinkedList<>();
-		markersInINTERSECTION = new HashSet<>();
+		pxInINTERSECTION = new Vector<>(500000);
 		pxTemporarilyHidden = new LinkedList<>();
+
+		pxInINTERSECTION_map
+			= templateImg.factory().imgFactory(new UnsignedIntType()).create(templateImg);
+		LoopBuilder.setImages(pxInINTERSECTION_map).forEachPixel(UnsignedIntType::setZero);
+		pxInINTERSECTION_map_RA = pxInINTERSECTION_map.randomAccess();
 	}
 
 	/** returns the collision size histogram */
@@ -145,10 +157,6 @@ implements LabelInsertor<LT,ET>
 			//update the histogram
 			if (!mNoMatches.contains(marker))
 				collHistogram[(int)(collRatio*10.f)]++;
-
-			//note down all markers that has to do something with any collision,
-			//we would dilate them only later in the colliding areas
-			if (collRatio > 0) markersInINTERSECTION.add(marker);
 		}
 
 		//job #1: remove border-touching cells
@@ -162,7 +170,7 @@ implements LabelInsertor<LT,ET>
 		//NB: assumes that markerImg was created from outImg and both have, thus, the same iteration order
 		while (oC.hasNext())
 		{
-		    final LT o = oC.next();
+			final LT o = oC.next();
 			final LT m = mC.next();
 			final int label = o.getInteger();
 			if (removeMarkersAtBoundary && mBordering.contains(label))
@@ -191,7 +199,9 @@ implements LabelInsertor<LT,ET>
 		//int cnt = 0;
 
 		//fill in the intersection region by iterative eroding it,
-		//eroding it with (neighboring) pixels from the 'markersInINTERSECTION'
+		//eroding it only with its claimers that are neighboring to it
+		//
+		//preparations:
 		final RandomAccess<LT> oRA = outImg.randomAccess();
 		final int[] posMax = new int[3]; //note, it comes zeroed
 		for (int d = 0; d < outImg.numDimensions() && d < posMax.length; ++d)
@@ -249,7 +259,7 @@ implements LabelInsertor<LT,ET>
 		while (pxIt.hasNext())
 		{
 			PxCoord px = pxIt.next();
-			//look around pxPos to find first pixel from markersInINTERSECTION, if at all
+			//look around pxPos to find first pixel from claimers, if at all
 			for (int[] posDelta : posDeltas)
 			{
 				pos[0] = Math.min( Math.max(px.x + posDelta[0],0) , posMax[0] );
