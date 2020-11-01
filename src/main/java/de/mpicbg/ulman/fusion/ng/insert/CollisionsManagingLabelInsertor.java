@@ -27,8 +27,10 @@
  */
 package de.mpicbg.ulman.fusion.ng.insert;
 
+import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
+import net.imglib2.type.numeric.integer.UnsignedIntType;
 import net.imglib2.Cursor;
 import net.imglib2.RandomAccess;
 import net.imglib2.img.Img;
@@ -86,27 +88,31 @@ implements LabelInsertor<LT,ET>
 		//find coinciding pixel
 		PxCoord p;
 
-		final Iterator<PxCoord> it = pxInINTERSECTION.iterator();
-		while (it.hasNext())
+		//check the map first
+		pxInINTERSECTION_map_RA.setPosition(pos);
+		int pxCoordIdx = pxInINTERSECTION_map_RA.get().getInt();
+
+		if (pxCoordIdx > 0)
 		{
-			p = it.next();
-			if (p.x == pos[0] && p.y == pos[1] && p.z == pos[2])
-			{
-				//found coinciding pixel, add another claimer
-				p.claimingLabels.add( claimer );
-				return;
-			}
+			//found coinciding pixel, add another claimer
+			p = pxInINTERSECTION.get( pxCoordIdx-1 );
+			p.claimingLabels.add( claimer );
+			return;
 		}
 
 		//not found, add a brand new pixel with its claimer
 		p = new PxCoord(pos);
 		p.claimingLabels.add( claimer );
 		pxInINTERSECTION.add( p );
+		pxInINTERSECTION_map_RA.get().setInt( pxInINTERSECTION.size() );
 	}
 
 	List<PxCoord> pxInINTERSECTION;
 	Set<Integer> markersInINTERSECTION;
 	List<PxCoord> pxTemporarilyHidden;
+
+	protected Img<UnsignedIntType> pxInINTERSECTION_map;
+	protected RandomAccess<UnsignedIntType> pxInINTERSECTION_map_RA;
 
 	@Override
 	public
@@ -114,9 +120,14 @@ implements LabelInsertor<LT,ET>
 	{
 		super.initialize(templateImg);
 
-		pxInINTERSECTION = new LinkedList<>();
+		pxInINTERSECTION = new Vector<>(500000);
 		markersInINTERSECTION = new HashSet<>();
 		pxTemporarilyHidden = new LinkedList<>();
+
+		pxInINTERSECTION_map
+			= templateImg.factory().imgFactory(new UnsignedIntType()).create(templateImg);
+		LoopBuilder.setImages(pxInINTERSECTION_map).forEachPixel(UnsignedIntType::setZero);
+		pxInINTERSECTION_map_RA = pxInINTERSECTION_map.randomAccess();
 	}
 
 	/** returns the collision size histogram */
