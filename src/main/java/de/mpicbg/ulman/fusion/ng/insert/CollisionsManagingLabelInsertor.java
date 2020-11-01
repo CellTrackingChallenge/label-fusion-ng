@@ -97,6 +97,9 @@ implements LabelInsertor<LT,ET>
 			//found coinciding pixel, add another claimer
 			p = pxInINTERSECTION.get( pxCoordIdx-1 );
 			p.claimingLabels.add( claimer );
+			//TODO remove debug test
+			if (p.x != pos[0] || p.y != pos[1] || p.z != pos[2])
+				System.out.println("WARNING: pxInINTERSECTION map refers to wrong PxCoord!");
 			return;
 		}
 
