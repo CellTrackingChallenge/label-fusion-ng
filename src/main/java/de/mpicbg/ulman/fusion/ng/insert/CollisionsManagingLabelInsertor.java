@@ -111,7 +111,6 @@ implements LabelInsertor<LT,ET>
 	}
 
 	List<PxCoord> pxInINTERSECTION;
-	Set<Integer> markersInINTERSECTION;
 	List<PxCoord> pxTemporarilyHidden;
 
 	protected Img<UnsignedIntType> pxInINTERSECTION_map;
@@ -124,7 +123,6 @@ implements LabelInsertor<LT,ET>
 		super.initialize(templateImg);
 
 		pxInINTERSECTION = new Vector<>(500000);
-		markersInINTERSECTION = new HashSet<>();
 		pxTemporarilyHidden = new LinkedList<>();
 
 		pxInINTERSECTION_map
@@ -159,10 +157,6 @@ implements LabelInsertor<LT,ET>
 			//update the histogram
 			if (!mNoMatches.contains(marker))
 				collHistogram[(int)(collRatio*10.f)]++;
-
-			//note down all markers that has to do something with any collision,
-			//we would dilate them only later in the colliding areas
-			if (collRatio > 0) markersInINTERSECTION.add(marker);
 		}
 
 		//job #1: remove border-touching cells
@@ -205,7 +199,9 @@ implements LabelInsertor<LT,ET>
 		//int cnt = 0;
 
 		//fill in the intersection region by iterative eroding it,
-		//eroding it with (neighboring) pixels from the 'markersInINTERSECTION'
+		//eroding it only with its claimers that are neighboring to it
+		//
+		//preparations:
 		final RandomAccess<LT> oRA = outImg.randomAccess();
 		final int[] posMax = new int[3]; //note, it comes zeroed
 		for (int d = 0; d < outImg.numDimensions() && d < posMax.length; ++d)
@@ -263,7 +259,7 @@ implements LabelInsertor<LT,ET>
 		while (pxIt.hasNext())
 		{
 			PxCoord px = pxIt.next();
-			//look around pxPos to find first pixel from markersInINTERSECTION, if at all
+			//look around pxPos to find first pixel from claimers, if at all
 			for (int[] posDelta : posDeltas)
 			{
 				pos[0] = Math.min( Math.max(px.x + posDelta[0],0) , posMax[0] );
