@@ -162,7 +162,7 @@ implements LabelInsertor<LT,ET>
 		//NB: assumes that markerImg was created from outImg and both have, thus, the same iteration order
 		while (oC.hasNext())
 		{
-		    final LT o = oC.next();
+			final LT o = oC.next();
 			final LT m = mC.next();
 			final int label = o.getInteger();
 			if (removeMarkersAtBoundary && mBordering.contains(label))
