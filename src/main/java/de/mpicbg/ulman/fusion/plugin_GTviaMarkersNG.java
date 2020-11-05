@@ -395,11 +395,13 @@ public class plugin_GTviaMarkersNG implements Command
 	static
 	String expandFilenamePattern(final String pattern, final int idx)
 	{
-		//detect position
-		int a = pattern.indexOf("TTT");
+		//detect position... optimistic version, though ;-)
 		int b = pattern.lastIndexOf("TTT");
-		//and span
-		b = b > a ? 4 : 3;
+		int a = b;
+		while (pattern.charAt(a) == 'T') --a;
+
+		++a;           //'a' is at the first position of the last 'T'-sequence
+		b = b+3 - a;   //span is in 'b'
 
 		String res = pattern.substring(0,a);
 		res += String.format(String.format("%c0%dd",'%',b),idx);
