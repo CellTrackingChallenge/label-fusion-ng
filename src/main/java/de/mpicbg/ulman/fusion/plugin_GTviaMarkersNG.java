@@ -741,7 +741,7 @@ public class plugin_GTviaMarkersNG implements Command
 	{
 		if (args.length != 4)
 		{
-			System.out.println("Usage: jobFile threshold outputFilesPattern timepoint");
+			System.out.println("Usage: jobFile noOfNoPruneIters outputFilesPattern timepoint");
 			return;
 		}
 
@@ -786,7 +786,7 @@ public class plugin_GTviaMarkersNG implements Command
 			++lineNo;
 		}
 
-		argsPattern[2*lineNo -1] = args[1];
+		argsPattern[2*lineNo -1] = "0"; //threshold is ignored
 		argsPattern[2*lineNo +0] = args[2];
 		//generic job specification is done
 
@@ -800,9 +800,11 @@ public class plugin_GTviaMarkersNG implements Command
 		for (int i=1; i < aargs.length-3; i+=2) aargs[i] = argsPattern[i];
 
 		final MyLog myLog = new MyLog();
-		final BICenhanced bic = new BICenhanced(myLog);
-		bic.setEnforceFlatWeightsVoting(true);
-		final WeightedVotingFusionFeeder feeder = new WeightedVotingFusionFeeder(myLog).setAlgorithm(bic);
+		final SIMPLE simpleVoter = new SIMPLE(myLog);
+		simpleVoter.getFuserReference().noOfNoPruneIters = Integer.parseInt(args[1]);
+		myLog.info( simpleVoter.getFuserReference().reportSettings() );
+
+		final WeightedVotingFusionFeeder feeder = new WeightedVotingFusionFeeder(myLog).setAlgorithm(simpleVoter);
 
 		try {
 			//parse out the list of timepoints
@@ -812,7 +814,6 @@ public class plugin_GTviaMarkersNG implements Command
 			long ttime = System.currentTimeMillis();
 
 			//iterate over all jobs
-			int progresCnt = 0;
 			for (Integer idx : fileIdxList)
 			{
 				//first populate/expand to get a particular instance of a job
