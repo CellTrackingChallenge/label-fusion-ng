@@ -41,7 +41,7 @@ implements LabelFuser<IT,ET>
 {
 	// explicit params of this particular fuser
 	public int maxIters = 4;
-	public int noOfNoUpdateIters = 2;
+	public int noOfNoPruneIters = 2;
 	public double initialQualityThreshold = 0.7;
 	public double stepDownInQualityThreshold = 0.1;
 	public double minimalQualityThreshold = 0.3;
@@ -49,8 +49,8 @@ implements LabelFuser<IT,ET>
 	public
 	String reportSettings()
 	{
-		return String.format("maxIters = %d, noOfNoUpdateIters = %d, initialQualityThreshold = %f, stepDownInQualityThreshold = %f, minimalQualityThreshold = %f",
-			maxIters,noOfNoUpdateIters, initialQualityThreshold, stepDownInQualityThreshold, minimalQualityThreshold);
+		return String.format("maxIters = %d, noOfNoPruneIters = %d, initialQualityThreshold = %f, stepDownInQualityThreshold = %f, minimalQualityThreshold = %f",
+			maxIters, noOfNoPruneIters, initialQualityThreshold, stepDownInQualityThreshold, minimalQualityThreshold);
 	}
 
 	/**
@@ -101,7 +101,7 @@ implements LabelFuser<IT,ET>
 				myWeights.set(i,newWeight);
 
 				//filter out low-weighted ones (only after the initial settle-down phase)
-				if (iterationCnt >= noOfNoUpdateIters && newWeight < currentQualityThreshold) inImgs.set(i,null);
+				if (iterationCnt >= noOfNoPruneIters && newWeight < currentQualityThreshold) inImgs.set(i,null);
 			}
 
 			//DEBUG
@@ -116,8 +116,8 @@ implements LabelFuser<IT,ET>
 
 			//update the quality threshold
 			++iterationCnt;
-			if (iterationCnt > noOfNoUpdateIters) currentQualityThreshold = Math.max(
-				currentQualityThreshold - stepDownInQualityThreshold*(iterationCnt-noOfNoUpdateIters),
+			if (iterationCnt > noOfNoPruneIters) currentQualityThreshold = Math.max(
+				currentQualityThreshold - stepDownInQualityThreshold*(iterationCnt- noOfNoPruneIters),
 				minimalQualityThreshold );
 		}
 	}

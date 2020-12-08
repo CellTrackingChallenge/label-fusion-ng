@@ -109,7 +109,7 @@ public class testMergingAPI
 		final SIMPLE<UnsignedByteType, UnsignedShortType> SIMPLEfuser = new SIMPLE<>(localLogger);
 		//_additional_ fusion params:
 		SIMPLEfuser.getFuserReference().maxIters=4;
-		SIMPLEfuser.getFuserReference().noOfNoUpdateIters=2;
+		SIMPLEfuser.getFuserReference().noOfNoPruneIters=2;
 		SIMPLEfuser.getFuserReference().initialQualityThreshold=0.7;
 		SIMPLEfuser.getFuserReference().stepDownInQualityThreshold=0.1;
 		SIMPLEfuser.getFuserReference().minimalQualityThreshold=0.3;
