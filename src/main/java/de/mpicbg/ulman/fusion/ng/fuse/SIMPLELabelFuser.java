@@ -35,6 +35,7 @@ import java.util.Vector;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 import net.celltrackingchallenge.measures.util.Jaccard;
 import net.imglib2.type.operators.SetZero;
+import sc.fiji.simplifiedio.SimplifiedIO;
 
 public class SIMPLELabelFuser<IT extends RealType<IT>, ET extends RealType<ET>>
 implements LabelFuser<IT,ET>
@@ -72,23 +73,38 @@ implements LabelFuser<IT,ET>
 		// inputs that get below the quality threshold will be "erased" by
 		//   setting their respective inImgs[i] to null
 
-		//DEBUG
-		System.out.print("it: 0 ");
+		//DEBUG (block starts for gnuplot)
+		System.out.println();
+		System.out.println();
+
+		//DEBUG -- report-only Oracle weights (something we normally don't have at hand)
+		System.out.print("it: -1 ");
 		reportCurrentWeights(inImgs,inWeights);
 
 		//prepare flat local weights
 		final Vector<Double> myWeights = new Vector<>(inWeights);
 		for (int i=0; i < myWeights.size(); ++i) myWeights.set(i, 1.0);
 
+		//report the flat weights, just to be on the safe side
+		System.out.print("it: 0.0 ");
+		reportCurrentWeights(inImgs,myWeights);
+
 		//make sure the majorityFuser is available
 		if (majorityFuser == null) majorityFuser = new WeightedVotingLabelFuser<>();
 
 		//initial candidate segment
-		majorityFuser.minAcceptableWeight = getMajorityThreshold(inImgs,myWeights);
+		majorityFuser.minAcceptableWeight = getMajorityThreshold(inImgs,myWeights); //majority?? or, 1/3??
 		majorityFuser.fuseMatchingLabels(inImgs,inLabels, le, myWeights,outImg);
 
+		//DEBUG: report...
+		System.out.println("#it: 0, voting thres: "+majorityFuser.minAcceptableWeight);
+
+		//DEBUG
+		if (inLabels.get(1) == 7290)
+			SimplifiedIO.saveImage(outImg, "/temp/CE_02/tmp/SIMPLEcase"+dbgImageCounter+"_1_initialSegment.tif");
+
 		double currentQualityThreshold = initialQualityThreshold;
-		int iterationCnt = 1;
+		int iterationCnt = 1; //how many times a candidate was created
 
 		while (iterationCnt < maxIters)
 		{
@@ -101,13 +117,25 @@ implements LabelFuser<IT,ET>
 				//adapt the weight
 				final double newWeight = Jaccard.Jaccard(inImgs.get(i),inLabels.get(i), outImg,1.0);
 				myWeights.set(i,newWeight);
-
-				//filter out low-weighted ones (only after the initial settle-down phase)
-				if (iterationCnt >= noOfNoPruneIters && newWeight < currentQualityThreshold) inImgs.set(i,null);
 			}
 
-			//DEBUG
-			System.out.print("it: "+iterationCnt+", thres: "+currentQualityThreshold+" ");
+			//DEBUG: report updated weights based on the current candidate
+			System.out.print("it: "+(iterationCnt-0.1)+" ");
+			reportCurrentWeights(inImgs,myWeights);
+			System.out.println("#it: "+iterationCnt+", prunning thres: "+currentQualityThreshold);
+
+			//prune poor inputs
+			for (int i=0; i < inImgs.size(); ++i)
+			{
+				//consider only available images
+				if (inImgs.get(i) == null) continue;
+
+				//filter out low-weighted ones (only after the initial settle-down phase)
+				if (iterationCnt >= noOfNoPruneIters && myWeights.get(i) < currentQualityThreshold) inImgs.set(i,null);
+			}
+
+			//DEBUG: report how the prunning ended up
+			System.out.print("it: "+(iterationCnt+0.0)+" ");
 			reportCurrentWeights(inImgs,myWeights);
 
 			//create a new candidate
@@ -116,13 +144,26 @@ implements LabelFuser<IT,ET>
 			majorityFuser.fuseMatchingLabels(inImgs,inLabels, le, myWeights,outImg);
 			//TODO stopping flag when new outImg is different from the previous one
 
+			//DEBUG
+			if (inLabels.get(1) == 7290)
+				SimplifiedIO.saveImage(outImg, "/temp/CE_02/tmp/SIMPLEcase"+dbgImageCounter+"_"+(iterationCnt+1)+"_candidateSegment.tif");
+			//DEBUG: report...
+			System.out.println("#it: "+iterationCnt+", voting thres: "+majorityFuser.minAcceptableWeight);
+
 			//update the quality threshold
 			++iterationCnt;
 			if (iterationCnt > noOfNoPruneIters) currentQualityThreshold = Math.max(
 				currentQualityThreshold - stepDownInQualityThreshold*(iterationCnt- noOfNoPruneIters),
 				minimalQualityThreshold );
 		}
+
+		//DEBUG (will appear just before "TRA marker: .....")
+		System.out.println("# (reported with counter "+(dbgImageCounter++)+")");
+		System.out.print("# ");
 	}
+
+	private
+	int dbgImageCounter = 1;
 
 	private
 	WeightedVotingLabelFuser<IT,ET> majorityFuser = null;
@@ -154,7 +195,8 @@ implements LabelFuser<IT,ET>
 	{
 		System.out.print("weights: ");
 		for (int i=0; i < inImgs.size(); ++i)
-			System.out.printf("%+.3f\t",inImgs.get(i) != null ? inWeights.get(i).floatValue() : -1.f);
+			System.out.printf("%+.3f\t",inImgs.get(i) != null ? inWeights.get(i).floatValue() : -0.2f);
+			//NB: -0.2 is to indicate we dropped it (Jaccard cannot get below 0.0)
 		System.out.println();
 	}
 }
