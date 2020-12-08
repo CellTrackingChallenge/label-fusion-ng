@@ -76,15 +76,17 @@ implements LabelFuser<IT,ET>
 		System.out.print("it: 0 ");
 		reportCurrentWeights(inImgs,inWeights);
 
+		//prepare flat local weights
+		final Vector<Double> myWeights = new Vector<>(inWeights);
+		for (int i=0; i < myWeights.size(); ++i) myWeights.set(i, 1.0);
+
 		//make sure the majorityFuser is available
 		if (majorityFuser == null) majorityFuser = new WeightedVotingLabelFuser<>();
 
 		//initial candidate segment
-		majorityFuser.minAcceptableWeight = getMajorityThreshold(inImgs,inWeights);
-		majorityFuser.fuseMatchingLabels(inImgs,inLabels, le, inWeights,outImg);
+		majorityFuser.minAcceptableWeight = getMajorityThreshold(inImgs,myWeights);
+		majorityFuser.fuseMatchingLabels(inImgs,inLabels, le, myWeights,outImg);
 
-		//own copy of the weights
-		final Vector<Double> myWeights = new Vector<>(inWeights);
 		double currentQualityThreshold = initialQualityThreshold;
 		int iterationCnt = 1;
 
