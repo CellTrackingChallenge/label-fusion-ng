@@ -116,6 +116,13 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 		markersOfInterest.put( 442 , 22 );
 		markersOfInterest.put( 571 , 3  );
 		markersOfInterest.put( 509 , 27 );
+		markersOfInterest.put( 574 , 2 );
+		markersOfInterest.put( 610 , 11 );
+		markersOfInterest.put( 599 , 13 );
+		markersOfInterest.put( 498 , 26 );
+		markersOfInterest.put( 389 , 28 );
+		markersOfInterest.put( 460 , 33 );
+		markersOfInterest.put( 525 , 36 );
 	}
 
 
