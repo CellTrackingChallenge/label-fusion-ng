@@ -41,11 +41,11 @@ public class SIMPLELabelFuser<IT extends RealType<IT>, ET extends RealType<ET>>
 implements LabelFuser<IT,ET>
 {
 	// explicit params of this particular fuser
-	public int maxIters = 7;
+	public int maxIters = 6;
 	public int noOfNoPruneIters = 2;
 	public double initialQualityThreshold = 0.5;
 	public double stepDownInQualityThreshold = 0.1;
-	public double minimalQualityThreshold = 0.9;
+	public double minimalQualityThreshold = 0.7;
 
 	public
 	String reportSettings()
