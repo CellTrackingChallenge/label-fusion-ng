@@ -79,7 +79,7 @@ implements LabelFuser<IT,ET>
 		System.out.println();
 
 		//DEBUG -- report-only Oracle weights (something we normally don't have at hand)
-		System.out.print("it: -1.5 ");
+		System.out.print("it: -1.5 0.0 ");
 		reportCurrentWeights(inImgs,inWeights);
 
 		//Jaccards of the inputs for this particular marker
@@ -92,14 +92,14 @@ implements LabelFuser<IT,ET>
 		}
 
 		//DEBUG -- report-only our estimated weights
-		System.out.print("it: -1.0 ");
+		System.out.print("it: -1.0 0.0 ");
 		reportCurrentWeights(inImgs,myWeights);
 
 		//prepare flat local weights
 		for (int i=0; i < myWeights.size(); ++i) myWeights.set(i, 1.0);
 
 		//report the flat weights, just to be on the safe side
-		System.out.print("it: 0.0 ");
+		System.out.print("it: 0.0 0.0 ");
 		reportCurrentWeights(inImgs,myWeights);
 
 		//make sure the majorityFuser is available
@@ -133,7 +133,8 @@ implements LabelFuser<IT,ET>
 			}
 
 			//DEBUG: report updated weights based on the current candidate
-			System.out.print("it: "+(iterationCnt-0.1)+" ");
+			double jaccard = Jaccard.Jaccard(Views.hyperSlice(outImg,2,19),1, GT_segImage,GT_currentLabel);
+			System.out.print("it: "+(iterationCnt-0.1)+" "+jaccard+" ");
 			reportCurrentWeights(inImgs,myWeights);
 			System.out.println("#it: "+iterationCnt+", prunning thres: "+currentQualityThreshold);
 
@@ -149,6 +150,7 @@ implements LabelFuser<IT,ET>
 
 			//DEBUG: report how the prunning ended up
 			System.out.print("it: "+(iterationCnt+0.0)+" ");
+			System.out.print(jaccard+" ");
 			reportCurrentWeights(inImgs,myWeights);
 
 			//create a new candidate
@@ -172,7 +174,11 @@ implements LabelFuser<IT,ET>
 
 		//compute Jaccard for the final candidate segment
 		//LoopBuilder.setImages(outImg).forEachPixel( (a) -> { if (a.getRealFloat() > 0) a.setOne(); else a.setZero(); } );
-		System.out.println("# GT_label="+GT_currentLabel+" SEG "+Jaccard.Jaccard(Views.hyperSlice(outImg,2,19),1, GT_segImage,GT_currentLabel));
+		double jaccard = Jaccard.Jaccard(Views.hyperSlice(outImg,2,19),1, GT_segImage,GT_currentLabel);
+		System.out.print("it: "+(iterationCnt+0.5)+" ");
+		System.out.print(jaccard+" ");
+		reportCurrentWeights(inImgs,myWeights);
+		System.out.println("# GT_label="+GT_currentLabel+" SEG "+jaccard);
 
 		//DEBUG (will appear just before "TRA marker: .....")
 		System.out.println("# (reported with counter "+(dbgImageCounter++)+")");
