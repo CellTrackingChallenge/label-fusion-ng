@@ -41,11 +41,11 @@ public class SIMPLELabelFuser<IT extends RealType<IT>, ET extends RealType<ET>>
 implements LabelFuser<IT,ET>
 {
 	// explicit params of this particular fuser
-	public int maxIters = 4;
+	public int maxIters = 7;
 	public int noOfNoPruneIters = 2;
-	public double initialQualityThreshold = 0.7;
+	public double initialQualityThreshold = 0.5;
 	public double stepDownInQualityThreshold = 0.1;
-	public double minimalQualityThreshold = 0.3;
+	public double minimalQualityThreshold = 0.9;
 
 	public
 	String reportSettings()
@@ -152,8 +152,8 @@ implements LabelFuser<IT,ET>
 
 			//update the quality threshold
 			++iterationCnt;
-			if (iterationCnt > noOfNoPruneIters) currentQualityThreshold = Math.max(
-				currentQualityThreshold - stepDownInQualityThreshold*(iterationCnt- noOfNoPruneIters),
+			if (iterationCnt > noOfNoPruneIters) currentQualityThreshold = Math.min(
+				initialQualityThreshold + stepDownInQualityThreshold * (iterationCnt-noOfNoPruneIters),
 				minimalQualityThreshold );
 		}
 
