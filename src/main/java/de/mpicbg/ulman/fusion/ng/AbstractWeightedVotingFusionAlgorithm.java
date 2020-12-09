@@ -41,6 +41,8 @@ import net.imglib2.type.numeric.real.DoubleType;
 import java.util.Iterator;
 import java.util.Vector;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.HashMap;
 import net.imglib2.type.numeric.IntegerType;
 
 import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionAlgorithm;
@@ -86,6 +88,33 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 		//inevitable sanity test to see if the user has
 		//implemented the setFusionComponents() correctly
 		testFusionComponents();
+
+		markersOfInterest.put( 580 , 12 );
+		markersOfInterest.put( 197 , 20 );
+		markersOfInterest.put( 134 , 8  );
+		markersOfInterest.put( 262 , 34 );
+		markersOfInterest.put( 587 , 1  );
+		markersOfInterest.put( 396 , 30 );
+		markersOfInterest.put( 142 , 9  );
+		markersOfInterest.put( 592 , 14 );
+		markersOfInterest.put( 145 , 16 );
+		markersOfInterest.put( 212 , 35 );
+		markersOfInterest.put( 404 , 29 );
+		markersOfInterest.put( 150 , 7  );
+		markersOfInterest.put( 411 , 23 );
+		markersOfInterest.put( 219 , 31 );
+		markersOfInterest.put( 29  , 5  );
+		markersOfInterest.put( 607 , 10 );
+		markersOfInterest.put( 420 , 24 );
+		markersOfInterest.put( 38  , 18 );
+		markersOfInterest.put( 490 , 21 );
+		markersOfInterest.put( 428 , 25 );
+		markersOfInterest.put( 46  , 17 );
+		markersOfInterest.put( 49  , 15 );
+		markersOfInterest.put( 568 , 4  );
+		markersOfInterest.put( 442 , 22 );
+		markersOfInterest.put( 571 , 3  );
+		markersOfInterest.put( 509 , 27 );
 	}
 
 
@@ -159,6 +188,7 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 	public Boolean insertTRAforCollidingOrMissingMarkers = false;
 
 	public String dbgImgFileName;
+	static Map<Integer,Integer> markersOfInterest = new HashMap<>(28);
 
 	@Override
 	public
@@ -217,6 +247,10 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 			//scan for not yet observed markers (and ignore background values...)
 			if ( curMarker > 0 && (!mDiscovered.contains(curMarker)) )
 			{
+				mDiscovered.add(curMarker);
+				int segGtMarker = markersOfInterest.getOrDefault( curMarker, -1);
+				if (segGtMarker == -1) continue; //not found? -> skip it
+
 				//found a new marker, determine its size and the AABB it spans
 				MajorityOverlapBasedLabelExtractor.findAABB(mCursor, minBound,maxBound);
 /*
