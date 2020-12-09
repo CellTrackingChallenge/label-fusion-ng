@@ -35,6 +35,7 @@ import java.util.Vector;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 import net.celltrackingchallenge.measures.util.Jaccard;
 import net.imglib2.type.operators.SetZero;
+import net.imglib2.view.Views;
 import sc.fiji.simplifiedio.SimplifiedIO;
 
 public class SIMPLELabelFuser<IT extends RealType<IT>, ET extends RealType<ET>>
@@ -78,11 +79,23 @@ implements LabelFuser<IT,ET>
 		System.out.println();
 
 		//DEBUG -- report-only Oracle weights (something we normally don't have at hand)
-		System.out.print("it: -1 ");
+		System.out.print("it: -1.5 ");
 		reportCurrentWeights(inImgs,inWeights);
 
+		//Jaccards of the inputs for this particular marker
 		//prepare flat local weights
 		final Vector<Double> myWeights = new Vector<>(inWeights);
+		for (int i=0; i < inImgs.size(); ++i)
+		{
+			if (inImgs.get(i) == null) continue;
+			myWeights.set(i, Jaccard.Jaccard(Views.hyperSlice(inImgs.get(i),2,19),inLabels.get(i), GT_segImage,GT_currentLabel) );
+		}
+
+		//DEBUG -- report-only our estimated weights
+		System.out.print("it: -1.0 ");
+		reportCurrentWeights(inImgs,myWeights);
+
+		//prepare flat local weights
 		for (int i=0; i < myWeights.size(); ++i) myWeights.set(i, 1.0);
 
 		//report the flat weights, just to be on the safe side
@@ -157,6 +170,10 @@ implements LabelFuser<IT,ET>
 				minimalQualityThreshold );
 		}
 
+		//compute Jaccard for the final candidate segment
+		//LoopBuilder.setImages(outImg).forEachPixel( (a) -> { if (a.getRealFloat() > 0) a.setOne(); else a.setZero(); } );
+		System.out.println("# GT_label="+GT_currentLabel+" SEG "+Jaccard.Jaccard(Views.hyperSlice(outImg,2,19),1, GT_segImage,GT_currentLabel));
+
 		//DEBUG (will appear just before "TRA marker: .....")
 		System.out.println("# (reported with counter "+(dbgImageCounter++)+")");
 		System.out.print("# ");
@@ -164,6 +181,9 @@ implements LabelFuser<IT,ET>
 
 	private
 	int dbgImageCounter = 1;
+
+	public int GT_currentLabel = -1;
+	public RandomAccessibleInterval<IT> GT_segImage;
 
 	private
 	WeightedVotingLabelFuser<IT,ET> majorityFuser = null;

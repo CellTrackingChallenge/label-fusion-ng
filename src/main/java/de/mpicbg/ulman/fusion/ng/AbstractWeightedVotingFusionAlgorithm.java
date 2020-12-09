@@ -27,6 +27,7 @@
  */
 package de.mpicbg.ulman.fusion.ng;
 
+import de.mpicbg.ulman.fusion.ng.fuse.SIMPLELabelFuser;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.loops.LoopBuilder;
 import org.scijava.log.LogService;
@@ -250,6 +251,7 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 				mDiscovered.add(curMarker);
 				int segGtMarker = markersOfInterest.getOrDefault( curMarker, -1);
 				if (segGtMarker == -1) continue; //not found? -> skip it
+				((SIMPLELabelFuser<IT,DoubleType>)labelFuser).GT_currentLabel = segGtMarker;
 
 				//found a new marker, determine its size and the AABB it spans
 				MajorityOverlapBasedLabelExtractor.findAABB(mCursor, minBound,maxBound);

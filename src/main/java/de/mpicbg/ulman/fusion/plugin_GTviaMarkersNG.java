@@ -74,6 +74,7 @@ import de.mpicbg.ulman.fusion.ng.BIC;
 import de.mpicbg.ulman.fusion.ng.BICenhanced;
 import de.mpicbg.ulman.fusion.ng.SIMPLE;
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
+import sc.fiji.simplifiedio.SimplifiedIO;
 
 @Plugin(type = Command.class, menuPath = "Plugins>Annotations Merging Tool")
 public class plugin_GTviaMarkersNG implements Command
@@ -802,6 +803,7 @@ public class plugin_GTviaMarkersNG implements Command
 		final MyLog myLog = new MyLog();
 		final SIMPLE simpleVoter = new SIMPLE(myLog);
 		simpleVoter.getFuserReference().noOfNoPruneIters = Integer.parseInt(args[1]);
+		simpleVoter.getFuserReference().GT_segImage = SimplifiedIO.openImage("/temp/CE_02/SEG_GT/man_seg_120_019.tif");
 		myLog.info( simpleVoter.getFuserReference().reportSettings() );
 
 		final WeightedVotingFusionFeeder feeder = new WeightedVotingFusionFeeder(myLog).setAlgorithm(simpleVoter);
