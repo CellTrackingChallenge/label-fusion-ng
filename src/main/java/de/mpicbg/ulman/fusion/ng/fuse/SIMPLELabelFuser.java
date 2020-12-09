@@ -79,7 +79,7 @@ implements LabelFuser<IT,ET>
 		System.out.println();
 
 		//DEBUG -- report-only Oracle weights (something we normally don't have at hand)
-		System.out.print("it: -1.5 0.0 ");
+		System.out.print("it: -2.5 0.0 ");
 		reportCurrentWeights(inImgs,inWeights);
 
 		//Jaccards of the inputs for this particular marker
@@ -92,7 +92,7 @@ implements LabelFuser<IT,ET>
 		}
 
 		//DEBUG -- report-only our estimated weights
-		System.out.print("it: -1.0 0.0 ");
+		System.out.print("it: -1.5 0.0 ");
 		reportCurrentWeights(inImgs,myWeights);
 
 		//prepare flat local weights
@@ -175,7 +175,7 @@ implements LabelFuser<IT,ET>
 		//compute Jaccard for the final candidate segment
 		//LoopBuilder.setImages(outImg).forEachPixel( (a) -> { if (a.getRealFloat() > 0) a.setOne(); else a.setZero(); } );
 		double jaccard = Jaccard.Jaccard(Views.hyperSlice(outImg,2,19),1, GT_segImage,GT_currentLabel);
-		System.out.print("it: "+(iterationCnt+0.5)+" ");
+		System.out.print("it: "+(iterationCnt-0.3)+" ");
 		System.out.print(jaccard+" ");
 		reportCurrentWeights(inImgs,myWeights);
 		System.out.println("# GT_label="+GT_currentLabel+" SEG "+jaccard);
