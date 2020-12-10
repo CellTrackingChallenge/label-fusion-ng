@@ -802,8 +802,10 @@ public class plugin_GTviaMarkersNG implements Command
 
 		final MyLog myLog = new MyLog();
 		final SIMPLE simpleVoter = new SIMPLE(myLog);
-		simpleVoter.getFuserReference().noOfNoPruneIters = Integer.parseInt(args[1]);
-		simpleVoter.getFuserReference().GT_segImage = SimplifiedIO.openImage("/temp/CE_02/SEG_GT/man_seg_120_019.tif");
+		//simpleVoter.getFuserReference().noOfNoPruneIters = Integer.parseInt(args[1]);
+		//simpleVoter.getFuserReference().GT_segImage = SimplifiedIO.openImage("/temp/CE_02/SEG_GT/man_seg_120_019.tif");
+		simpleVoter.getFuserReference().GT_segImage = SimplifiedIO.openImage("/temp/DIC_01/SEG_GT/man_seg033.tif");
+		simpleVoter.getFuserReference().GT_sliceNo = 0;
 		myLog.info( simpleVoter.getFuserReference().reportSettings() );
 
 		final WeightedVotingFusionFeeder feeder = new WeightedVotingFusionFeeder(myLog).setAlgorithm(simpleVoter);

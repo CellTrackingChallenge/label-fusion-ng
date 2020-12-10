@@ -90,6 +90,7 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 		//implemented the setFusionComponents() correctly
 		testFusionComponents();
 
+		/*
 		markersOfInterest.put( 580 , 12 );
 		markersOfInterest.put( 197 , 20 );
 		markersOfInterest.put( 134 , 8  );
@@ -123,6 +124,21 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 		markersOfInterest.put( 389 , 28 );
 		markersOfInterest.put( 460 , 33 );
 		markersOfInterest.put( 525 , 36 );
+		*/
+
+		markersOfInterest.put( 32 , 12 );
+		markersOfInterest.put( 34 , 13 );
+		markersOfInterest.put( 3  , 1 );
+		markersOfInterest.put( 4  , 2 );
+		markersOfInterest.put( 5  , 3 );
+		markersOfInterest.put( 7  , 4 );
+		markersOfInterest.put( 11 , 5 );
+		markersOfInterest.put( 16 , 6 );
+		markersOfInterest.put( 18 , 7 );
+		markersOfInterest.put( 21 , 8 );
+		markersOfInterest.put( 22 , 9 );
+		markersOfInterest.put( 23 , 10 );
+		markersOfInterest.put( 27 , 11 );
 	}
 
 
