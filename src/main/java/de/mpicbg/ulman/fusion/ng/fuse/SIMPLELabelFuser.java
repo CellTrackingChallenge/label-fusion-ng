@@ -31,6 +31,10 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.RealType;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Vector;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 import net.celltrackingchallenge.measures.util.Jaccard;
@@ -184,6 +188,8 @@ implements LabelFuser<IT,ET>
 		System.out.println("# GT_label="+GT_currentLabel+" SEG "+jaccard);
 
 		//DEBUG (will appear just before "TRA marker: .....")
+		System.out.println("# PLACES: scores estimated from this code");
+		reportInOrder(inImgs,myWeights, myPlaces);
 		System.out.println("# (reported with counter "+(dbgImageCounter++)+")");
 		System.out.print("# ");
 	}
@@ -228,5 +234,62 @@ implements LabelFuser<IT,ET>
 			System.out.printf("%+.3f\t",inImgs.get(i) != null ? inWeights.get(i).floatValue() : -0.2f);
 			//NB: -0.2 is to indicate we dropped it (Jaccard cannot get below 0.0)
 		System.out.println();
+	}
+
+
+	private
+	void reportInOrder(final Vector<RandomAccessibleInterval<IT>> inImgs,
+	                   final Vector<Double> inWeights,
+	                   final Vector< List<Integer> > places)
+	{
+		double currentMax  = 1.5;
+		for (int i=0; i < inImgs.size(); ++i)
+		{
+			//if (inImgs.get(i) == null) continue;
+			double currentBest = -0.2;
+			int currentBestInput = 99;
+
+			for (int j=0; j < inImgs.size(); ++j)
+			{
+				if (inImgs.get(j) == null) continue;
+				double w = inWeights.get(j);
+				if (w > currentBest && w < currentMax)
+				{
+					currentBest = w;
+					currentBestInput = j;
+				}
+			}
+
+			//System.out.printf("# ORDER: %d ( %+.3f )\n",currentBestInput,currentBest);
+			currentMax = currentBest;
+
+			if (currentBestInput < 99) places.get(currentBestInput).add(i+1);
+		}
+		//System.out.println("# ORDER: ");
+
+		//print the current places:
+		for (int i=0; i < inImgs.size(); ++i)
+		{
+			System.out.print("# PLACES: ");
+			//System.out.print("# INPUT "+(i+1)+" : ");
+			for (int pos : places.get(i))
+				//System.out.print(pos+", ");
+				System.out.print((i+1)+" "+pos+";");
+			System.out.println();
+		}
+	}
+
+	//places[inputNo].add[currentOrder]
+	Vector< List<Integer> > myPlaces = new Vector<>(16);
+	{
+		resetPlaces( myPlaces);
+	}
+
+	private
+	void resetPlaces(final Vector< List<Integer> > places)
+	{
+		places.clear();
+		while (places.size() < places.capacity())
+			places.add( new Vector<>(20) );
 	}
 }
