@@ -100,6 +100,9 @@ implements LabelFuser<IT,ET>
 		System.out.print("it: -1.5 0.0 ");
 		reportCurrentWeights(inImgs,myWeights);
 
+		System.out.println("# PLACES: scores from Jaccard");
+		reportInOrder(inImgs,myWeights, truePlaces);
+
 		//prepare flat local weights
 		for (int i=0; i < myWeights.size(); ++i) myWeights.set(i, 1.0);
 
@@ -281,8 +284,10 @@ implements LabelFuser<IT,ET>
 
 	//places[inputNo].add[currentOrder]
 	Vector< List<Integer> > myPlaces = new Vector<>(16);
+	Vector< List<Integer> > truePlaces = new Vector<>(16);
 	{
 		resetPlaces( myPlaces);
+		resetPlaces( truePlaces );
 	}
 
 	private
