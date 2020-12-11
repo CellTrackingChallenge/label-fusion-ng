@@ -269,11 +269,11 @@ implements LabelFuser<IT,ET>
 		//print the current places:
 		for (int i=0; i < inImgs.size(); ++i)
 		{
-			System.out.print("# PLACES: ");
+			System.out.print("# PLACES "+(i+1)+" : ");
 			//System.out.print("# INPUT "+(i+1)+" : ");
 			for (int pos : places.get(i))
-				//System.out.print(pos+", ");
-				System.out.print((i+1)+" "+pos+";");
+				System.out.print(pos+" ");
+				//System.out.print((i+1)+" "+pos+";");
 			System.out.println();
 		}
 	}
