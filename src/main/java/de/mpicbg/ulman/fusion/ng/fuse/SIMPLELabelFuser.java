@@ -266,6 +266,11 @@ implements LabelFuser<IT,ET>
 		}
 		//System.out.println("# ORDER: ");
 
+		//add "last place" to all inputs that are no longer valid by now
+		for (int i=0; i < inImgs.size(); ++i)
+			if (inImgs.get(i) == null)
+				places.get(i).add(inImgs.size());
+
 		//print the current places:
 		for (int i=0; i < inImgs.size(); ++i)
 		{
