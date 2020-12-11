@@ -35,6 +35,7 @@ import net.imglib2.type.numeric.RealType;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedList;
 import java.util.Vector;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 import net.celltrackingchallenge.measures.util.Jaccard;
@@ -297,5 +298,89 @@ implements LabelFuser<IT,ET>
 		places.clear();
 		while (places.size() < places.capacity())
 			places.add( new Vector<>(20) );
+	}
+
+
+	public
+	void reportInputsSorting(int timepoint)
+	{
+		Vector<Float> avgs = new Vector<>( truePlaces.size() );
+
+		boolean foundEmpty = false;
+		int curInput = 0;
+
+		//report position-graph for Jaccard
+		while (curInput < truePlaces.size() && !foundEmpty)
+		{
+			float avgPos = 0;
+			for (int p : truePlaces.get(curInput)) avgPos += (float)p;
+
+			if (truePlaces.get(curInput).size() > 0)
+			{
+				avgPos /= (float)truePlaces.get(curInput).size();
+				avgs.add(avgPos);
+				++curInput;
+			}
+			else
+				foundEmpty = true;
+		}
+
+		for (int i=0; i < curInput; ++i)
+			System.out.println("# TP "+timepoint+" Jaccard: inputNo. averagePos. "+(i+1)+" "+avgs.get(i));
+
+		foundEmpty = false;
+		curInput = 0;
+
+		//report position-graph from our prediction
+		while (curInput < myPlaces.size() && !foundEmpty)
+		{
+			float avgPos = 0;
+			for (int p : myPlaces.get(curInput)) avgPos += (float)p;
+
+			if (myPlaces.get(curInput).size() > 0)
+			{
+				avgPos /= (float)myPlaces.get(curInput).size();
+				avgs.set(curInput,avgPos);
+				++curInput;
+			}
+			else
+				foundEmpty = true;
+		}
+
+		for (int i=0; i < curInput; ++i)
+			System.out.println("# TP "+timepoint+" Prediction: inputNo. averagePos. "+(i+1)+" "+avgs.get(i));
+
+		//prepare groups: best, best two, best three, etc...
+		//sort first
+		class InputScore {
+			InputScore(float a, int i) { avgPos = a; inputId =i ; }
+			float avgPos;
+			int inputId;
+		}
+		List< InputScore > ranked = new LinkedList<>();
+		for (int i=0; i < curInput; ++i)
+			ranked.add( new InputScore(avgs.get(i),i) );
+		ranked.sort( (o1,o2) -> {
+			if (o1.avgPos < o2.avgPos) return -1;
+			return 1;
+		} );
+
+		for (int i=0; i < curInput; ++i)
+		{
+			int binaryMask = 0;
+			for (int j=0; j <= i; ++j)
+				binaryMask |= 1 << ranked.get(j).inputId;
+
+			//System.out.print("# TP "+timepoint+" GROUP "+binaryMask+" consists of inputs: ");
+			System.out.printf("# TP %d GROUP %08d consists of inputs: ",timepoint,binaryMask);
+			for (int j=0; j <= i; ++j)
+				System.out.print((ranked.get(j).inputId+1)+" ("+ranked.get(j).avgPos+") ");
+			System.out.println();
+		}
+
+
+		//prepare for another image
+		resetPlaces(myPlaces);
+		resetPlaces(truePlaces);
 	}
 }

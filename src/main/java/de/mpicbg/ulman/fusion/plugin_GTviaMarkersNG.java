@@ -833,6 +833,7 @@ public class plugin_GTviaMarkersNG implements Command
 
 				long time = System.currentTimeMillis();
 				feeder.processJob(aargs);
+				simpleVoter.getFuserReference().reportInputsSorting(idx);
 				time -= System.currentTimeMillis();
 				System.out.println("ELAPSED TIME: "+(-time/1000)+" seconds");
 			}
