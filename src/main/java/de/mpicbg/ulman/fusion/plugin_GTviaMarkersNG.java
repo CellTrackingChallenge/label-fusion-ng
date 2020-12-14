@@ -740,9 +740,9 @@ public class plugin_GTviaMarkersNG implements Command
 	// ==========================================================================================
 	public static void main(String[] args)
 	{
-		if (args.length != 4)
+		if (args.length != 3)
 		{
-			System.out.println("Usage: jobFile noOfNoPruneIters outputFilesPattern timepoint");
+			System.out.println("Usage: jobFile outputFilesPattern timepoint");
 			return;
 		}
 
@@ -788,7 +788,7 @@ public class plugin_GTviaMarkersNG implements Command
 		}
 
 		argsPattern[2*lineNo -1] = "0"; //threshold is ignored
-		argsPattern[2*lineNo +0] = args[2];
+		argsPattern[2*lineNo +0] = args[1];
 		//generic job specification is done
 
 		//create an array to hold an "expanded"/instantiated job
@@ -802,7 +802,6 @@ public class plugin_GTviaMarkersNG implements Command
 
 		final MyLog myLog = new MyLog();
 		final SIMPLE simpleVoter = new SIMPLE(myLog);
-		simpleVoter.getFuserReference().noOfNoPruneIters = Integer.parseInt(args[1]);
 		simpleVoter.getFuserReference().GT_segImage = SimplifiedIO.openImage("/temp/CE_02/SEG_GT/man_seg_120_019.tif");
 		myLog.info( simpleVoter.getFuserReference().reportSettings() );
 
@@ -811,7 +810,7 @@ public class plugin_GTviaMarkersNG implements Command
 		try {
 			//parse out the list of timepoints
 			TreeSet<Integer> fileIdxList = new TreeSet<>();
-			NumberSequenceHandler.parseSequenceOfNumbers(args[3],fileIdxList);
+			NumberSequenceHandler.parseSequenceOfNumbers(args[2],fileIdxList);
 
 			long ttime = System.currentTimeMillis();
 
