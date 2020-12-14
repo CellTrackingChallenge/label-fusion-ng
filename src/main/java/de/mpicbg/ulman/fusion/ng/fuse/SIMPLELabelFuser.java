@@ -32,9 +32,7 @@ import net.imglib2.img.Img;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.RealType;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.LinkedList;
 import java.util.Vector;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
@@ -93,7 +91,7 @@ implements LabelFuser<IT,ET>
 		for (int i=0; i < inImgs.size(); ++i)
 		{
 			if (inImgs.get(i) == null) continue;
-			myWeights.set(i, Jaccard.Jaccard(Views.hyperSlice(inImgs.get(i),2,19),inLabels.get(i), GT_segImage,GT_currentLabel) );
+			myWeights.set(i, Jaccard.Jaccard(GT_segRefSlice(inImgs.get(i)),inLabels.get(i), GT_segImage,GT_currentLabel) );
 		}
 
 		//DEBUG -- report-only our estimated weights
@@ -141,7 +139,7 @@ implements LabelFuser<IT,ET>
 			}
 
 			//DEBUG: report updated weights based on the current candidate
-			double jaccard = Jaccard.Jaccard(Views.hyperSlice(outImg,2,19),1, GT_segImage,GT_currentLabel);
+			double jaccard = Jaccard.Jaccard(GT_segRefSlice(outImg),1, GT_segImage,GT_currentLabel);
 			System.out.print("it: "+(iterationCnt-0.1)+" "+jaccard+" ");
 			reportCurrentWeights(inImgs,myWeights);
 			System.out.println("#it: "+iterationCnt+", prunning thres: "+currentQualityThreshold);
@@ -182,7 +180,7 @@ implements LabelFuser<IT,ET>
 
 		//compute Jaccard for the final candidate segment
 		//LoopBuilder.setImages(outImg).forEachPixel( (a) -> { if (a.getRealFloat() > 0) a.setOne(); else a.setZero(); } );
-		double jaccard = Jaccard.Jaccard(Views.hyperSlice(outImg,2,19),1, GT_segImage,GT_currentLabel);
+		double jaccard = Jaccard.Jaccard(GT_segRefSlice(outImg),1, GT_segImage,GT_currentLabel);
 		System.out.print("it: "+(iterationCnt-0.3)+" ");
 		System.out.print(jaccard+" ");
 		reportCurrentWeights(inImgs,myWeights);
@@ -200,6 +198,16 @@ implements LabelFuser<IT,ET>
 
 	public int GT_currentLabel = -1;
 	public RandomAccessibleInterval<IT> GT_segImage;
+	public int GT_sliceNo = 1;
+
+	<T>
+	RandomAccessibleInterval<T> GT_segRefSlice(final RandomAccessibleInterval<T> testImg)
+	{
+		if (GT_sliceNo == -1)
+			return testImg;
+
+		return Views.hyperSlice(testImg, 2, GT_sliceNo);
+	}
 
 	private
 	WeightedVotingLabelFuser<IT,ET> majorityFuser = null;

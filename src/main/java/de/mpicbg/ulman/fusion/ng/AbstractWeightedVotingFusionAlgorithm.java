@@ -89,40 +89,6 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 		//inevitable sanity test to see if the user has
 		//implemented the setFusionComponents() correctly
 		testFusionComponents();
-
-		markersOfInterest.put( 580 , 12 );
-		markersOfInterest.put( 197 , 20 );
-		markersOfInterest.put( 134 , 8  );
-		markersOfInterest.put( 262 , 34 );
-		markersOfInterest.put( 587 , 1  );
-		markersOfInterest.put( 396 , 30 );
-		markersOfInterest.put( 142 , 9  );
-		markersOfInterest.put( 592 , 14 );
-		markersOfInterest.put( 145 , 16 );
-		markersOfInterest.put( 212 , 35 );
-		markersOfInterest.put( 404 , 29 );
-		markersOfInterest.put( 150 , 7  );
-		markersOfInterest.put( 411 , 23 );
-		markersOfInterest.put( 219 , 31 );
-		markersOfInterest.put( 29  , 5  );
-		markersOfInterest.put( 607 , 10 );
-		markersOfInterest.put( 420 , 24 );
-		markersOfInterest.put( 38  , 18 );
-		markersOfInterest.put( 490 , 21 );
-		markersOfInterest.put( 428 , 25 );
-		markersOfInterest.put( 46  , 17 );
-		markersOfInterest.put( 49  , 15 );
-		markersOfInterest.put( 568 , 4  );
-		markersOfInterest.put( 442 , 22 );
-		markersOfInterest.put( 571 , 3  );
-		markersOfInterest.put( 509 , 27 );
-		markersOfInterest.put( 574 , 2 );
-		markersOfInterest.put( 610 , 11 );
-		markersOfInterest.put( 599 , 13 );
-		markersOfInterest.put( 498 , 26 );
-		markersOfInterest.put( 389 , 28 );
-		markersOfInterest.put( 460 , 33 );
-		markersOfInterest.put( 525 , 36 );
 	}
 
 
@@ -196,7 +162,7 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 	public Boolean insertTRAforCollidingOrMissingMarkers = false;
 
 	public String dbgImgFileName;
-	static Map<Integer,Integer> markersOfInterest = new HashMap<>(28);
+	public Map<Integer,Integer> markersOfInterest = new HashMap<>(100);
 
 	@Override
 	public
@@ -258,6 +224,7 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 				mDiscovered.add(curMarker);
 				int segGtMarker = markersOfInterest.getOrDefault( curMarker, -1);
 				if (segGtMarker == -1) continue; //not found? -> skip it
+				//if (segGtMarker == -1) segGtMarker = 2; //fake wrong value to keep it spinning (and ignore Jaccard measurements)
 				((SIMPLELabelFuser<IT,DoubleType>)labelFuser).GT_currentLabel = segGtMarker;
 
 				//found a new marker, determine its size and the AABB it spans

@@ -800,9 +800,9 @@ public class plugin_GTviaMarkersNG implements Command
 		//also weights are constant all the time
 		for (int i=1; i < aargs.length-3; i+=2) aargs[i] = argsPattern[i];
 
+		final int[] TPandSlice = new int[2];
 		final MyLog myLog = new MyLog();
 		final SIMPLE simpleVoter = new SIMPLE(myLog);
-		simpleVoter.getFuserReference().GT_segImage = SimplifiedIO.openImage("/temp/CE_02/SEG_GT/man_seg_120_019.tif");
 		myLog.info( simpleVoter.getFuserReference().reportSettings() );
 
 		final WeightedVotingFusionFeeder feeder = new WeightedVotingFusionFeeder(myLog).setAlgorithm(simpleVoter);
@@ -829,6 +829,14 @@ public class plugin_GTviaMarkersNG implements Command
 				for (; i < aargs.length; ++i)
 					myLog.info(i+": "+aargs[i]);
 
+				String mappingFile = TraToSeg.getMappingPath(aargs[aargs.length-3]);
+				myLog.info("XX: "+mappingFile);
+				String gtSegImgPath = TraToSeg.readGTMapping(mappingFile,TPandSlice,simpleVoter.markersOfInterest);
+				if (TPandSlice[0] != idx)
+					throw new ParseException("traSeg file for wrong time point (found mapping for TP "
+							+TPandSlice[0]+" while processing TP "+idx+")!",0);
+				simpleVoter.getFuserReference().GT_sliceNo = TPandSlice[1];
+				simpleVoter.getFuserReference().GT_segImage = SimplifiedIO.openImage(gtSegImgPath);
 
 				long time = System.currentTimeMillis();
 				feeder.processJob(aargs);
