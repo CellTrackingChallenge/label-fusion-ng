@@ -250,35 +250,27 @@ implements LabelFuser<IT,ET>
 	                   final Vector<Double> inWeights,
 	                   final Vector< List<Integer> > places)
 	{
-		double currentMax  = 1.5;
+		//over all inputs, find for each how many are smaller than the current one
 		for (int i=0; i < inImgs.size(); ++i)
 		{
-			//if (inImgs.get(i) == null) continue;
-			double currentBest = -0.2;
-			int currentBestInput = 99;
-
-			for (int j=0; j < inImgs.size(); ++j)
+			if (inImgs.get(i) == null)
 			{
-				if (inImgs.get(j) == null) continue;
-				double w = inWeights.get(j);
-				if (w > currentBest && w < currentMax)
-				{
-					currentBest = w;
-					currentBestInput = j;
-				}
+				//add "last place" to all inputs that are no longer valid by now
+				places.get(i).add(inImgs.size());
+				continue;
 			}
 
-			//System.out.printf("# ORDER: %d ( %+.3f )\n",currentBestInput,currentBest);
-			currentMax = currentBest;
+			int noOfOthersThatAreBetter = 0;
+			for (int j=0; j < inImgs.size(); ++j)
+			{
+				if (inImgs.get(j) == null) continue; //skip invalid
+				if (j == i) continue;                //skip myself
+				if (inWeights.get(j) >= inWeights.get(i)) ++noOfOthersThatAreBetter;
+			}
 
-			if (currentBestInput < 99) places.get(currentBestInput).add(i+1);
+			places.get(i).add(noOfOthersThatAreBetter+1);
+			//NB: "+1" to become 1-based position
 		}
-		//System.out.println("# ORDER: ");
-
-		//add "last place" to all inputs that are no longer valid by now
-		for (int i=0; i < inImgs.size(); ++i)
-			if (inImgs.get(i) == null)
-				places.get(i).add(inImgs.size());
 
 		//print the current places:
 		for (int i=0; i < inImgs.size(); ++i)
