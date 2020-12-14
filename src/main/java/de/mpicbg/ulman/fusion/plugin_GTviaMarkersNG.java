@@ -843,6 +843,7 @@ public class plugin_GTviaMarkersNG implements Command
 				simpleVoter.getFuserReference().reportInputsSorting(idx);
 				time -= System.currentTimeMillis();
 				System.out.println("ELAPSED TIME: "+(-time/1000)+" seconds");
+				System.out.println();
 			}
 
 			ttime -= System.currentTimeMillis();
