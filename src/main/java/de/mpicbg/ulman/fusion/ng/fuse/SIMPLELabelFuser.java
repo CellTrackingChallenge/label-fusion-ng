@@ -327,6 +327,8 @@ implements LabelFuser<IT,ET>
 
 		for (int i=0; i < curInput; ++i)
 			System.out.println("# TP "+timepoint+" Jaccard: inputNo. averagePos. "+(i+1)+" "+avgs.get(i));
+		System.out.println("# TP "+timepoint+" Jaccard: inputNo. averagePos. SEPARATOR line");
+		System.out.println("# TP "+timepoint+" Jaccard: inputNo. averagePos. SEPARATOR line");
 
 		foundEmpty = false;
 		curInput = 0;
