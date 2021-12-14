@@ -113,6 +113,7 @@ public class testMergingAPI
 		SIMPLEfuser.getFuserReference().initialQualityThreshold=0.7;
 		SIMPLEfuser.getFuserReference().stepDownInQualityThreshold=0.1;
 		SIMPLEfuser.getFuserReference().minimalQualityThreshold=0.3;
+		SIMPLEfuser.setWeights(segWeights);
 
 		//fusion itself (SIMPLE is a generic fuser too):
 		fuser = SIMPLEfuser;
