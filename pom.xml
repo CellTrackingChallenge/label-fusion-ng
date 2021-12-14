@@ -4,13 +4,23 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>28.0.0</version>
+		<version>30.0.0</version>
 		<relativePath />
 	</parent>
 
 	<groupId>de.mpicbg.ulman</groupId>
 	<artifactId>label-fusion-ng</artifactId>
 	<version>2.0.0-SNAPSHOT</version>
+
+	<organization>
+		<name>The Cell Tracking Challenge</name>
+		<url>http://celltrackingchallenge.net</url>
+	</organization>
+
+	<name>Reworked Automatic Fusion of Segmentation and Tracking Labels (new generation)</name>
+	<description>Original segmentation results fusing algorithm, the inner part of the BIC 2019 paper.</description>
+	<url>https://github.com/CellTrackingChallenge/label-fusion-ng</url>
+	<inceptionYear>2020</inceptionYear>
 
 	<build>
 		<plugins>
@@ -57,16 +67,6 @@
 			</plugin>
 		</plugins>
 	</build>
-
-	<organization>
-		<name>MPI-CBG</name>
-		<url>http://www.mpi-cbg.de</url>
-	</organization>
-
-	<name>Reworked Automatic Fusion of Segmentation and Tracking Labels (new generation)</name>
-	<description>Original segmentation results fusing algorithm, the inner part of the BIC 2019 paper.</description>
-	<url>https://github.com/CellTrackingChallenge/label-fusion-ng</url>
-	<inceptionYear>2020</inceptionYear>
 
 	<packaging>jar</packaging>
 	<licenses>
@@ -137,6 +137,10 @@
 			<id>scijava.public</id>
 			<url>https://maven.scijava.org/content/groups/public</url>
 		</repository>
+		<repository>
+			<id>it4i</id>
+			<url>https://artifactory.cs.vsb.cz/it4i/</url>
+		</repository>
 	</repositories>
 
 	<dependencies>
@@ -157,8 +161,8 @@
 		<!-- the "main paper"-part of this project -->
 		<dependency>
 			<groupId>net.celltrackingchallenge</groupId>
-			<artifactId>measures</artifactId>
-			<version>1.0.0</version>
+			<artifactId>CTC-measures</artifactId>
+			<version>0.9.0</version>
 		</dependency>
 
 		<!-- 3rd party dependency (to display progress bar) -->
