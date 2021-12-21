@@ -54,7 +54,6 @@ public class LabelSyncerCLI
 		return traDir+File.separator+"man_track"+resName.substring(digitsFrom,digitsTill)+".tif";
 	}
 
-	public static void main(String[] args) {
 	// ================= handling image files =================
 	static public
 	Img<?> readImageSilently(final String path)
@@ -84,6 +83,9 @@ public class LabelSyncerCLI
 	}
 
 	// ================= the main workhorse code =================
+	static public <T extends IntegerType<T>>
+	void processImages(String[] args, final T referenceVoxelType)
+	{
 		//check parameters first
 		if (args.length != 3)
 		{
@@ -93,14 +95,14 @@ public class LabelSyncerCLI
 
 		//prepare the syncing code
 		final LogService myLog = new Context(LogService.class).getService(LogService.class);
-		final LabelSync2<UnsignedShortType,UnsignedShortType> labelSync = new LabelSync2<>(myLog);
+		final LabelSync2<T,T> labelSync = new LabelSync2<>(myLog);
 
 		//prepare the syncing containers
 		Vector<Double> weights = new Vector<>(1);
 		weights.add(1.0);
 		labelSync.setWeights(weights);
 
-		Vector<RandomAccessibleInterval<UnsignedShortType>> imgs = new Vector<>(1);
+		Vector<RandomAccessibleInterval<T>> imgs = new Vector<>(1);
 		imgs.add(null);
 
 		try {
@@ -116,7 +118,7 @@ public class LabelSyncerCLI
 				//
 				Img<?> i = readImageSilently(aFilePath);
 				if (isImgFailedAndComplained(i)) continue;
-				imgs.setElementAt((Img<UnsignedShortType>) i, 0);
+				imgs.setElementAt((Img<T>) i, 0);
 
 				aFilePath = matchTraMarkerFile(inFile, args[1]);
 				System.out.println("Reading marker: " + aFilePath);
@@ -125,7 +127,7 @@ public class LabelSyncerCLI
 				if (isImgFailedAndComplained(tra)) continue;
 
 				System.out.println("Syncing labels....");
-				final Img<UnsignedShortType> res = labelSync.fuse(imgs, (Img<UnsignedShortType>) tra);
+				final Img<T> res = labelSync.fuse(imgs, (Img<T>) tra);
 
 				aFilePath = args[2] + File.separator + inFile;
 				System.out.println("Creating output: " + aFilePath);
@@ -140,5 +142,8 @@ public class LabelSyncerCLI
 	}
 
 
+	public static void main(String[] args)
+	{
+		processImages(args, new UnsignedShortType());
 	}
 }
