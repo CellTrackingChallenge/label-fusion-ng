@@ -18,8 +18,15 @@ import java.util.stream.Stream;
 public class LabelSyncerCLI
 {
 	static
-	public Set<String> listAllResultMaskFilesInFolder(String dir) {
-		return Stream.of(new File(dir).listFiles())
+	public Set<String> listAllResultMaskFilesInFolder(String dir)
+	{
+		final File fDir = new File(dir);
+		if (!fDir.exists()) return null;
+
+		final File[] files = fDir.listFiles();
+		if (files == null || files.length == 0) return null;
+
+		return Stream.of(files)
 				.filter(file -> !file.isDirectory())
 				//.filter(file -> file.getName().startsWith("res"))
 				.filter(file -> file.getName().endsWith("tif"))
@@ -66,7 +73,13 @@ public class LabelSyncerCLI
 		imgs.add(null);
 
 		try {
-			for (String inFile : listAllResultMaskFilesInFolder(args[0])) {
+			final Set<String> inFiles = listAllResultMaskFilesInFolder(args[0]);
+			if (inFiles == null) {
+				System.out.println("Non-existent input folder: "+args[0]);
+				return;
+			}
+
+			for (String inFile : inFiles) {
 				String aFilePath = args[0] + File.separator + inFile;
 				System.out.println("Reading input: " + aFilePath);
 				//
