@@ -66,17 +66,17 @@ public class LabelSyncerCLI
 		return null;
 	}
 
-	static public
-	boolean isImgFailedAndComplained(final Img<?> img)
+	static public <T extends IntegerType<T>>
+	boolean isImgFailedAndComplained(final Img<?> img, final T referenceVoxelType)
 	{
 		if (img == null)
 		{
 			System.out.println("skipping this one -- failure while reading it");
 			return true;
 		}
-		if (! (img.firstElement() instanceof UnsignedShortType))
+		if (! (img.firstElement().getClass().equals(referenceVoxelType.getClass())) )
 		{
-			System.out.println("skipping this one -- not gray16 per pixel");
+			System.out.println("skipping this one -- not the expected pixel type");
 			return true;
 		}
 		return false;
@@ -117,14 +117,14 @@ public class LabelSyncerCLI
 				System.out.println("Reading input: " + aFilePath);
 				//
 				Img<?> i = readImageSilently(aFilePath);
-				if (isImgFailedAndComplained(i)) continue;
+				if (isImgFailedAndComplained(i,referenceVoxelType)) continue;
 				imgs.setElementAt((Img<T>) i, 0);
 
 				aFilePath = matchTraMarkerFile(inFile, args[1]);
 				System.out.println("Reading marker: " + aFilePath);
 				//
 				Img<?> tra = readImageSilently(aFilePath);
-				if (isImgFailedAndComplained(tra)) continue;
+				if (isImgFailedAndComplained(tra,referenceVoxelType)) continue;
 
 				System.out.println("Syncing labels....");
 				final Img<T> res = labelSync.fuse(imgs, (Img<T>) tra);
