@@ -1,14 +1,14 @@
 package de.mpicbg.ulman.fusion;
 
 import de.mpicbg.ulman.fusion.ng.LabelSync2;
+import ij.ImagePlus;
+import ij.io.Opener;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.img.ImagePlusAdapter;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
-import org.scijava.Context;
-import org.scijava.log.LogService;
 import sc.fiji.simplifiedio.SimplifiedIO;
-import sc.fiji.simplifiedio.SimplifiedIOException;
 
 import java.io.File;
 import java.util.Set;
@@ -59,8 +59,10 @@ public class LabelSyncerCLI
 	Img<?> readImageSilently(final String path)
 	{
 		try {
-			return SimplifiedIO.openImage(path).getImg();
-		} catch (SimplifiedIOException e) {
+			final ImagePlus image = new Opener().openImage(path);
+			if (image == null) return null;
+			return ImagePlusAdapter.wrapImgPlus(image).getImg();
+		} catch (Exception e) {
 			System.out.println("IO error: "+e.getMessage());
 		}
 		return null;
@@ -94,7 +96,7 @@ public class LabelSyncerCLI
 		}
 
 		//prepare the syncing code
-		final LogService myLog = new Context(LogService.class).getService(LogService.class);
+		final plugin_GTviaMarkersNG.MyLog myLog = new plugin_GTviaMarkersNG.MyLog();
 		final LabelSync2<T,T> labelSync = new LabelSync2<>(myLog);
 
 		//prepare the syncing containers
@@ -113,6 +115,8 @@ public class LabelSyncerCLI
 			}
 
 			for (String inFile : inFiles) {
+				System.out.println("==========================");
+
 				String aFilePath = args[0] + File.separator + inFile;
 				System.out.println("Reading input: " + aFilePath);
 				//
@@ -132,8 +136,6 @@ public class LabelSyncerCLI
 				aFilePath = args[2] + File.separator + inFile;
 				System.out.println("Creating output: " + aFilePath);
 				SimplifiedIO.saveImage(res, aFilePath);
-
-				System.out.println("==========================");
 			}
 		} catch (Exception e) {
 			System.out.println("error: "+e.getMessage());
