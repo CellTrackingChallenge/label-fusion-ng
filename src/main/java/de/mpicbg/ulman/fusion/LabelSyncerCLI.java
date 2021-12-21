@@ -3,6 +3,7 @@ package de.mpicbg.ulman.fusion;
 import de.mpicbg.ulman.fusion.ng.LabelSync2;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
+import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import org.scijava.Context;
 import org.scijava.log.LogService;
@@ -17,8 +18,9 @@ import java.util.stream.Stream;
 
 public class LabelSyncerCLI
 {
-	static
-	public Set<String> listAllResultMaskFilesInFolder(String dir)
+	// ================= handling filenames =================
+	static public
+	Set<String> listAllResultMaskFilesInFolder(String dir)
 	{
 		final File fDir = new File(dir);
 		if (!fDir.exists()) return null;
@@ -34,8 +36,8 @@ public class LabelSyncerCLI
 				.collect(Collectors.toSet());
 	}
 
-	static
-	public String matchTraMarkerFile(String resName, String traDir)
+	static public
+	String matchTraMarkerFile(String resName, String traDir)
 	{
 		//extract number from 'resName'
 		int digitsFrom = 0;
@@ -53,6 +55,35 @@ public class LabelSyncerCLI
 	}
 
 	public static void main(String[] args) {
+	// ================= handling image files =================
+	static public
+	Img<?> readImageSilently(final String path)
+	{
+		try {
+			return SimplifiedIO.openImage(path).getImg();
+		} catch (SimplifiedIOException e) {
+			System.out.println("IO error: "+e.getMessage());
+		}
+		return null;
+	}
+
+	static public
+	boolean isImgFailedAndComplained(final Img<?> img)
+	{
+		if (img == null)
+		{
+			System.out.println("skipping this one -- failure while reading it");
+			return true;
+		}
+		if (! (img.firstElement() instanceof UnsignedShortType))
+		{
+			System.out.println("skipping this one -- not gray16 per pixel");
+			return true;
+		}
+		return false;
+	}
+
+	// ================= the main workhorse code =================
 		//check parameters first
 		if (args.length != 3)
 		{
@@ -108,30 +139,6 @@ public class LabelSyncerCLI
 		}
 	}
 
-	static public
-	Img<?> readImageSilently(final String path)
-	{
-		try {
-			return SimplifiedIO.openImage(path).getImg();
-		} catch (SimplifiedIOException e) {
-			System.out.println("IO error: "+e.getMessage());
-		}
-		return null;
-	}
 
-	static public
-	boolean isImgFailedAndComplained(final Img<?> img)
-	{
-		if (img == null)
-		{
-			System.out.println("skipping this one -- failure while reading it");
-			return true;
-		}
-		if (! (img.firstElement() instanceof UnsignedShortType))
-		{
-			System.out.println("skipping this one -- not gray16 per pixel");
-			return true;
-		}
-		return false;
 	}
 }
