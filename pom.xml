@@ -158,11 +158,18 @@
 			</exclusions>
 		</dependency>
 
-		<!-- the "main paper"-part of this project -->
+		<!-- essentially only because of the Jaccard -->
 		<dependency>
 			<groupId>net.celltrackingchallenge</groupId>
 			<artifactId>CTC-measures</artifactId>
 			<version>0.9.0</version>
+		</dependency>
+
+		<!-- essentially only CCA algorithm -->
+		<dependency>
+			<groupId>net.imglib2</groupId>
+			<artifactId>imglib2-algorithm</artifactId>
+			<version>0.12.1</version>
 		</dependency>
 
 		<!-- 3rd party dependency (to display progress bar) -->
@@ -170,12 +177,6 @@
 			<groupId>org.jhotdraw</groupId>
 			<artifactId>jhotdraw</artifactId>
 			<version>7.6.0</version>
-		</dependency>
-
-		<!-- for GTviaMarkers and to start and test plugins (from the ImageJ GUI) -->
-		<dependency>
-			<groupId>net.imagej</groupId>
-			<artifactId>imagej</artifactId>
 		</dependency>
 	</dependencies>
 </project>
