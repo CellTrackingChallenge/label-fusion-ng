@@ -102,8 +102,9 @@ public class LabelSyncerCLI
 
 				System.out.println("==========================");
 			}
-		} catch (SimplifiedIOException e) {
-			System.out.println("SIO ex: "+e.getMessage());
+		} catch (Exception e) {
+			System.out.println("error: "+e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
