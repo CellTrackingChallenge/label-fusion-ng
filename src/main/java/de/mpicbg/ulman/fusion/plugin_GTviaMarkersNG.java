@@ -106,7 +106,7 @@ public class plugin_GTviaMarkersNG implements Command
 			           "SIMPLE",
 			           "BICv2 with FlatVoting, SingleMaskFailSafe and CollisionResolver",
 			           "BICv2 with WeightedVoting, SingleMaskFailSafe and CollisionResolver",
-			           "Label Syncer"}, //,"STAPLE"},
+			           "Label Syncer"},
 			callback = "mergeModelChanged")
 	private String mergeModel;
 
@@ -148,7 +148,7 @@ public class plugin_GTviaMarkersNG implements Command
 	@SuppressWarnings("unused")
 	private void mergeModelChanged()
 	{
-		if (mergeModel.startsWith("Threshold - flat"))
+		if (mergeModel.startsWith("Threshold - flat") || mergeModel.startsWith("BICv2 with Flat"))
 		{
 			fileInfoA = "The job file should list one input filename pattern per line.";
 			fileInfoB = "The job file should end with tracking markers filename pattern.";
@@ -156,7 +156,7 @@ public class plugin_GTviaMarkersNG implements Command
 			fileInfoD = " ";
 		}
 		else
-		if (mergeModel.startsWith("Threshold - user") || mergeModel.startsWith("BICv2"))
+		if (mergeModel.startsWith("Threshold - user") || mergeModel.startsWith("BICv2 with Weight"))
 		{
 			fileInfoA = "The job file should list one input filename pattern per line";
 			fileInfoB = "and space separated single real number weight.";
@@ -189,7 +189,6 @@ public class plugin_GTviaMarkersNG implements Command
 		}
 		else
 		{
-			//STAPLE:
 			fileInfoA = " ";
 			fileInfoB = "Don't know yet how to use this model.";
 			fileInfoC = " ";
@@ -314,7 +313,7 @@ public class plugin_GTviaMarkersNG implements Command
 		//check it has understandable content:
 		//is there additional column with weights?
 		final boolean weightAvail = mergeModel.startsWith("Threshold - user") ||
-		                            mergeModel.startsWith("BICv2");
+		                            mergeModel.startsWith("BICv2 with Weight");
 
 		//read the whole input file
 		List<String> job = null;
@@ -450,7 +449,7 @@ public class plugin_GTviaMarkersNG implements Command
 		//parses job file (which we know is sane for sure) to prepare an array of strings
 		//is there additional column with weights?
 		final boolean weightAvail = mergeModel.startsWith("Threshold - user") ||
-		                            mergeModel.startsWith("BICv2");
+		                            mergeModel.startsWith("BICv2 with Weight");
 
 		//read the whole input file
 		List<String> job = null;
