@@ -24,6 +24,10 @@ hs_err_pid*
 # tmp output files
 /*.tif
 
+# binaries from the cropper
+cropper/findROI
+cropper/findROI_static
+
 
 # Maven #
 /target/
