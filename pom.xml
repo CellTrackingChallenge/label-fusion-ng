@@ -10,7 +10,7 @@
 
 	<groupId>de.mpicbg.ulman</groupId>
 	<artifactId>label-fusion-ng</artifactId>
-	<version>2.0.0-SNAPSHOT</version>
+	<version>2.0.2-SNAPSHOT</version>
 
 	<organization>
 		<name>The Cell Tracking Challenge</name>
@@ -65,6 +65,7 @@
 					</arguments>
 				</configuration>
 			</plugin>
+			<!-- disabled until fusion GUI and especially CLI is updated
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
 				<version>3.3.0</version>
@@ -88,6 +89,7 @@
 					</execution>
 				</executions>
 			</plugin>
+			-->
 		</plugins>
 	</build>
 
@@ -200,6 +202,13 @@
 			<groupId>org.jhotdraw</groupId>
 			<artifactId>jhotdraw</artifactId>
 			<version>7.6.0</version>
+		</dependency>
+
+		<!-- for GTviaMarkers and to start and test plugins (from the ImageJ GUI) -->
+		<dependency>
+			<groupId>net.imagej</groupId>
+			<artifactId>imagej</artifactId>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 </project>
