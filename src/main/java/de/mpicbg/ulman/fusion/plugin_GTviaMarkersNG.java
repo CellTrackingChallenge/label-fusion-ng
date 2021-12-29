@@ -843,7 +843,7 @@ public class plugin_GTviaMarkersNG implements Command
 	}
 
 
-	private static
+	static
 	class MyLog implements LogService
 	{
 		@Override
