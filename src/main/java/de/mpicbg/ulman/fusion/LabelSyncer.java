@@ -167,7 +167,7 @@ public class LabelSyncer extends CommonGUI implements Command
 		{
 			log.error("Input parameters are wrong.");
 			if (useGui)
-				uiService.showDialog("There is something wrong with the job file.");
+				uiService.showDialog("Stopped because there is something wrong with the job file.");
 			return;
 		}
 		if (!syncOutputFilenameOKAY())

@@ -159,6 +159,7 @@ public class Fusers extends CommonGUI implements Command
 			fileInfoC = " ";
 			fileInfoD = " ";
 		}
+		inFileOKAY();
 	}
 
 	//will be also used for sanity checking, thus returns boolean
@@ -210,7 +211,7 @@ public class Fusers extends CommonGUI implements Command
 		{
 			log.error("Input parameters are wrong.");
 			if (useGui)
-				uiService.showDialog("There is something wrong with the job file.");
+				uiService.showDialog("Stopped because there is something wrong with the job file.");
 			return;
 		}
 		if (!outFileOKAY())
