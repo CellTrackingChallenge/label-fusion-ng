@@ -296,11 +296,11 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 				//is there the second column at all?
 				if (lineTokens.length == 1)
 				{
-					log.warn("Missing column with weights on line "+lineNo+".");
+					log.warn("Job file: Missing column with weights on line "+lineNo+".");
 					if (!uiService.isHeadless())
 					{
-						statusService.showStatus("Missing column with weights on line "+lineNo+".");
-						uiService.showDialog(    "Missing column with weights on line "+lineNo+".");
+						statusService.showStatus("Job file: Missing column with weights on line "+lineNo+".");
+						uiService.showDialog(    "Job file: Missing column with weights on line "+lineNo+".");
 					}
 					return false;
 				}
@@ -317,11 +317,11 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 					Float.parseFloat(partTwo);
 				}
 				catch (Exception e) {
-					log.warn("The weight column \""+partTwo+"\" cannot be parsed as a real number on line "+lineNo+".");
+					log.warn("Job file: The weight column \""+partTwo+"\" cannot be parsed as a real number on line "+lineNo+".");
 					if (!uiService.isHeadless())
 					{
-						statusService.showStatus("The weight column \""+partTwo+"\" cannot be parsed as a real number on line "+lineNo+".");
-						uiService.showDialog(    "The weight column \""+partTwo+"\" cannot be parsed as a real number on line "+lineNo+".");
+						statusService.showStatus("Job file: The weight column \""+partTwo+"\" cannot be parsed as a real number on line "+lineNo+".");
+						uiService.showDialog(    "Job file: The weight column \""+partTwo+"\" cannot be parsed as a real number on line "+lineNo+".");
 					}
 					return false;
 				}
@@ -330,11 +330,11 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 			//test for presence of the expanding pattern TTT or TTTT
 			if (partOne.indexOf("TTT") == -1 || ( (partOne.lastIndexOf("TTT") - partOne.indexOf("TTT")) > 1 ))
 			{
-				log.warn("Filename \""+partOne+"\" does not contain TTT or TTTT pattern on line "+lineNo+".");
+				log.warn("Job file: Filename \""+partOne+"\" does not contain TTT or TTTT pattern on line "+lineNo+".");
 				if (!uiService.isHeadless())
 				{
-					statusService.showStatus("Filename \""+partOne+"\" does not contain TTT or TTTT pattern on line "+lineNo+".");
-					uiService.showDialog(    "Filename \""+partOne+"\" does not contain TTT or TTTT pattern on line "+lineNo+".");
+					statusService.showStatus("Job file: Filename \""+partOne+"\" does not contain TTT or TTTT pattern on line "+lineNo+".");
+					uiService.showDialog(    "Job file: Filename \""+partOne+"\" does not contain TTT or TTTT pattern on line "+lineNo+".");
 				}
 				return false;
 			}
