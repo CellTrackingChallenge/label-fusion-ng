@@ -32,11 +32,21 @@ import net.imglib2.img.Img;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
-
-import org.scijava.log.LogService;
 import sc.fiji.simplifiedio.SimplifiedIO;
 
+import org.scijava.app.StatusService;
+import org.scijava.ui.UIService;
+import org.scijava.log.LogService;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
+import java.util.List;
 import java.util.Vector;
+
+import de.mpicbg.ulman.fusion.JobSpecification;
 
 /**
  * This class essentially takes care of the IO burden. One provides it with
@@ -180,5 +190,158 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 		final int dotSeparatorIdx = newName.lastIndexOf(".");
 		newName = new String(newName.substring(0, dotSeparatorIdx)+"__DBG"+newName.substring(dotSeparatorIdx));
 		*/
+	}
+
+
+
+	// ----------- static helpers for the outter world -----------
+	static public
+	JobSpecification.Builder parseJobFileWithoutWeights(final String pathToJobFile)
+	throws IOException
+	{
+		return parseJobFile(pathToJobFile,false);
+	}
+
+	static public
+	JobSpecification.Builder parseJobFile(final String pathToJobFile, final boolean expectWeights)
+	throws IOException
+	{
+		//prepare the output array
+		JobSpecification.Builder jobPattern = JobSpecification.builder();
+
+		//read the whole input file
+		List<String> job = Files.readAllLines(Paths.get(pathToJobFile));
+
+		//parse the input job specification file (which we know is sane for sure)
+		int lineNo=0;
+		for (String line : job)
+		{
+			if (lineNo < (job.size()-1)) {
+				//processing input lines
+
+				if (expectWeights) {
+					String[] lineTokens = line.split("\\s+");
+					//NB: inFileOKAY() was true, so there is the second column
+
+					//get the first part into the filenameColumn variable
+					StringBuilder filenameColumn = new StringBuilder();
+					for (int q=0; q < lineTokens.length-1; ++q)
+						filenameColumn.append( lineTokens[q] );
+
+					//the weight itself
+					double weightColumn = Double.parseDouble(lineTokens[lineTokens.length-1]);
+
+					jobPattern.addInput(filenameColumn.toString(),weightColumn);
+				} else {
+					//user-weights not available -> use the whole line
+					jobPattern.addInput(line);
+				}
+			} else {
+				//processing final line with marker filename
+				jobPattern.setMarker(line);
+			}
+
+			++lineNo;
+		}
+
+		return jobPattern;
+	}
+
+
+	//a common callback:
+	//will be also used for sanity checking, thus returns boolean
+	static public
+	boolean inFileOKAY(final File filePath,
+	                   final boolean shouldCheckForWeights,
+	                   final LogService log,
+	                   final StatusService statusService,
+	                   final UIService uiService)
+	{
+		//check the job file exists
+		if (filePath == null) {
+			log.warn("The path to a job file was not provided.");
+			statusService.showStatus("The path to a job file was not provided.");
+			return false;
+		}
+		if (!filePath.exists()) {
+			log.warn("Job file \""+filePath.getAbsolutePath()+"\" does not exist.");
+			statusService.showStatus("Job file \""+filePath.getAbsolutePath()+"\" does not exist.");
+			return false;
+		}
+
+		//read the whole input file
+		List<String> job = null;
+		try {
+			job = Files.readAllLines(Paths.get(filePath.getAbsolutePath()));
+		}
+		catch (IOException e) {
+			log.error("Error reading job file: "+e);
+			return false;
+		}
+
+		int lineNo=0;
+		for (String line : job)
+		{
+			++lineNo;
+
+			//this currently represents the first column/complete line
+			String partOne = line;
+
+			//should there be the weight column on this line?
+			if (shouldCheckForWeights && lineNo < job.size())
+			{
+				//yes, there should be one...
+				String[] lineTokens = line.split("\\s+");
+
+				//is there the second column at all?
+				if (lineTokens.length == 1)
+				{
+					log.warn("Missing column with weights on line "+lineNo+".");
+					if (!uiService.isHeadless())
+					{
+						statusService.showStatus("Missing column with weights on line "+lineNo+".");
+						uiService.showDialog(    "Missing column with weights on line "+lineNo+".");
+					}
+					return false;
+				}
+
+				//get the first part into the partOne variable
+				StringBuilder partOneSB = new StringBuilder();
+				for (int q=0; q < lineTokens.length-1; ++q)
+					partOneSB.append(lineTokens[q]);
+				partOne = partOneSB.toString();
+
+				//is the column actually float-parsable number?
+				String partTwo = lineTokens[lineTokens.length-1];
+				try {
+					Float.parseFloat(partTwo);
+				}
+				catch (Exception e) {
+					log.warn("The weight column \""+partTwo+"\" cannot be parsed as a real number on line "+lineNo+".");
+					if (!uiService.isHeadless())
+					{
+						statusService.showStatus("The weight column \""+partTwo+"\" cannot be parsed as a real number on line "+lineNo+".");
+						uiService.showDialog(    "The weight column \""+partTwo+"\" cannot be parsed as a real number on line "+lineNo+".");
+					}
+					return false;
+				}
+			}
+
+			//test for presence of the expanding pattern TTT or TTTT
+			if (partOne.indexOf("TTT") == -1 || ( (partOne.lastIndexOf("TTT") - partOne.indexOf("TTT")) > 1 ))
+			{
+				log.warn("Filename \""+partOne+"\" does not contain TTT or TTTT pattern on line "+lineNo+".");
+				if (!uiService.isHeadless())
+				{
+					statusService.showStatus("Filename \""+partOne+"\" does not contain TTT or TTTT pattern on line "+lineNo+".");
+					uiService.showDialog(    "Filename \""+partOne+"\" does not contain TTT or TTTT pattern on line "+lineNo+".");
+				}
+				return false;
+			}
+		}
+
+		log.info("Job file feels sane.");
+		statusService.showStatus("Job file feels sane.");
+		return true;
 	}
 }
