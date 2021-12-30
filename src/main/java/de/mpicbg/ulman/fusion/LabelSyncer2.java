@@ -48,7 +48,7 @@ import java.util.Vector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@Plugin(type = Command.class, name = "LabelSync2", menuPath = "Plugins>LabelSync2")
+@Plugin(type = Command.class, name = "LabelSync2", menuPath = "Plugins>Annotation Labels Sync2")
 public class LabelSyncer2 implements Command
 {
 	// ================= Fiji =================
@@ -168,7 +168,7 @@ public class LabelSyncer2 implements Command
 		void processImages()
 		{
 			//prepare the syncing code
-			final plugin_GTviaMarkersNG.MyLog myLog = new plugin_GTviaMarkersNG.MyLog();
+			final Fusers.MyLog myLog = new Fusers.MyLog();
 			final LabelSync2<T,T> labelSync = new LabelSync2<>(myLog);
 
 			//prepare the syncing containers
