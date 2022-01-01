@@ -101,6 +101,75 @@ public class JobSpecification
 		return args;
 	}
 
+	// ============= instantiating =============
+	public Inputs instantiateForTime(final int timepoint)
+	{
+		final Inputs res = new Inputs();
+		res.inputFiles = new String[numberOfFusionInputs];
+		res.inputWeights = new double[numberOfFusionInputs];
+		for (int i = 0; i < numberOfFusionInputs; ++i) {
+			res.inputFiles[i] = expandFilenamePattern(inputs.get(i).filePathPattern, timepoint);
+			res.inputWeights[i] = inputs.get(i).weight;
+		}
+		res.markerFile = expandFilenamePattern(markerPattern,timepoint);
+		res.threshold = votingThreshold;
+		return res;
+	}
+
+	static
+	public Inputs instantiateForTime(final String[] args, final int timepoint)
+	{
+		final int inputImagesCount = (args.length-3) / 2;
+		final Inputs res = new Inputs();
+		res.inputFiles = new String[inputImagesCount];
+		res.inputWeights = new double[inputImagesCount];
+		for (int i = 0; i < inputImagesCount; ++i) {
+			res.inputFiles[i] = expandFilenamePattern(args[2*i +0], timepoint);
+			res.inputWeights[i] = Double.parseDouble(args[2*i +1]);
+		}
+		res.markerFile = expandFilenamePattern(args[2*inputImagesCount],timepoint);
+		res.threshold = Double.parseDouble(args[2*inputImagesCount+1]);
+		return res;
+	}
+
+	static
+	public Inputs instanceCopyOf(final String[] args)
+	{
+		final int inputImagesCount = (args.length-3) / 2;
+		final Inputs res = new Inputs();
+		res.inputFiles = new String[inputImagesCount];
+		res.inputWeights = new double[inputImagesCount];
+		for (int i = 0; i < inputImagesCount; ++i) {
+			res.inputFiles[i] = args[2*i +0];
+			res.inputWeights[i] = Double.parseDouble(args[2*i +1]);
+		}
+		res.markerFile = args[2*inputImagesCount];
+		res.threshold = Double.parseDouble(args[2*inputImagesCount+1]);
+		return res;
+	}
+
+	static public class Inputs
+	{
+		public String[] inputFiles;
+		public double[] inputWeights;
+		public String markerFile;
+		public double threshold;
+
+		@Override
+		public String toString()
+		{
+			final StringBuilder sb = new StringBuilder();
+			for (int i = 0; i < inputFiles.length; ++i) {
+				sb.append(i).append(": ")
+						.append(inputFiles[i]).append("  ")
+						.append(inputWeights[i]).append('\n');
+			}
+			sb.append("m: ").append(markerFile)
+						.append("\nt: ").append(threshold);
+			return sb.toString();
+		}
+	}
+
 	// ============= printing =============
 	public void reportJobArgs(final String[] args, final Logger log)
 	{
