@@ -195,6 +195,12 @@ extends JobIO<IT,LT>
 		saveStreamedImages( syncAllInputsAndStreamIt(inImgs,markerImg) );
 	}
 
+	public
+	void syncAllOwnInputsAndSaveAllToDisk()
+	{
+		saveStreamedImages( syncAllInputsAndStreamIt(this.inImgs,this.markerImg) );
+	}
+
 
 	public
 	ImagesWithOrigin syncAllInputsAndStreamIt(final Vector<RandomAccessibleInterval<IT>> inImgs,

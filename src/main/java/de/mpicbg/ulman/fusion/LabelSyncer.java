@@ -236,7 +236,8 @@ public class LabelSyncer extends CommonGUI implements Command
 		iterateTimePoints(fileIdxList,useGui,time -> {
 			job.reportJobForTime(time,log);
 			syncer.currentTime = time;
-			//syncer.syncAllInputsAndSaveAllToDisk(args);
+			syncer.loadJob(job,time);
+			syncer.syncAllOwnInputsAndSaveAllToDisk();
 		});
 	}
 
