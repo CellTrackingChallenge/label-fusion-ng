@@ -30,6 +30,7 @@ package de.mpicbg.ulman.fusion.ng.backbones;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
+import de.mpicbg.ulman.fusion.JobSpecification;
 
 import org.scijava.log.LogService;
 import sc.fiji.simplifiedio.SimplifiedIO;
@@ -75,19 +76,44 @@ extends JobIO<IT,LT>
 
 
 	public
+	Img<LT> useAlgorithm()
+	{
+		if (algorithm == null)
+			throw new RuntimeException("Cannot work without an algorithm.");
+
+		log.info("calling weighted voting algorithm with threshold="+threshold);
+		algorithm.setWeights(inWeights);
+		algorithm.setThreshold(threshold);
+		return algorithm.fuse(inImgs, markerImg);
+	}
+
+
+	public
 	void processJob(final String... args)
 	{
 		if (algorithm == null)
 			throw new RuntimeException("Cannot work without an algorithm.");
 
 		super.loadJob(args);
-
-		log.info("calling weighted voting algorithm with threshold="+threshold);
-		algorithm.setWeights(inWeights);
-		algorithm.setThreshold(threshold);
-		final Img<LT> outImg = algorithm.fuse(inImgs, markerImg);
+		final Img<LT> outImg = useAlgorithm();
 
 		log.info("Saving file: "+args[args.length-1]);
 		SimplifiedIO.saveImage(outImg, args[args.length-1]);
+	}
+
+
+	public
+	void processJob(final JobSpecification job, final int time)
+	{
+		if (algorithm == null)
+			throw new RuntimeException("Cannot work without an algorithm.");
+		//NB: expand now... and fail possibly soon before possibly lengthy loading of images
+		final String outFile = JobSpecification.expandFilenamePattern(job.outputPattern,time);
+
+		super.loadJob(job,time);
+		final Img<LT> outImg = useAlgorithm();
+
+		log.info("Saving file: "+outFile);
+		SimplifiedIO.saveImage(outImg, outFile);
 	}
 }

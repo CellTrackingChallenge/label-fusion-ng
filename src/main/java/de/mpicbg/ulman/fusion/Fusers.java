@@ -303,6 +303,7 @@ public class Fusers extends CommonGUI implements Command
 		// ------------ action per time point ------------
 		iterateTimePoints(fileIdxList,useGui,time -> {
 			job.reportJobForTime(time,log);
+			feeder.processJob(job,time);
 		});
 	}
 
