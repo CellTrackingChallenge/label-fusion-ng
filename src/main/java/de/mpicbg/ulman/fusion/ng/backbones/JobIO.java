@@ -307,43 +307,68 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 			//this currently represents the first column/complete line
 			String partOne = line;
 
-			//should there be the weight column on this line?
-			if (shouldCheckForWeights && lineNo < job.size())
+			//are we still processing lines with input files? ...possibly with weight columns
+			if (lineNo < job.size())
 			{
-				//yes, there should be one...
-				String[] lineTokens = line.split("\\s+");
-
-				//is there the second column at all?
-				if (lineTokens.length == 1)
+				//and if so, should we care about the weight column?
+				if (shouldCheckForWeights)
 				{
-					log.warn("Job file: Missing column with weights on line "+lineNo+".");
-					if (!uiService.isHeadless())
-					{
-						statusService.showStatus("Job file: Missing column with weights on line "+lineNo+".");
-						uiService.showDialog(    "Job file: Missing column with weights on line "+lineNo+".");
-					}
-					return false;
-				}
+					//yes, there should be one...
+					String[] lineTokens = line.split("\\s+");
 
-				//get the first part into the partOne variable
-				StringBuilder partOneSB = new StringBuilder();
-				for (int q=0; q < lineTokens.length-1; ++q)
-					partOneSB.append(lineTokens[q]);
-				partOne = partOneSB.toString();
-
-				//is the column actually float-parsable number?
-				String partTwo = lineTokens[lineTokens.length-1];
-				try {
-					Float.parseFloat(partTwo);
-				}
-				catch (Exception e) {
-					log.warn("Job file: The weight column \""+partTwo+"\" cannot be parsed as a real number on line "+lineNo+".");
-					if (!uiService.isHeadless())
+					//is there the second column at all?
+					if (lineTokens.length == 1)
 					{
-						statusService.showStatus("Job file: The weight column \""+partTwo+"\" cannot be parsed as a real number on line "+lineNo+".");
-						uiService.showDialog(    "Job file: The weight column \""+partTwo+"\" cannot be parsed as a real number on line "+lineNo+".");
+						log.warn("Job file: Missing column with weights on line "+lineNo+".");
+						if (!uiService.isHeadless())
+						{
+							statusService.showStatus("Job file: Missing column with weights on line "+lineNo+".");
+							uiService.showDialog(    "Job file: Missing column with weights on line "+lineNo+".");
+						}
+						return false;
 					}
-					return false;
+
+					//get the first part into the partOne variable
+					StringBuilder partOneSB = new StringBuilder();
+					for (int q=0; q < lineTokens.length-1; ++q)
+						partOneSB.append(lineTokens[q]);
+					partOne = partOneSB.toString();
+
+					//is the column actually float-parsable number?
+					String partTwo = lineTokens[lineTokens.length-1];
+					try {
+						Float.parseFloat(partTwo);
+					}
+					catch (Exception e) {
+						log.warn("Job file: The weight column \""+partTwo+"\" cannot be parsed as a real number on line "+lineNo+".");
+						if (!uiService.isHeadless())
+						{
+							statusService.showStatus("Job file: The weight column \""+partTwo+"\" cannot be parsed as a real number on line "+lineNo+".");
+							uiService.showDialog(    "Job file: The weight column \""+partTwo+"\" cannot be parsed as a real number on line "+lineNo+".");
+						}
+						return false;
+					}
+				}
+				else
+				{
+					//no, there shall be no trailing weights...
+					//so we test if it does not accidentally end up with numbers..
+					String[] lineTokens = line.split("\\s+");
+					String possiblyNumber = lineTokens[lineTokens.length-1];
+					boolean isNumber = false;
+					try {
+						Float.parseFloat(possiblyNumber);
+						isNumber = true;
+					}
+					catch (Exception e) { /* intentionally empty */ }
+					if (isNumber) {
+						log.warn("Job file: There seems to be present the weight column \""+possiblyNumber+"\" on line "+lineNo+".");
+						if (!uiService.isHeadless())
+						{
+							statusService.showStatus("Job file: There seems to be present the weight column \""+possiblyNumber+"\" on line "+lineNo+".");
+							uiService.showDialog(    "Job file: There seems to be present the weight column \""+possiblyNumber+"\" on line "+lineNo+".");
+						}
+					}
 				}
 			}
 
