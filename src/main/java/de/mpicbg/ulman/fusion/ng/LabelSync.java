@@ -181,7 +181,7 @@ extends JobIO<IT,LT>
 	ImagesWithOrigin syncAllInputsAndStreamIt(final String... jobSpec)
 	{
 		//load the image data
-		super.processJob(jobSpec);
+		super.loadJob(jobSpec);
 
 		//return the data fetching object
 		return new ImagesWithOrigin();

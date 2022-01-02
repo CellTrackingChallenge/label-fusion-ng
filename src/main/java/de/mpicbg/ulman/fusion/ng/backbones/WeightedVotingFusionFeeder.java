@@ -74,14 +74,13 @@ extends JobIO<IT,LT>
 	private WeightedVotingFusionAlgorithm<IT,LT> algorithm;
 
 
-	@Override
 	public
 	void processJob(final String... args)
 	{
 		if (algorithm == null)
 			throw new RuntimeException("Cannot work without an algorithm.");
 
-		super.processJob(args);
+		super.loadJob(args);
 
 		log.info("calling weighted voting algorithm with threshold="+threshold);
 		algorithm.setWeights(inWeights);
