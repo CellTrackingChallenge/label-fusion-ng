@@ -27,6 +27,7 @@
  */
 package de.mpicbg.ulman.fusion.ng.backbones;
 
+import de.mpicbg.ulman.fusion.ng.AbstractWeightedVotingRoisFusionAlgorithm;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
@@ -84,6 +85,13 @@ extends JobIO<IT,LT>
 		log.info("calling weighted voting algorithm with threshold="+threshold);
 		algorithm.setWeights(inWeights);
 		algorithm.setThreshold(threshold);
+		if (algorithm instanceof AbstractWeightedVotingRoisFusionAlgorithm) {
+			AbstractWeightedVotingRoisFusionAlgorithm<IT,LT,?> algRoi
+					= (AbstractWeightedVotingRoisFusionAlgorithm<IT,LT,?>)algorithm;
+			algRoi.setupBoxes(inImgs,markerImg);
+			//DEBUG// algRoi.printBoxes();
+			log.warn("ROIs (boxes) are ready");
+		}
 		return algorithm.fuse(inImgs, markerImg);
 	}
 
