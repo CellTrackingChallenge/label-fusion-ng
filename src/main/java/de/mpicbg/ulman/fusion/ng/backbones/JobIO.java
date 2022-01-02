@@ -98,10 +98,10 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 
 
 	// ----------- input job spec to output attributes -----------
-	/** converts job specification into the output attributes */
-	@SuppressWarnings("unchecked")
+	/** converts time-instantiated, String[]-based job specification
+	    into JobSpecification.Inputs specs and processes it */
 	public
-	void processJob(final String... args)
+	void loadJob(final String... args)
 	{
 		//check the minimum number of input parameters, should be odd number
 		if (args.length < 5 || (args.length&1)==0)
@@ -111,9 +111,25 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 			log.info("All img1 (path to an image file) are TRA marker-wise combined into output outImg.");
 			throw new RuntimeException("At least one input image, exactly one marker image and one treshold plus one output image are expected.");
 		}
+		loadJob( JobSpecification.instanceCopyOf(args) );
+	}
 
-		//the number of input pairs, the test above enforces it is nicely divisible by 2
-		final int inputImagesCount = (args.length-3) / 2;
+
+	/** processes JobSpecification-based job specification
+	    into JobSpecification.Inputs specs and processes it */
+	public
+	void loadJob(final JobSpecification job, final int time)
+	{
+		loadJob( job.instantiateForTime(time) );
+	}
+
+
+	/** processes JobSpecification.Inputs job specification */
+	public
+	void loadJob(final JobSpecification.Inputs jsi)
+	{
+		log.info("inputs:\n"+jsi); //DEBUG REMOVE VLADO
+		final int inputImagesCount = jsi.inputFiles.length;
 
 		//container to store the input images
 		inImgs = new Vector<>(inputImagesCount);
@@ -133,8 +149,13 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 		for (int i=0; i < inputImagesCount+1; ++i)
 		{
 			//load the image
-			log.info("Reading pair: "+args[2*i]+" "+args[2*i +1]);
-			img = SimplifiedIO.openImage(args[2*i]);
+			if (i < inputImagesCount) {
+				log.info("Reading pair: " + jsi.inputFiles[i] + " " + jsi.inputWeights[i]);
+				img = SimplifiedIO.openImage(jsi.inputFiles[i]);
+			} else {
+				log.info("Reading marker: " + jsi.markerFile);
+				img = SimplifiedIO.openImage(jsi.markerFile);
+			}
 
 			//check the type of the image (the combineGTs plug-in requires RealType<>)
 			if (!(img.firstElement() instanceof RealType<?>))
@@ -173,11 +194,11 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 
 			//also parse and store the weight
 			if (i < inputImagesCount)
-				inWeights.add( Double.parseDouble(args[2*i +1]) );
+				inWeights.add( jsi.inputWeights[i] );
 		}
 
 		//parse threshold value
-		threshold = Float.parseFloat(args[args.length-2]);
+		threshold = (float)jsi.threshold;
 
 		//since the simplifiedIO() returns actually always ImgPlus,
 		//we better strip away the "plus" extras to make it pure Img<>
@@ -191,7 +212,6 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 		newName = new String(newName.substring(0, dotSeparatorIdx)+"__DBG"+newName.substring(dotSeparatorIdx));
 		*/
 	}
-
 
 
 	// ----------- static helpers for the outter world -----------
