@@ -39,18 +39,18 @@ import de.mpicbg.ulman.fusion.ng.insert.CollisionsAwareLabelInsertor;
 
 public
 class BIC<IT extends RealType<IT>, LT extends IntegerType<LT>>
-extends AbstractWeightedVotingFusionAlgorithm<IT,LT>
+extends AbstractWeightedVotingFusionAlgorithm<IT,LT,DoubleType>
 {
 	public
 	BIC(final LogService _log)
 	{
-		super(_log);
+		super(_log, new DoubleType());
 	}
 
 	public
 	BIC(final LogService _log, final String dbgImgSuffix)
 	{
-		super(_log);
+		super(_log, new DoubleType());
 
 		//enable debug output
 		this.dbgImgFileName = dbgImgSuffix;

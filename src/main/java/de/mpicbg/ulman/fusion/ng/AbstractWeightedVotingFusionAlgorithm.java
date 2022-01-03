@@ -36,7 +36,6 @@ import net.imglib2.*;
 import net.imglib2.img.Img;
 import net.imglib2.view.Views;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.real.DoubleType;
 
 import java.util.Iterator;
 import java.util.Vector;
@@ -61,24 +60,28 @@ import de.mpicbg.ulman.fusion.ng.postprocess.LabelPostprocessor;
  * method from the 'postprocess' folder).
  */
 public abstract
-class AbstractWeightedVotingFusionAlgorithm<IT extends RealType<IT>, LT extends IntegerType<LT>>
+class AbstractWeightedVotingFusionAlgorithm<IT extends RealType<IT>, LT extends IntegerType<LT>, ET extends RealType<ET>>
 implements WeightedVotingFusionAlgorithm<IT,LT>
 {
 	///prevent from creating the class without any connection
 	@SuppressWarnings("unused")
 	private
 	AbstractWeightedVotingFusionAlgorithm()
-	{ log = null; } //this is to get rid of some warnings
+	{ log = null; referenceType = null; } //this is to get rid of some warnings
 
 	protected final LogService log;
+	protected final ET referenceType;
 
 	public
-	AbstractWeightedVotingFusionAlgorithm(final LogService _log)
+	AbstractWeightedVotingFusionAlgorithm(final LogService _log, final ET refType)
 	{
 		if (_log == null)
 			throw new RuntimeException("Please, give me existing LogService.");
-
 		log = _log;
+
+		if (refType == null)
+			throw new RuntimeException("Provide pixel type -- precision of the fusion.");
+		referenceType = refType.createVariable();
 
 		//setup the required components
 		setFusionComponents();
@@ -116,9 +119,9 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 	void setFusionComponents();
 
 	//setup extract, fuse, insert, postprocess (clean up)
-	LabelExtractor<IT,LT,DoubleType> labelExtractor = null;
-	LabelFuser<IT,DoubleType> labelFuser = null;
-	CollisionsAwareLabelInsertor<LT,DoubleType> labelInsertor = null;
+	LabelExtractor<IT,LT,ET> labelExtractor = null;
+	LabelFuser<IT,ET> labelFuser = null;
+	CollisionsAwareLabelInsertor<LT,ET> labelInsertor = null;
 	LabelPostprocessor<LT> labelCleaner = null;
 
 
@@ -184,8 +187,8 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 		//later post-processing
 
 		//create a temporary image (of the same iteration order as the markerImg)
-		final Img<DoubleType> tmpImg
-			= markerImg.factory().imgFactory(new DoubleType()).create(markerImg);
+		final Img<ET> tmpImg
+			= markerImg.factory().imgFactory(referenceType).create(markerImg);
 
 		//create the output image (of the same iteration order as the markerImg),
 		//and init it
