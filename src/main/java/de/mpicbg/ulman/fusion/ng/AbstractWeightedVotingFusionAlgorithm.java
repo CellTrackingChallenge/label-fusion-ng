@@ -163,6 +163,20 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 
 	public String dbgImgFileName;
 
+	public String reportImageSize(final RandomAccessibleInterval<?> img)
+	{ return reportImageSize(img, referenceType.getBitsPerPixel()/8); }
+	//
+	public String reportImageSize(final RandomAccessibleInterval<?> img, final long pixelInBytes)
+	{
+		long pixels = 1;
+		for (long d : img.dimensionsAsLongArray()) pixels *= d;
+		pixels /= 1 << 20;
+		final StringBuilder sb = new StringBuilder();
+		sb.append("Size in Mpixels: ").append(pixels)
+				.append("\nSize in MBytes:  ").append(pixels*pixelInBytes);
+		return sb.toString();
+	}
+
 	@Override
 	public
 	Img<LT> fuse(final Vector<RandomAccessibleInterval<IT>> inImgs,
@@ -187,31 +201,42 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 		//later post-processing
 
 		//create a temporary image (of the same iteration order as the markerImg)
+		log.warn("tmpImg: "+reportImageSize(markerImg));
+		log.warn("outImg: "+reportImageSize(markerImg,2));
+		log.warn("starting to create images...");
 		final Img<ET> tmpImg
 			= markerImg.factory().imgFactory(referenceType).create(markerImg);
+		log.warn("created tmpImg");
 
 		//create the output image (of the same iteration order as the markerImg),
 		//and init it
 		final Img<LT> outImg = markerImg.factory().create(markerImg);
+		log.warn("created outImg");
 		LoopBuilder.setImages(outImg).forEachPixel( (a) -> a.setZero() );
+		log.warn("zeroed outImg");
 
 		//aux params for the fusion
 		final Vector<RandomAccessibleInterval<IT>> selectedInImgs  = new Vector<>(inWeights.size());
 		final Vector<Float>                       selectedInLabels = new Vector<>(inWeights.size());
+		log.warn("init A");
 
 		//set to remember already discovered TRA markers
 		//(with initial capacity set for 100 markers)
 		HashSet<Integer> mDiscovered = new HashSet<>(100);
+		log.warn("init B");
 
 		//init insertion (includes to create (re-usable) insertion status object)
 		final LabelInsertor.InsertionStatus insStatus = new LabelInsertor.InsertionStatus();
+		log.warn("init C");
 		labelInsertor.initialize(outImg);
+		log.warn("init D");
 
 		//also prepare the positions holding aux array, and bbox corners
 		final long[] minBound = new long[markerImg.numDimensions()];
 		final long[] maxBound = new long[markerImg.numDimensions()];
 
 		//sweep over the marker image
+		log.warn("starting the main sweep");
 		final Cursor<LT> mCursor = markerImg.localizingCursor();
 		while (mCursor.hasNext())
 		{
@@ -220,8 +245,10 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 			//scan for not yet observed markers (and ignore background values...)
 			if ( curMarker > 0 && (!mDiscovered.contains(curMarker)) )
 			{
+				log.warn("discovered new marker: "+curMarker);
 				//found a new marker, determine its size and the AABB it spans
 				MajorityOverlapBasedLabelExtractor.findAABB(mCursor, minBound,maxBound);
+				log.warn("found its AABB");
 /*
 				//report detected markers just for debug
 				System.out.print("marker "+mCursor.get().getInteger()+": lower corner: (");
@@ -240,12 +267,14 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 				int noOfMatchingImages = 0;
 				for (int i = 0; i < inImgs.size(); ++i)
 				{
+					log.warn("searching input image "+i+" for candidate");
 					//find the corresponding label in the input image (in the restricted interval)
 					final float matchingLabel = labelExtractor.findMatchingLabel(
 							Views.interval(inImgs.get(i), minBound,maxBound),
 							Views.interval(markerImg,     minBound,maxBound),
 							curMarker);
 					//System.out.println(i+". image: found label "+matchingLabel);
+					log.warn("finished the searching, found "+matchingLabel);
 
 					if (matchingLabel > 0)
 					{
@@ -264,10 +293,12 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 				{
 					//reset the temporary image beforehand
 					LoopBuilder.setImages(tmpImg).forEachPixel( (a) -> a.setZero() );
+					log.warn("zeroed tmpImg");
 
 					//fuse the selected labels into it
 					labelFuser.fuseMatchingLabels(selectedInImgs,selectedInLabels,
 					                              labelExtractor,inWeights, tmpImg);
+					log.warn("fused into tmpImg");
 
 					//save the debug image
 					//SimplifiedIO.saveImage(tmpImg, "/Users/ulman/DATA/dbgMerge__"+curMarker+".tif");
