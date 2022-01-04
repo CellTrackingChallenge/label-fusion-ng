@@ -29,7 +29,6 @@ package de.mpicbg.ulman.fusion.ng.fuse;
 
 import java.util.Vector;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.img.Img;
 import net.imglib2.type.numeric.RealType;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 
@@ -58,5 +57,5 @@ public interface LabelFuser<IT extends RealType<IT>, ET extends RealType<ET>>
 	                        final Vector<Float> inLabels,
 	                        final LabelExtractor<IT,?,ET> le,
 	                        final Vector<Double> inWeights,
-	                        final Img<ET> outImg);
+	                        final RandomAccessibleInterval<ET> outImg);
 }

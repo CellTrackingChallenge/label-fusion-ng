@@ -28,13 +28,12 @@
 package de.mpicbg.ulman.fusion.ng.fuse;
 
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.img.Img;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.operators.SetZero;
 import java.util.Vector;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 import net.celltrackingchallenge.measures.util.Jaccard;
-import net.imglib2.type.operators.SetZero;
 
 public class SIMPLELabelFuser<IT extends RealType<IT>, ET extends RealType<ET>>
 implements LabelFuser<IT,ET>
@@ -63,7 +62,7 @@ implements LabelFuser<IT,ET>
 	                        final Vector<Float> inLabels,
 	                        final LabelExtractor<IT,?,ET> le,
 	                        final Vector<Double> inWeights,
-	                        final Img<ET> outImg)
+	                        final RandomAccessibleInterval<ET> outImg)
 	{
 		//da plan:
 		// outImg will contain the current candidate fusion segment
