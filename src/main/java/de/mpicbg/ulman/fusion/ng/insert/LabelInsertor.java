@@ -82,4 +82,13 @@ public interface LabelInsertor<LT extends IntegerType<LT>, ET extends RealType<E
 	                 final RandomAccessibleInterval<LT> outResultImg,
 	                 final int outMarker,
 	                 final InsertionStatus operationStatus);
+
+	/**
+	 * Some implementations of the {@link #insertLabel(RAI,RAI,int,InsertionStatus)}
+	 * may detect when insertion of an label may lead to overwriting of some other
+	 * previously inserted label -- a collision situation, and some implementations
+	 * may mark/denote such "colliding pixels" with a special value. This method
+	 * allows to read what is that special value.
+	 */
+	int getValueOfCollisionPixels();
 }

@@ -45,4 +45,9 @@ implements LabelInsertor<LT,ET>
 		LoopBuilder.setImages(outResultImg,inSingleLabelImg).forEachPixel(
 			(io,lab) -> { if (lab.getRealFloat() > 0) io.setInteger(outMarker); } );
 	}
+
+	@Override
+	public
+	int getValueOfCollisionPixels()
+	{ return 0; /* this policy does not introduce intersections */ }
 }

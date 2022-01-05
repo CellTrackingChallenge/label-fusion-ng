@@ -224,4 +224,9 @@ implements LabelInsertor<LT,ET>
 	 */
 	void registerPxInCollision(final int[] pos, final int claimer)
 	{ /* intentionally empty */ }
+
+	@Override
+	public
+	int getValueOfCollisionPixels()
+	{ return INTERSECTION; }
 }
