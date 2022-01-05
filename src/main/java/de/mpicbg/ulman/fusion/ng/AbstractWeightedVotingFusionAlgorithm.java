@@ -27,20 +27,20 @@
  */
 package de.mpicbg.ulman.fusion.ng;
 
+import net.imglib2.Cursor;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.img.Img;
+import net.imglib2.view.Views;
 import net.imglib2.loops.LoopBuilder;
+import net.imglib2.type.operators.SetZero;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.IntegerType;
 import org.scijava.log.LogService;
 import sc.fiji.simplifiedio.SimplifiedIO;
 
-import net.imglib2.*;
-import net.imglib2.img.Img;
-import net.imglib2.view.Views;
-import net.imglib2.type.numeric.RealType;
-
-import java.util.Iterator;
-import java.util.Vector;
+import java.util.Set;
 import java.util.HashSet;
-import net.imglib2.type.numeric.IntegerType;
+import java.util.Vector;
 
 import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionAlgorithm;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
@@ -97,10 +97,6 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 	{
 		if (labelExtractor == null)
 			throw new RuntimeException("this.labelExtractor must be set");
-		/*
-		if (labelExtractor instanceof LabelExtractor)
-			throw new RuntimeException("this.labelExtractor must implement LabelExtractor");
-		*/
 
 		if (labelFuser == null)
 			throw new RuntimeException("this.labelFuser must be set");
@@ -132,7 +128,7 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 	public
 	void setWeights(final Vector<Double> weights)
 	{
-		inWeights = weights; //TODO: should make own copy? no!
+		inWeights = weights;
 	}
 
 	@Override
@@ -171,10 +167,8 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 		long pixels = 1;
 		for (long d : img.dimensionsAsLongArray()) pixels *= d;
 		pixels /= 1 << 20;
-		final StringBuilder sb = new StringBuilder();
-		sb.append("Size in Mpixels: ").append(pixels)
-				.append("\nSize in MBytes:  ").append(pixels*pixelInBytes);
-		return sb.toString();
+		return "Size in Mpixels: " + pixels +
+		     "\nSize in MBytes:  " + pixels * pixelInBytes;
 	}
 
 	@Override
@@ -212,7 +206,7 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 		//and init it
 		final Img<LT> outImg = markerImg.factory().create(markerImg);
 		log.warn("created outImg");
-		LoopBuilder.setImages(outImg).forEachPixel( (a) -> a.setZero() );
+		LoopBuilder.setImages(outImg).forEachPixel(SetZero::setZero);
 		log.warn("zeroed outImg");
 
 		//aux params for the fusion
@@ -222,7 +216,7 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 
 		//set to remember already discovered TRA markers
 		//(with initial capacity set for 100 markers)
-		HashSet<Integer> mDiscovered = new HashSet<>(100);
+		Set<Integer> mDiscovered = new HashSet<>(100);
 		log.warn("init B");
 
 		//init insertion (includes to create (re-usable) insertion status object)
@@ -292,7 +286,7 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 				if (noOfMatchingImages > 0)
 				{
 					//reset the temporary image beforehand
-					LoopBuilder.setImages(tmpImg).forEachPixel( (a) -> a.setZero() );
+					LoopBuilder.setImages(tmpImg).forEachPixel(SetZero::setZero);
 					log.warn("zeroed tmpImg");
 
 					//fuse the selected labels into it
@@ -368,7 +362,7 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 		{
 			int dotPos = dbgImgFileName.lastIndexOf('.');
 			SimplifiedIO.saveImage(outImg,
-			dbgImgFileName.substring(0,dotPos) + "_afterFinalize" + dbgImgFileName.substring(dotPos) );
+				dbgImgFileName.substring(0,dotPos) + "_afterFinalize" + dbgImgFileName.substring(dotPos) );
 		}
 
 		// --------- CCA analyses ---------

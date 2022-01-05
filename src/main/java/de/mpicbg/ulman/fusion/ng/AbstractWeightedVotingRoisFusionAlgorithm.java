@@ -46,7 +46,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Vector;
-import java.util.Iterator;
 
 public abstract
 class AbstractWeightedVotingRoisFusionAlgorithm<IT extends RealType<IT>, LT extends IntegerType<LT>, ET extends RealType<ET>>
@@ -205,14 +204,14 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 		log.warn("outImg: "+reportImageSize(markerImg,2));
 		log.warn("starting to create images...");
 		final Img<ET> tmpImg
-				= markerImg.factory().imgFactory(referenceType).create(markerImg);
+			= markerImg.factory().imgFactory(referenceType).create(markerImg);
 		log.warn("created tmpImg");
 
 		//create the output image (of the same iteration order as the markerImg),
 		//and init it
 		final Img<LT> outImg = markerImg.factory().create(markerImg);
 		log.warn("created outImg");
-		LoopBuilder.setImages(outImg).forEachPixel( (a) -> a.setZero() );
+		LoopBuilder.setImages(outImg).forEachPixel(SetZero::setZero);
 		log.warn("zeroed outImg");
 
 		//aux params for the fusion
@@ -290,7 +289,7 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 
 					//fuse the selected labels into it
 					labelFuser.fuseMatchingLabels(selectedInImgs,selectedInLabels,
-							labelExtractor,inWeights, tmpImg, fuseInterval);
+					                              labelExtractor,inWeights, tmpImg, fuseInterval);
 					log.warn("fused into tmpImg");
 
 					//save the debug image
@@ -360,13 +359,13 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 
 		final int allMarkers = mDiscovered.size();
 		final int[] collHistogram
-				= labelInsertor.finalize(outImg,markerImg,removeMarkersCollisionThreshold,removeMarkersAtBoundary);
+			= labelInsertor.finalize(outImg,markerImg,removeMarkersCollisionThreshold,removeMarkersAtBoundary);
 
 		if (dbgImgFileName != null && dbgImgFileName.length() > 0)
 		{
 			int dotPos = dbgImgFileName.lastIndexOf('.');
 			SimplifiedIO.saveImage(outImg,
-					dbgImgFileName.substring(0,dotPos) + "_afterFinalize" + dbgImgFileName.substring(dotPos) );
+				dbgImgFileName.substring(0,dotPos) + "_afterFinalize" + dbgImgFileName.substring(dotPos) );
 		}
 
 		// --------- CCA analyses ---------
@@ -426,12 +425,12 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 			//TODO: accumulate numbers of how many times submitting of TRA label
 			//would overwrite existing label in the output image, and report it
 			LoopBuilder.setImages(outImg,markerImg).forEachPixel(
-					(o,m) -> {
-						final int outLabel = o.getInteger();
-						final int traLabel = m.getInteger();
-						if (outLabel == 0 && (labelInsertor.mColliding.contains(traLabel) || labelInsertor.mNoMatches.contains(traLabel)))
-							o.setInteger(traLabel);
-					} );
+				(o,m) -> {
+					final int outLabel = o.getInteger();
+					final int traLabel = m.getInteger();
+					if (outLabel == 0 && (labelInsertor.mColliding.contains(traLabel) || labelInsertor.mNoMatches.contains(traLabel)))
+						o.setInteger(traLabel);
+				} );
 		}
 
 		return outImg;
