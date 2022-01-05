@@ -27,6 +27,7 @@
  */
 package de.mpicbg.ulman.fusion.ng.postprocess;
 
+import net.imglib2.Interval;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.IntegerType;
 
@@ -37,6 +38,7 @@ implements LabelPostprocessor<LT>
 	@Override
 	public
 	void processLabel(final Img<LT> img,
-	                  final int markerValue)
+	                  final int markerValue,
+	                  final Interval ROI)
 	{}
 }
