@@ -31,6 +31,8 @@ import java.util.Vector;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
+import net.imglib2.Interval;
+import net.imglib2.view.Views;
 
 /**
  * Fuses selected labels from input images (of voxel type IT -- Input Type)
@@ -58,4 +60,38 @@ public interface LabelFuser<IT extends RealType<IT>, ET extends RealType<ET>>
 	                        final LabelExtractor<IT,?,ET> le,
 	                        final Vector<Double> inWeights,
 	                        final RandomAccessibleInterval<ET> outImg);
+
+	/**
+	 * Fuses selected labels from input images into output image.
+	 * The vector of input images may include null pointers.
+	 * The values in the output image 'outImg' are not specified, except
+	 * that non-zero values are understood to represent the fused segment.
+	 *
+	 * The fusion work itself shall happen exclusively only inside
+	 * the specified ROI to enable faster processing. That said, the
+	 * ROI is only narrowing down (it is guiding) the sweeping of the
+	 * input/output images to prevent from sweeping when nothing relevant
+	 * would be found anyway.
+	 *
+	 * @param inImgs     image with labels
+	 * @param inLabels   what label per image
+	 * @param le         how to extract the label
+	 * @param inWeights  what weight per image
+	 * @param outImg     outcome of the fusion
+	 * @param fuseROI    ROI (AABB, Interval) within which the fusion happens
+	 */
+	default
+	void fuseMatchingLabels(final Vector<RandomAccessibleInterval<IT>> inImgs,
+	                        final Vector<Float> inLabels,
+	                        final LabelExtractor<IT,?,ET> le,
+	                        final Vector<Double> inWeights,
+	                        final RandomAccessibleInterval<ET> outImg,
+	                        final Interval fuseROI)
+	{
+		final Vector<RandomAccessibleInterval<IT>> inImgsROI = new Vector<>(inImgs.size());
+		for (RandomAccessibleInterval<IT> inImg : inImgs)
+				inImgsROI.add( inImg != null ? Views.interval(inImg, fuseROI) : null );
+
+		fuseMatchingLabels(inImgsROI,inLabels,le,inWeights,Views.interval(outImg,fuseROI));
+	}
 }
