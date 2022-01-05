@@ -370,13 +370,16 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 
 		// --------- CCA analyses ---------
 		mDiscovered.clear();
+		final int collisionValue = labelInsertor.getValueOfCollisionPixels();
 		final Cursor<LT> outFICursor = outImg.cursor();
 		while (outFICursor.hasNext())
 		{
 			final int curMarker = outFICursor.next().getInteger();
 
-			//scan for not yet observed markers (and ignore background values...)
-			if ( curMarker > 0 && (!mDiscovered.contains(curMarker)) )
+			//wipe-out leftovers from post-processing, and scan for
+			//not yet observed markers (and ignore background values...)
+			if (curMarker == collisionValue) outFICursor.get().setZero();
+			else if ( curMarker > 0 && (!mDiscovered.contains(curMarker)) )
 			{
 				final Interval resultROI = createInterval(markerBoxes.get((double)curMarker));
 				labelCleaner.processLabel(outImg, curMarker, resultROI);
