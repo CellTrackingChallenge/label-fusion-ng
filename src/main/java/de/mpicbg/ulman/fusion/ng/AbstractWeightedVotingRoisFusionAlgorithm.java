@@ -308,7 +308,7 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 				}
 
 				//some per marker report:
-				System.out.print("TRA marker: "+curMarker+" , images matching: "+noOfMatchingImages);
+				String markerReport = "TRA marker: "+curMarker+" , images matching: "+noOfMatchingImages;
 
 				//outcomes in 4 states:
 				//TRA marker was secured (TODO: secured after threshold increase)
@@ -320,28 +320,27 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 				if (!insStatus.foundAtAll)
 				{
 					labelInsertor.mNoMatches.add(curMarker);
-					System.out.println(" , not included because not matched in results");
+					log.info(markerReport+" , not included because not matched in results");
 				}
 				else
 				{
 					if (removeMarkersAtBoundary & insStatus.atBorder)
 					{
 						labelInsertor.mBordering.add(curMarker);
-						System.out.println(" , detected to be at boundary");
+						log.info(markerReport+" , detected to be at boundary");
 					}
 					else if (insStatus.inCollision)
 						//NB: labelInsertor.mColliding.add() must be done after all markers are processed
-						System.out.println(" , detected to be in collision");
+						log.info(markerReport+" , detected to be in collision");
 					else
-						System.out.println(" , secured for now");
+						log.info(markerReport+" , secured for now");
 				}
 
 				if (insStatus.localColliders.size() > 0)
 				{
-					System.out.print("guys colliding with this marker: ");
-					for (Iterator<Integer> it = insStatus.localColliders.iterator(); it.hasNext(); )
-						System.out.print(it.next()+",");
-					System.out.println();
+					StringBuilder sb = new StringBuilder("guys colliding with this marker: ");
+					for (int integer : insStatus.localColliders) sb.append(integer).append(',');
+					log.info(sb.toString());
 				}
 
 				//finally, mark we have processed this marker
@@ -390,13 +389,13 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 		// --------- CCA analyses ---------
 
 		//report details of colliding markers:
-		System.out.println("reporting colliding markers:");
+		log.info("reporting colliding markers:");
 		for (final int marker : labelInsertor.mCollidingVolume.keySet())
 		{
 			float collRatio = (float) labelInsertor.mCollidingVolume.get(marker);
 			collRatio /= (float) (labelInsertor.mNoCollidingVolume.get(marker) + labelInsertor.mCollidingVolume.get(marker));
 			if (collRatio > 0.f)
-				System.out.println("marker: " + marker + ": colliding " + labelInsertor.mCollidingVolume.get(marker)
+				log.info("marker: " + marker + ": colliding " + labelInsertor.mCollidingVolume.get(marker)
 						+ " and non-colliding " + labelInsertor.mNoCollidingVolume.get(marker)
 						+ " voxels ( " + collRatio + " ) "
 						+ (collRatio > removeMarkersCollisionThreshold ? "too much" : "acceptable"));
@@ -404,21 +403,21 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 
 		//report the histogram of colliding volume ratios
 		for (int hi=0; hi < 10; ++hi)
-			System.out.println("HIST: "+(hi*10)+" %- "+(hi*10+9)+" % collision area happened "
-					+collHistogram[hi]+" times");
-		System.out.println("HIST: 100 %- 100 % collision area happened "
-				+collHistogram[10]+" times");
+			log.info("HIST: "+(hi*10)+" %- "+(hi*10+9)+" % collision area happened "
+			                  +collHistogram[hi]+" times");
+		log.info("HIST: 100 %- 100 % collision area happened "
+		                  +collHistogram[10]+" times");
 
 		//also some per image report:
 		final int okMarkers = allMarkers - labelInsertor.mNoMatches.size() - labelInsertor.mBordering.size() - labelInsertor.mColliding.size();
-		System.out.println("not found markers    = "+labelInsertor.mNoMatches.size()
-				+" = "+ 100.0f*(float)labelInsertor.mNoMatches.size()/(float)allMarkers +" %");
-		System.out.println("markers at boundary  = "+labelInsertor.mBordering.size()
-				+" = "+ 100.0f*(float)labelInsertor.mBordering.size()/(float)allMarkers +" %");
-		System.out.println("markers in collision = "+labelInsertor.mColliding.size()
-				+" = "+ 100.0f*(float)labelInsertor.mColliding.size()/(float)allMarkers +" %");
-		System.out.println("secured markers      = "+okMarkers
-				+" = "+ 100.0f*(float)okMarkers/(float)allMarkers +" %");
+		log.info("not found markers    = "+labelInsertor.mNoMatches.size()
+			+" = "+ 100.0f*(float)labelInsertor.mNoMatches.size()/(float)allMarkers +" %");
+		log.info("markers at boundary  = "+labelInsertor.mBordering.size()
+			+" = "+ 100.0f*(float)labelInsertor.mBordering.size()/(float)allMarkers +" %");
+		log.info("markers in collision = "+labelInsertor.mColliding.size()
+			+" = "+ 100.0f*(float)labelInsertor.mColliding.size()/(float)allMarkers +" %");
+		log.info("secured markers      = "+okMarkers
+			+" = "+ 100.0f*(float)okMarkers/(float)allMarkers +" %");
 
 		if (insertTRAforCollidingOrMissingMarkers && (labelInsertor.mColliding.size() > 0 || labelInsertor.mNoMatches.size() > 0))
 		{
