@@ -46,47 +46,48 @@ import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 public class KeepLargestCCALabelPostprocessor<LT extends IntegerType<LT>>
 implements LabelPostprocessor<LT>
 {
-	private Img<LT> ccaInImg  = null; //copy of just one label
-	private Img<LT> ccaOutImg = null; //result of CCA on this one label
-	private long[] minBound = null, maxBound = null;
-
-	protected
-	void resetAuxAttribs(final Img<LT> templateImg)
+	@Override
+	public
+	void processLabel(final Img<LT> img,
+	                  final int markerValue)
 	{
-		ccaInImg  = templateImg.factory().create(templateImg);
-		ccaOutImg = templateImg.factory().create(templateImg);
-		minBound = new long[templateImg.numDimensions()];
-		maxBound = new long[templateImg.numDimensions()];
+		//localize the marker in the processed image
+		final Cursor<LT> markerCursor = img.localizingCursor();
+		while (markerCursor.hasNext() && markerCursor.next().getInteger() != markerValue) ;
+
+		//determine marker's size and the AABB it spans
+		final long[] minBound = new long[img.numDimensions()];
+		final long[] maxBound = new long[img.numDimensions()];
+		MajorityOverlapBasedLabelExtractor.findAABB(markerCursor, minBound,maxBound);
+		final Interval ccaInterval = new FinalInterval(minBound, maxBound);
+
+		processLabel(img,markerValue,ccaInterval);
 	}
 
 
 	@Override
 	public
 	void processLabel(final Img<LT> img,
-	                  final int markerValue)
+	                  final int markerValue,
+	                  final Interval ROI)
 	{
-		//TODO: should change everytime the img is not compatible with any of the aux attribs
-		if (ccaInImg == null || minBound == null) resetAuxAttribs(img);
+		//copy of just one label
+		final Img<LT> ccaInImg = img.factory().create(img);
 
-		//localize the marker in the processed image
-		final Cursor<LT> markerCursor = img.localizingCursor();
-		while (markerCursor.hasNext() && markerCursor.next().getInteger() != markerValue) ;
-
-		//determine marker's size and the AABB it spans
-		MajorityOverlapBasedLabelExtractor.findAABB(markerCursor, minBound,maxBound);
-		final Interval ccaInterval = new FinalInterval(minBound, maxBound); //TODO: can't I be reusing the same Interval?
+		//result of CCA on this one label
+		final Img<LT> ccaOutImg = img.factory().create(img);
 
 		//copy out only this marker
-		final IntervalView<LT> ccaInView = Views.interval(ccaInImg,ccaInterval);
+		final IntervalView<LT> ccaInView = Views.interval(ccaInImg,ROI);
 		      Cursor<LT> ccaCursor = ccaInView.cursor();
-		final Cursor<LT> outCursor = Views.interval(img,ccaInterval).cursor();
+		final Cursor<LT> outCursor = Views.interval(img,ROI).cursor();
 		while (ccaCursor.hasNext())
 		{
 			ccaCursor.next().setInteger( outCursor.next().getInteger() == markerValue ? 1 : 0 );
 		}
 
 		//CCA to this View
-		final IntervalView<LT> ccaOutView = Views.interval(ccaOutImg,ccaInterval);
+		final IntervalView<LT> ccaOutView = Views.interval(ccaOutImg,ROI);
 		//since the View comes from one shared large image, there might be results of CCA for other markers,
 		//we better clear it before (so that the CCA function cannot be fooled by some previous result)
 		ccaCursor = ccaOutView.cursor();
