@@ -27,7 +27,7 @@
  */
 package de.mpicbg.ulman.fusion.ng.insert;
 
-import net.imglib2.img.Img;
+import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
@@ -37,8 +37,8 @@ implements LabelInsertor<LT,ET>
 {
 	@Override
 	public
-	void insertLabel(final Img<ET> inSingleLabelImg,
-	                 final Img<LT> outResultImg,
+	void insertLabel(final RandomAccessibleInterval<ET> inSingleLabelImg,
+	                 final RandomAccessibleInterval<LT> outResultImg,
 	                 final int outMarker,
 	                 final InsertionStatus status)
 	{
