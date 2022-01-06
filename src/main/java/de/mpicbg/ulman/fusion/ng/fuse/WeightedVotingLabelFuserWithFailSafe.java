@@ -28,8 +28,9 @@
 package de.mpicbg.ulman.fusion.ng.fuse;
 
 import net.imglib2.Cursor;
-import net.imglib2.type.numeric.RealType; import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.img.Img;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.view.Views;
 import java.util.Vector;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 
@@ -54,13 +55,13 @@ implements LabelFuser<IT,ET>
 	                        final Vector<Float> inLabels,
 	                        final LabelExtractor<IT,?,ET> le,
 	                        final Vector<Double> inWeights,
-	                        final Img<ET> outImg)
+	                        final RandomAccessibleInterval<ET> outImg)
 	{
 		super.fuseMatchingLabels(inImgs,inLabels, le, inWeights,outImg);
 
 		//check if fusion managed to create something
 		boolean isEmpty = true;
-		final Cursor<ET> oC = outImg.cursor();
+		final Cursor<ET> oC = Views.flatIterable(outImg).cursor();
 		while (isEmpty && oC.hasNext())
 			isEmpty = oC.next().getRealFloat() == 0;
 

@@ -27,6 +27,7 @@
  */
 package de.mpicbg.ulman.fusion.ng.postprocess;
 
+import net.imglib2.Interval;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.IntegerType;
 
@@ -34,8 +35,17 @@ public interface LabelPostprocessor<LT extends IntegerType<LT>>
 {
 	/**
 	 * Processes the label/segment with voxel values 'markerValue' in
-	 * the input-output image 'img'.
+	 * the input-output image 'img', with possible advice that the
+	 * marker spans only within the given 'ROI'
 	 */
 	void processLabel(final Img<LT> img,
-	                  final int markerValue);
+	                  final int markerValue,
+	                  final Interval ROI);
+
+	default
+	void processLabel(final Img<LT> img,
+	                  final int markerValue)
+	{
+		processLabel(img,markerValue,img);
+	}
 }

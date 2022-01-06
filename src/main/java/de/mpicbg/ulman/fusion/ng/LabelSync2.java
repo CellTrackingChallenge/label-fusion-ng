@@ -38,10 +38,10 @@ import org.scijava.log.LogService;
 
 public
 class LabelSync2<IT extends RealType<IT>, LT extends IntegerType<LT>>
-extends AbstractWeightedVotingFusionAlgorithm<IT,LT>
+extends AbstractWeightedVotingFusionAlgorithm<IT,LT,DoubleType>
 {
 	public LabelSync2(LogService _log) {
-		super(_log);
+		super(_log, new DoubleType());
 	}
 
 	@Override

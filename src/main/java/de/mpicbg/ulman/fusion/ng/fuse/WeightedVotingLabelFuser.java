@@ -29,7 +29,7 @@ package de.mpicbg.ulman.fusion.ng.fuse;
 
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.img.Img;
+import net.imglib2.view.Views;
 import net.imglib2.loops.LoopBuilder;
 import java.util.Vector;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
@@ -59,10 +59,10 @@ implements LabelFuser<IT,ET>
 	                        final Vector<Float> inLabels,
 	                        final LabelExtractor<IT,?,ET> le,
 	                        final Vector<Double> inWeights,
-	                        final Img<ET> outImg)
+	                        final RandomAccessibleInterval<ET> outImg)
 	{
 		//the "adding constant" with the weight of an image
-		final ET ONE = outImg.firstElement().createVariable();
+		final ET ONE = Views.flatIterable(outImg).firstElement().createVariable();
 
 		for (int i=0; i < inImgs.size(); ++i)
 		{

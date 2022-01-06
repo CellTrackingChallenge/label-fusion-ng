@@ -39,12 +39,12 @@ import de.mpicbg.ulman.fusion.ng.insert.CollisionsAwareLabelInsertor;
 
 public
 class SIMPLE<IT extends RealType<IT>, LT extends IntegerType<LT>>
-extends AbstractWeightedVotingFusionAlgorithm<IT,LT>
+extends AbstractWeightedVotingFusionAlgorithm<IT,LT,DoubleType>
 {
 	public
 	SIMPLE(final LogService _log)
 	{
-		super(_log);
+		super(_log, new DoubleType());
 	}
 
 	@Override
