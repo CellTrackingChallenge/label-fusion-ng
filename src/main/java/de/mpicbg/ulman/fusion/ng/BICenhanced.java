@@ -29,7 +29,7 @@ package de.mpicbg.ulman.fusion.ng;
 
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
-import net.imglib2.type.numeric.real.DoubleType;
+import net.imglib2.type.numeric.integer.ByteType;
 import org.scijava.log.LogService;
 
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
@@ -41,18 +41,18 @@ import de.mpicbg.ulman.fusion.ng.insert.CollisionsManagingLabelInsertor;
 
 public
 class BICenhanced<IT extends RealType<IT>, LT extends IntegerType<LT>>
-extends AbstractWeightedVotingFusionAlgorithm<IT,LT,DoubleType>
+extends AbstractWeightedVotingRoisFusionAlgorithm<IT,LT,ByteType>
 {
 	public
 	BICenhanced(final LogService _log)
 	{
-		super(_log, new DoubleType());
+		super(_log, new ByteType());
 	}
 
 	public
 	BICenhanced(final LogService _log, final String dbgImgSuffix)
 	{
-		super(_log, new DoubleType());
+		super(_log, new ByteType());
 
 		//enable debug output
 		this.dbgImgFileName = dbgImgSuffix;
@@ -73,7 +73,7 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,DoubleType>
 		enforceFlatWeightsVoting = newState;
 		log.info("BICv2: Override with FLAT weights during voting: "+enforceFlatWeightsVoting);
 
-		final WeightedVotingLabelFuser<IT,DoubleType> f = enforceFlatWeightsVoting ?
+		final WeightedVotingLabelFuser<IT,ByteType> f = enforceFlatWeightsVoting ?
 			new ForcedFlatVotingLabelFuserWithFailSafe<>() : new WeightedVotingLabelFuserWithFailSafe<>();
 		f.minAcceptableWeight = this.threshold;
 		this.labelFuser = f;
@@ -84,14 +84,14 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,DoubleType>
 	void setFusionComponents()
 	{
 		//setup the individual stages
-		final MajorityOverlapBasedLabelExtractor<IT,LT,DoubleType> e = new MajorityOverlapBasedLabelExtractor<>();
+		final MajorityOverlapBasedLabelExtractor<IT,LT,ByteType> e = new MajorityOverlapBasedLabelExtractor<>();
 		e.minFractionOfMarker = 0.5f;
 
-		final WeightedVotingLabelFuser<IT,DoubleType> f = enforceFlatWeightsVoting ?
+		final WeightedVotingLabelFuser<IT,ByteType> f = enforceFlatWeightsVoting ?
 			new ForcedFlatVotingLabelFuserWithFailSafe<>() : new WeightedVotingLabelFuserWithFailSafe<>();
 		f.minAcceptableWeight = this.threshold;
 
-		final CollisionsManagingLabelInsertor<LT, DoubleType> i = new CollisionsManagingLabelInsertor<>();
+		final CollisionsManagingLabelInsertor<LT, ByteType> i = new CollisionsManagingLabelInsertor<>();
 		this.removeMarkersCollisionThreshold = 0.2f;
 
 		final KeepLargestCCALabelPostprocessor<LT> p = new KeepLargestCCALabelPostprocessor<>();
