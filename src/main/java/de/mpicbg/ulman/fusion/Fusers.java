@@ -46,7 +46,8 @@ import de.mpicbg.ulman.fusion.ng.backbones.JobIO;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionFeeder;
 import de.mpicbg.ulman.fusion.ng.BIC;
-import de.mpicbg.ulman.fusion.ng.BICenhanced;
+import de.mpicbg.ulman.fusion.ng.BICenhancedFlat;
+import de.mpicbg.ulman.fusion.ng.BICenhancedWeighted;
 import de.mpicbg.ulman.fusion.ng.SIMPLE;
 
 @Plugin(type = Command.class, menuPath = "Plugins>Annotations Fusing Tools")
@@ -289,11 +290,14 @@ public class Fusers extends CommonGUI implements Command
 			feeder = new WeightedVotingFusionFeeder(log).setAlgorithm(fuser_SIMPLE);
 		}
 		else
-		if (mergeModel.startsWith("BICv2"))
+		if (mergeModel.startsWith("BICv2 with Flat"))
 		{
-			final BICenhanced bic = new BICenhanced(log);
-			bic.setEnforceFlatWeightsVoting( mergeModel.startsWith("BICv2 with FlatVoting") );
-			feeder = new WeightedVotingFusionFeeder(log).setAlgorithm(bic);
+			feeder = new WeightedVotingFusionFeeder(log).setAlgorithm(new BICenhancedFlat(log));
+		}
+		else
+		if (mergeModel.startsWith("BICv2 with Weight"))
+		{
+			feeder = new WeightedVotingFusionFeeder(log).setAlgorithm(new BICenhancedWeighted(log));
 		}
 		else
 		{

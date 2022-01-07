@@ -29,54 +29,32 @@ package de.mpicbg.ulman.fusion.ng;
 
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
-import net.imglib2.type.numeric.integer.ByteType;
+import net.imglib2.type.numeric.real.FloatType;
 import org.scijava.log.LogService;
 
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 import de.mpicbg.ulman.fusion.ng.fuse.WeightedVotingLabelFuser;
 import de.mpicbg.ulman.fusion.ng.fuse.WeightedVotingLabelFuserWithFailSafe;
-import de.mpicbg.ulman.fusion.ng.fuse.ForcedFlatVotingLabelFuserWithFailSafe;
 import de.mpicbg.ulman.fusion.ng.postprocess.KeepLargestCCALabelPostprocessor;
 import de.mpicbg.ulman.fusion.ng.insert.CollisionsManagingLabelInsertor;
 
 public
-class BICenhanced<IT extends RealType<IT>, LT extends IntegerType<LT>>
-extends AbstractWeightedVotingRoisFusionAlgorithm<IT,LT,ByteType>
+class BICenhancedWeighted<IT extends RealType<IT>, LT extends IntegerType<LT>>
+extends AbstractWeightedVotingRoisFusionAlgorithm<IT,LT, FloatType>
 {
 	public
-	BICenhanced(final LogService _log)
+	BICenhancedWeighted(final LogService _log)
 	{
-		super(_log, new ByteType());
+		super(_log, new FloatType());
 	}
 
 	public
-	BICenhanced(final LogService _log, final String dbgImgSuffix)
+	BICenhancedWeighted(final LogService _log, final String dbgImgSuffix)
 	{
-		super(_log, new ByteType());
+		super(_log, new FloatType());
 
 		//enable debug output
 		this.dbgImgFileName = dbgImgSuffix;
-	}
-
-	private
-	boolean enforceFlatWeightsVoting = false;
-
-	public
-	boolean isEnforceFlatWeightsVoting()
-	{
-		return enforceFlatWeightsVoting;
-	}
-
-	public
-	void setEnforceFlatWeightsVoting(boolean newState)
-	{
-		enforceFlatWeightsVoting = newState;
-		log.info("BICv2: Override with FLAT weights during voting: "+enforceFlatWeightsVoting);
-
-		final WeightedVotingLabelFuser<IT,ByteType> f = enforceFlatWeightsVoting ?
-			new ForcedFlatVotingLabelFuserWithFailSafe<>() : new WeightedVotingLabelFuserWithFailSafe<>();
-		f.minAcceptableWeight = this.threshold;
-		this.labelFuser = f;
 	}
 
 	@Override
@@ -84,14 +62,13 @@ extends AbstractWeightedVotingRoisFusionAlgorithm<IT,LT,ByteType>
 	void setFusionComponents()
 	{
 		//setup the individual stages
-		final MajorityOverlapBasedLabelExtractor<IT,LT,ByteType> e = new MajorityOverlapBasedLabelExtractor<>();
+		final MajorityOverlapBasedLabelExtractor<IT,LT,FloatType> e = new MajorityOverlapBasedLabelExtractor<>();
 		e.minFractionOfMarker = 0.5f;
 
-		final WeightedVotingLabelFuser<IT,ByteType> f = enforceFlatWeightsVoting ?
-			new ForcedFlatVotingLabelFuserWithFailSafe<>() : new WeightedVotingLabelFuserWithFailSafe<>();
+		final WeightedVotingLabelFuser<IT,FloatType> f = new WeightedVotingLabelFuserWithFailSafe<>();
 		f.minAcceptableWeight = this.threshold;
 
-		final CollisionsManagingLabelInsertor<LT, ByteType> i = new CollisionsManagingLabelInsertor<>();
+		final CollisionsManagingLabelInsertor<LT, FloatType> i = new CollisionsManagingLabelInsertor<>();
 		this.removeMarkersCollisionThreshold = 0.2f;
 
 		final KeepLargestCCALabelPostprocessor<LT> p = new KeepLargestCCALabelPostprocessor<>();
