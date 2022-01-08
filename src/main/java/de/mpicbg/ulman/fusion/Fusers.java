@@ -115,6 +115,9 @@ public class Fusers extends CommonGUI implements Command
 		callback = "outFileOKAY")
 	private File outputPath = new File("CHANGE THIS PATH/mergedTTT.tif");
 
+	@Parameter(label = "Level of parallelism (no. of threads):", min="1")
+	int noOfThreads = 1;
+
 	@Parameter
 	CommandService commandService;
 
@@ -311,7 +314,7 @@ public class Fusers extends CommonGUI implements Command
 		// ------------ action per time point ------------
 		iterateTimePoints(fileIdxList,useGui,time -> {
 			job.reportJobForTime(time,log);
-			feeder.processJob(job,time);
+			feeder.processJob(job,time, noOfThreads);
 		});
 	}
 
@@ -321,10 +324,10 @@ public class Fusers extends CommonGUI implements Command
 	{
 		final Fusers myself = new Fusers();
 
-		if (args.length != 4)
+		if (args.length != 5)
 		{
 			System.out.println("In this regime, it is always using the \"BICv2 with FlatVoting, SingleMaskFailSafe and CollisionResolver\"");
-			System.out.println("Usage: pathToJobFile threshold pathToOutputImages timePointsRangeSpecification\n");
+			System.out.println("Usage: pathToJobFile threshold pathToOutputImages timePointsRangeSpecification numberOfThreads\n");
 			System.out.println(myself.fileInfoA);
 			System.out.println(myself.fileInfoB);
 			System.out.println(myself.fileInfoE);
@@ -339,6 +342,7 @@ public class Fusers extends CommonGUI implements Command
 		myself.mergeThreshold = Float.parseFloat(args[1]);
 		myself.outputPath = new File(args[2]);
 		myself.fileIdxStr = args[3];
+		myself.noOfThreads = Integer.parseInt(args[4]);
 		myself.worker(false); //false -> run without GUI
 	}
 }
