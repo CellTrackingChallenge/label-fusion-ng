@@ -46,6 +46,10 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Vector;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
 
 public abstract
 class AbstractWeightedVotingRoisFusionAlgorithm<IT extends RealType<IT>, LT extends IntegerType<LT>, ET extends RealType<ET>>
@@ -60,6 +64,14 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 	public Map<Double,long[]> markerBoxes;
 
 	public
+	void setupBoxes(final Vector<RandomAccessibleInterval<IT>> inImgs,
+	                final RandomAccessibleInterval<LT> markerImg)
+	{
+		setupBoxes(inImgs);
+		markerBoxes = findBoxes(markerImg);
+	}
+
+	public
 	void setupBoxes(final Vector<RandomAccessibleInterval<IT>> inImgs)
 	{
 		inBoxes = new Vector<>(inImgs.size());
@@ -71,10 +83,21 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 
 	public
 	void setupBoxes(final Vector<RandomAccessibleInterval<IT>> inImgs,
-	                final RandomAccessibleInterval<LT> markerImg)
+	                final RandomAccessibleInterval<LT> markerImg,
+	                final ExecutorService workerThreads)
+			throws InterruptedException
 	{
-		setupBoxes(inImgs);
-		markerBoxes = findBoxes(markerImg);
+		inBoxes = new Vector<>(inImgs.size());
+
+		List<Callable<Object>> tasks = new ArrayList<>(inImgs.size()+1);
+		for (int i = 0; i < inImgs.size(); ++i) {
+			inBoxes.add(null);
+			final int idx = i;
+			tasks.add( () -> inBoxes.set( idx, findBoxes(inImgs.get(idx)) ) );
+		}
+		tasks.add( () -> markerBoxes = findBoxes(markerImg) );
+
+		workerThreads.invokeAll(tasks);
 	}
 
 	public <T extends RealType<T>>
