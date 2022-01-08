@@ -65,7 +65,6 @@
 					</arguments>
 				</configuration>
 			</plugin>
-			<!-- disabled until fusion GUI and especially CLI is updated
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
 				<version>3.3.0</version>
@@ -75,7 +74,7 @@
 					</descriptorRefs>
 					<archive>
 						<manifest>
-							<mainClass>de.mpicbg.ulman.fusion.LabelSyncerCLI</mainClass>
+							<mainClass>de.mpicbg.ulman.fusion.Fusers</mainClass>
 						</manifest>
 					</archive>
 				</configuration>
@@ -89,7 +88,6 @@
 					</execution>
 				</executions>
 			</plugin>
-			-->
 		</plugins>
 	</build>
 

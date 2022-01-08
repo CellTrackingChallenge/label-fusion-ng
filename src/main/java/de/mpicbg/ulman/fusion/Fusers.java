@@ -171,14 +171,16 @@ public class Fusers extends CommonGUI implements Command
 		if (name == null)
 		{
 			log.warn("No output filename is given.");
-			statusService.showStatus("No output filename is given.");
+			if (statusService != null) //NB: can be also executed in headless...
+				statusService.showStatus("No output filename is given.");
 			return false;
 		}
 		//does it contain "TTT" and the number of T's is 3 or 4?
 		if (name.indexOf("TTT") == -1 || ( (name.lastIndexOf("TTT") - name.indexOf("TTT")) > 1 ))
 		{
 			log.warn("Filename \""+name+"\" does not contain TTT or TTTT pattern.");
-			statusService.showStatus("Filename \""+name+"\" does not contain TTT or TTTT pattern.");
+			if (statusService != null)
+				statusService.showStatus("Filename \""+name+"\" does not contain TTT or TTTT pattern.");
 			return false;
 		}
 
@@ -187,12 +189,14 @@ public class Fusers extends CommonGUI implements Command
 		if (path != null && !path.exists())
 		{
 			log.warn("Parent folder \""+path.getAbsolutePath()+"\" does not exist.");
-			statusService.showStatus("Parent folder \""+path.getAbsolutePath()+"\" does not exist.");
+			if (statusService != null)
+				statusService.showStatus("Parent folder \""+path.getAbsolutePath()+"\" does not exist.");
 			return false;
 		}
 
 		log.info("Filename contains TTT or TTTT pattern, parent folder exists, all good.");
-		statusService.showStatus("Filename contains TTT or TTTT pattern, parent folder exists, all good.");
+		if (statusService != null)
+			statusService.showStatus("Filename contains TTT or TTTT pattern, parent folder exists, all good.");
 		return true;
 	}
 
@@ -312,36 +316,29 @@ public class Fusers extends CommonGUI implements Command
 	}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	// ==========================================================================================
 	public static void main(String[] args)
 	{
+		final Fusers myself = new Fusers();
+
 		if (args.length != 4)
 		{
-			System.out.println("Usage: jobFile threshold outputFilesPattern timepoint");
+			System.out.println("In this regime, it is always using the \"BICv2 with FlatVoting, SingleMaskFailSafe and CollisionResolver\"");
+			System.out.println("Usage: pathToJobFile threshold pathToOutputImages timePointsRangeSpecification\n");
+			System.out.println(myself.fileInfoA);
+			System.out.println(myself.fileInfoB);
+			System.out.println(myself.fileInfoE);
+			System.out.println(myself.fileInfoD);
+			System.out.println("timePointsRangeSpecification can be, e.g., 1-9,23,25");
 			return;
 		}
+
+		myself.log = new CommonGUI.MyLog();
+		myself.mergeModel="BICv2 with FlatVoting, SingleMaskFailSafe and CollisionResolver";
+		myself.filePath = new File(args[0]);
+		myself.mergeThreshold = Float.parseFloat(args[1]);
+		myself.outputPath = new File(args[2]);
+		myself.fileIdxStr = args[3];
+		myself.worker(false); //false -> run without GUI
 	}
 }

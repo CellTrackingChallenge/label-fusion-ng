@@ -40,9 +40,9 @@ import java.io.File;
 import de.mpicbg.ulman.fusion.ng.backbones.JobIO;
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
 
+import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import de.mpicbg.ulman.fusion.ng.LabelSync;
-import net.imglib2.type.numeric.RealType;
 
 @Plugin(type = Command.class, name = "LabelSync", menuPath = "Plugins>Annotation Labels Sync")
 public class LabelSyncer extends CommonGUI implements Command
@@ -88,7 +88,7 @@ public class LabelSyncer extends CommonGUI implements Command
 	@Parameter(label = "Output filename pattern:", style = FileWidget.SAVE_STYLE,
 		description = "Please, don't forget to include placeholders TT, SS and LL into the filename.",
 		callback = "syncOutputFilenameOKAY")
-	private File outputPath = new File("CHANGE THIS PATH/mergedTTT.tif");
+	private File outputPath = new File("CHANGE THIS PATH/syncedTTT_SS_LL.tif");
 
 
 	//will be also used for sanity checking, thus returns boolean
@@ -107,6 +107,8 @@ public class LabelSyncer extends CommonGUI implements Command
 		if (pos[0] == -1 || pos[2] == -1 || pos[4] == -1)
 		{
 			log.warn("missing some of the letter T or S or L");
+			if (statusService != null) //NB: can be also executed in headless...
+				statusService.showStatus("missing some of the letter T or S or L");
 			return false;
 		}
 
@@ -120,11 +122,15 @@ public class LabelSyncer extends CommonGUI implements Command
 			if (pos[t] < pos[i] && pos[i] < pos[t+1])
 			{
 				log.warn("beginning of "+lbl[i]+"s is inside "+lbl[t]+"s");
+				if (statusService != null)
+					statusService.showStatus("beginning of \"+lbl[i]+\"s is inside \"+lbl[t]+\"s");
 				return false;
 			}
 			if (pos[t] < pos[i+1] && pos[i+1] < pos[t+1])
 			{
 				log.warn("end of "+lbl[i]+"s is inside "+lbl[t]+"s");
+				if (statusService != null)
+					statusService.showStatus("end of \"+lbl[i]+\"s is inside \"+lbl[t]+\"s");
 				return false;
 			}
 		}
@@ -135,6 +141,8 @@ public class LabelSyncer extends CommonGUI implements Command
 		if (name.charAt(i) != lbl[t])
 		{
 			log.warn("the sequence of "+lbl[t]+"s is interrupted at character "+i);
+			if (statusService != null)
+				statusService.showStatus("the sequence of "+lbl[t]+"s is interrupted at character "+i);
 			return false;
 		}
 
@@ -242,29 +250,27 @@ public class LabelSyncer extends CommonGUI implements Command
 	}
 
 
-
-
-
-
-
-
-
-
-
-
-
 	// ================= CLI =================
 	public static void main(String[] args)
 	{
+		final LabelSyncer myself = new LabelSyncer();
+
 		//check parameters first
 		if (args.length != 3)
 		{
-			final LabelSyncer myself = new LabelSyncer();
+			System.out.println("Usage: pathToJobFile pathToOutputImages timePointsRangeSpecification\n");
 			System.out.println(myself.fileInfoA);
 			System.out.println(myself.fileInfoB);
-			System.out.println(myself.fileInfoD);
 			System.out.println(myself.fileInfoE);
+			System.out.println(myself.fileInfoD);
+			System.out.println("timePointsRangeSpecification can be, e.g., 1-9,23,25");
 			return;
 		}
+
+		myself.log = new CommonGUI.MyLog();
+		myself.filePath = new File(args[0]);
+		myself.outputPath = new File(args[1]);
+		myself.fileIdxStr = args[2];
+		myself.worker(false); //false -> run without GUI
 	}
 }
