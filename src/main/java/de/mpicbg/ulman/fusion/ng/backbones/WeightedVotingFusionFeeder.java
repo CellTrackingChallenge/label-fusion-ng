@@ -36,6 +36,9 @@ import de.mpicbg.ulman.fusion.JobSpecification;
 import org.scijava.log.LogService;
 import sc.fiji.simplifiedio.SimplifiedIO;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 /**
  * This class essentially takes care of the IO burden. One provides it with
  * a weighted voting fusion algorithm and a "formatted" job specification
@@ -79,6 +82,29 @@ extends JobIO<IT,LT>
 	public
 	Img<LT> useAlgorithm()
 	{
+		Img<LT> img = null;
+		try { img = useAlgorithm(null); }
+		catch (InterruptedException e) { /* cannot happen 'cause no MT */ }
+		return img;
+	}
+
+	public
+	Img<LT> useAlgorithm(final int noOfThreads)
+	{
+		final ExecutorService w = Executors.newFixedThreadPool(noOfThreads);
+		try {
+			return useAlgorithm(w);
+		} catch (InterruptedException e) {
+			throw new RuntimeException("Error in multithreading",e);
+		} finally {
+			w.shutdownNow();
+		}
+	}
+
+	public
+	Img<LT> useAlgorithm(final ExecutorService threadWorkers)
+			throws InterruptedException
+	{
 		if (algorithm == null)
 			throw new RuntimeException("Cannot work without an algorithm.");
 
@@ -88,7 +114,10 @@ extends JobIO<IT,LT>
 		if (algorithm instanceof AbstractWeightedVotingRoisFusionAlgorithm) {
 			AbstractWeightedVotingRoisFusionAlgorithm<IT,LT,?> algRoi
 					= (AbstractWeightedVotingRoisFusionAlgorithm<IT,LT,?>)algorithm;
-			algRoi.setupBoxes(inImgs,markerImg);
+			if (threadWorkers != null)
+				algRoi.setupBoxes(inImgs,markerImg,threadWorkers);
+			else
+				algRoi.setupBoxes(inImgs,markerImg);
 			//DEBUG// algRoi.printBoxes();
 			log.trace("ROIs (boxes) are ready");
 		}
@@ -113,13 +142,39 @@ extends JobIO<IT,LT>
 	public
 	void processJob(final JobSpecification job, final int time)
 	{
+		try { processJob(job, time, null); }
+		catch (InterruptedException e) { /* cannot happen 'cause no MT */ }
+	}
+
+	public
+	void processJob(final JobSpecification job, final int time, final int noOfThreads)
+	{
+		final ExecutorService w = Executors.newFixedThreadPool(noOfThreads);
+		try {
+			processJob(job,time, w);
+		} catch (InterruptedException e) {
+			throw new RuntimeException("Error in multithreading",e);
+		} finally {
+			w.shutdownNow();
+		}
+	}
+
+	void processJob(final JobSpecification job, final int time, final ExecutorService workerThreads)
+			throws InterruptedException
+	{
 		if (algorithm == null)
 			throw new RuntimeException("Cannot work without an algorithm.");
 		//NB: expand now... and fail possibly soon before possibly lengthy loading of images
 		final String outFile = JobSpecification.expandFilenamePattern(job.outputPattern,time);
+		Img<LT> outImg;
 
-		super.loadJob(job,time);
-		final Img<LT> outImg = useAlgorithm();
+		if (workerThreads != null) {
+			super.loadJob(job.instantiateForTime(time), workerThreads);
+			outImg = useAlgorithm(workerThreads);
+		} else {
+			super.loadJob(job,time);
+			outImg = useAlgorithm(null);
+		}
 
 		log.info("Saving file: "+outFile);
 		SimplifiedIO.saveImage(outImg, outFile);
