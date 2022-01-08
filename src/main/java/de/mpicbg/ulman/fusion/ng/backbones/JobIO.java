@@ -44,7 +44,13 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Vector;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ExecutionException;
 
 import de.mpicbg.ulman.fusion.JobSpecification;
 
@@ -99,7 +105,7 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 
 	// ----------- input job spec to output attributes -----------
 	/** converts time-instantiated, String[]-based job specification
-	    into JobSpecification.Inputs specs and processes it */
+	    into JobSpecification.Inputs specs and processes it serially */
 	public
 	void loadJob(final String... args)
 	{
@@ -114,21 +120,148 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 		loadJob( JobSpecification.instanceCopyOf(args) );
 	}
 
-
 	/** processes JobSpecification-based job specification
-	    into JobSpecification.Inputs specs and processes it */
+	    into JobSpecification.Inputs specs and processes it serially */
 	public
 	void loadJob(final JobSpecification job, final int time)
-	{
-		loadJob( job.instantiateForTime(time) );
-	}
+	{ loadJob( job.instantiateForTime(time) ); }
 
-
-	/** processes JobSpecification.Inputs job specification */
+	/** processes JobSpecification.Inputs job specification
+	    into JobSpecification.Inputs specs and processes it serially */
 	public
 	void loadJob(final JobSpecification.Inputs jsi)
 	{
-		log.info("inputs:\n"+jsi); //DEBUG REMOVE VLADO
+		try { loadJob( jsi, null ); }
+		catch (InterruptedException e) { /* cannot happen 'cause no MT */ }
+	}
+
+	/** processes JobSpecification-based job specification
+	    into JobSpecification.Inputs specs and processes it in parallel */
+	public
+	void loadJob(final JobSpecification job, final int time, final int noOfThreads)
+	{ loadJob( job.instantiateForTime(time), noOfThreads ); }
+
+	/** processes JobSpecification.Inputs job specification
+	    into JobSpecification.Inputs specs and processes it in parallel */
+	public
+	void loadJob(final JobSpecification.Inputs jsi, final int noOfThreads)
+	{
+		log.info("Loading images with multithreading ("+noOfThreads+" threads)");
+		final ExecutorService w = Executors.newFixedThreadPool(noOfThreads);
+		try {
+			loadJob( jsi, w );
+		} catch (InterruptedException e) {
+			throw new RuntimeException("Error in multithreading",e);
+		} finally {
+			w.shutdownNow();
+		}
+	}
+
+
+	// ----------- parallelization of loadjob() -----------
+	//shared among the image readers
+	Object firstImgVoxelType = null;
+	String firstImgVoxelTypeString = null;
+	long[] firstImgDimensions = null;
+
+	final Object auxSynchronizationToken = true;
+	//NB: for synchronized(...), because firstImgVoxelType is null and thus cannot be used
+
+	class LoadOneInput implements Callable<LoadOneInput>
+	{
+		LoadOneInput(final JobSpecification.Inputs inputBatch, final int whichOneFromTheBatch)
+		{
+			jsi = inputBatch;
+			input_idx = whichOneFromTheBatch;
+		}
+
+		//glob data
+		final JobSpecification.Inputs jsi;
+
+		//job specific data
+		final int input_idx;
+		String isErrorMsg; //non-null is flagging an error ;-)
+
+		@Override
+		public LoadOneInput call()
+		{
+			try
+			{
+				//load the image
+				Img<IT> img;
+				if (input_idx < jsi.inputFiles.length) {
+					log.info("Reading pair: " + jsi.inputFiles[input_idx] + " " + jsi.inputWeights[input_idx]);
+					img = SimplifiedIO.openImage(jsi.inputFiles[input_idx]);
+				} else if (input_idx == jsi.inputFiles.length) {
+					log.info("Reading marker: " + jsi.markerFile);
+					img = SimplifiedIO.openImage(jsi.markerFile);
+				} else {
+					//sanity check from "over-parallellism"
+					throw new RuntimeException("Can't process input_idx "+input_idx+" when only "
+						+jsi.inputFiles.length+"+1 should be loaded");
+				}
+
+				//check the type of the image (the combineGTs plug-in requires RealType<>)
+				if (!(img.firstElement() instanceof RealType<?>))
+					throw new RuntimeException(jsi.inputFiles[input_idx]+" input image voxels must be scalars.");
+
+				//is first image being read? -> define the reference voxel type
+				synchronized (auxSynchronizationToken)
+				{
+					if (firstImgVoxelType == null)
+					{
+						firstImgVoxelType = img.firstElement();
+						firstImgVoxelTypeString = firstImgVoxelType.getClass().getSimpleName();
+						//
+						firstImgDimensions = new long[img.numDimensions()];
+						img.dimensions(firstImgDimensions);
+					}
+				}
+
+				//check that all input images are of the same type
+				//NB: the check excludes the tracking markers image
+				if (input_idx < jsi.inputFiles.length && !(img.firstElement().getClass().getSimpleName().startsWith(firstImgVoxelTypeString)))
+				{
+					log.error("first  image  voxel type: "+firstImgVoxelType.getClass().getName());
+					log.error("current image voxel type: "+img.firstElement().getClass().getName());
+					throw new RuntimeException(jsi.inputFiles[input_idx]+" image has different voxel type, all input images must be the same.");
+				}
+
+				//check the dimensions, against the first loaded image
+				for (int d=0; d < img.numDimensions(); ++d)
+					if (img.dimension(d) != firstImgDimensions[d])
+						throw new RuntimeException(jsi.inputFiles[input_idx]+" image has different size in the "
+								+d+"th dimension than the first image.");
+
+				if (input_idx < jsi.inputFiles.length)
+				{
+					//all is fine, add this one into the input list
+					inImgs.set(input_idx,img);
+					inWeights.set(input_idx,jsi.inputWeights[input_idx]);
+				}
+				else
+				{
+					//or, if loading the last image, remember it as the marker image
+					if (!(img.firstElement() instanceof IntegerType<?>))
+						throw new RuntimeException("Markers must be stored in an integer-type image, e.g., 8bits or 16bits gray image.");
+					markerImg = (Img<LT>)img;
+				}
+			}
+			catch (RuntimeException e) {
+				isErrorMsg = e.getMessage();
+			}
+
+			return this;
+		} //end of call()
+	} //end of class
+
+
+	/** processes JobSpecification.Inputs job specification
+	    into JobSpecification.Inputs specs and processes it in parallel */
+	public
+	void loadJob(final JobSpecification.Inputs jsi, final ExecutorService workerThreads)
+			throws InterruptedException
+	{
 		final int inputImagesCount = jsi.inputFiles.length;
 
 		//container to store the input images
@@ -140,61 +273,49 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 		//marker image
 		markerImg = null;
 
-		//now, try to load the input images
-		Img<IT> img = null;
-		Object firstImgVoxelType = null;
-		String firstImgVoxelTypeString = null;
+		//init the shared objects
+		firstImgVoxelType = null;
+		firstImgVoxelTypeString = null;
+		firstImgDimensions = null;
 
-		//load all of them
-		for (int i=0; i < inputImagesCount+1; ++i)
+		//"containers" in the vectors need to be created in advance
+		//because they are set()'ed in (not add()'ed)
+		for (int i = 0; i < inputImagesCount; ++i)
 		{
-			//load the image
-			if (i < inputImagesCount) {
-				log.info("Reading pair: " + jsi.inputFiles[i] + " " + jsi.inputWeights[i]);
-				img = SimplifiedIO.openImage(jsi.inputFiles[i]);
-			} else {
-				log.info("Reading marker: " + jsi.markerFile);
-				img = SimplifiedIO.openImage(jsi.markerFile);
-			}
+			inImgs.add(null);
+			inWeights.add(0.0);
+		}
 
-			//check the type of the image (the combineGTs plug-in requires RealType<>)
-			if (!(img.firstElement() instanceof RealType<?>))
-				throw new RuntimeException("Input image voxels must be scalars.");
-
-			//check that all input images are of the same type
-			//NB: the check excludes the tracking markers image
-			if (firstImgVoxelType == null)
+		if (workerThreads == null)
+		{
+			//singlethreading special case
+			for (int i = 0; i < inputImagesCount+1; ++i) //NB: +1 for the marker img
 			{
-				firstImgVoxelType = img.firstElement();
-				firstImgVoxelTypeString = firstImgVoxelType.getClass().getSimpleName();
+				String errMsg = new LoadOneInput(jsi,i).call().isErrorMsg;
+				if (errMsg != null)
+					throw new RuntimeException(errMsg);
 			}
-			else if (i < inputImagesCount && !(img.firstElement().getClass().getSimpleName().startsWith(firstImgVoxelTypeString)))
-			{
-				log.info("first  image  voxel type: "+firstImgVoxelType.getClass().getName());
-				log.info("current image voxel type: "+img.firstElement().getClass().getName());
-				throw new RuntimeException("Voxel types of all input images must be the same.");
+		}
+		else
+		{
+			//multithreading
+			final List<LoadOneInput> tasks = new ArrayList<>(inputImagesCount+1);
+			for (int i = 0; i < inputImagesCount+1; ++i) //NB: +1 for the marker img
+				tasks.add( new LoadOneInput(jsi,i) );
+
+			//init a workerPool
+			try {
+				for (Future<LoadOneInput> f : workerThreads.invokeAll(tasks))
+				{
+					String errMsg = f.get().isErrorMsg;
+					if (errMsg != null)
+						throw new RuntimeException(errMsg);
+				}
 			}
-
-			//check the dimensions, against the first loaded image
-			//(if processing second or later image already)
-			for (int d=0; i > 0 && d < img.numDimensions(); ++d)
-				if (img.dimension(d) != inImgs.get(0).dimension(d))
-					throw new RuntimeException((i+1)+"th image has different size in the "
-							+d+"th dimension than the first image.");
-
-			//all is fine, add this one into the input list
-			if (i < inputImagesCount) inImgs.add(img);
-			//or, if loading the last image, remember it as the marker image
-			else
-			{
-				if (!(img.firstElement() instanceof IntegerType<?>))
-					throw new RuntimeException("Markers must be stored in an integer-type image, e.g., 8bits or 16bits gray image.");
-				markerImg = (Img<LT>)img;
+			catch (ExecutionException e) {
+				log.error("Execution error during multithreading: "+e.getMessage());
+				throw new InterruptedException("Interrupting loadJob() because of execution error.");
 			}
-
-			//also parse and store the weight
-			if (i < inputImagesCount)
-				inWeights.add( jsi.inputWeights[i] );
 		}
 
 		//parse threshold value
@@ -204,13 +325,6 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 		//we better strip away the "plus" extras to make it pure Img<>
 		if (markerImg instanceof ImgPlus)
 			markerImg = ((ImgPlus<LT>)markerImg).getImg();
-
-		//setup the debug image filename
-		/*
-		String newName = args[args.length-1];
-		final int dotSeparatorIdx = newName.lastIndexOf(".");
-		newName = new String(newName.substring(0, dotSeparatorIdx)+"__DBG"+newName.substring(dotSeparatorIdx));
-		*/
 	}
 
 
