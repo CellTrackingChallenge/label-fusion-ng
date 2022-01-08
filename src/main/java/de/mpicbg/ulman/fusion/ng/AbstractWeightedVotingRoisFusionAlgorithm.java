@@ -85,7 +85,7 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 		final long[] pos = new long[numDimensions];
 
 		final Map<Double,long[]> boxes = new HashMap<>(3000);
-		log.warn("pre-calculating ROIs (boxes) for new image");
+		log.info("pre-calculating ROIs (boxes) for one image");
 
 		final Cursor<T> mCursor = Views.flatIterable(inImg).localizingCursor();
 		while (mCursor.hasNext())
@@ -114,7 +114,7 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 			}
 		}
 
-		log.warn("done pre-calculating ROIs (boxes) for new image");
+		log.trace("done pre-calculating ROIs (boxes) for the image");
 		return boxes;
 	}
 
@@ -200,38 +200,38 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 		//later post-processing
 
 		//create a temporary image (of the same iteration order as the markerImg)
-		log.warn("tmpImg: "+reportImageSize(markerImg));
-		log.warn("outImg: "+reportImageSize(markerImg,2));
-		log.warn("starting to create images...");
+		log.info("tmpImg: "+reportImageSize(markerImg));
+		log.info("outImg: "+reportImageSize(markerImg,2));
+		log.info("allocating tmp+out (2) images...");
 		final Img<ET> tmpImg
 			= markerImg.factory().imgFactory(referenceType).create(markerImg);
-		log.warn("created tmpImg");
+		log.trace("created tmpImg");
 
 		//create the output image (of the same iteration order as the markerImg),
 		//and init it
 		final Img<LT> outImg = markerImg.factory().create(markerImg);
-		log.warn("created outImg");
+		log.trace("created outImg");
 		LoopBuilder.setImages(outImg).forEachPixel(SetZero::setZero);
-		log.warn("zeroed outImg");
+		log.trace("zeroed outImg");
 
 		//aux params for the fusion
 		final Vector<RandomAccessibleInterval<IT>> selectedInImgs  = new Vector<>(inWeights.size());
 		final Vector<Float>                       selectedInLabels = new Vector<>(inWeights.size());
-		log.warn("init A");
+		log.trace("init A");
 
 		//set to remember already discovered TRA markers
 		//(with initial capacity set for 100 markers)
 		Set<Integer> mDiscovered = new HashSet<>(100);
-		log.warn("init B");
+		log.trace("init B");
 
 		//init insertion (includes to create (re-usable) insertion status object)
 		final LabelInsertor.InsertionStatus insStatus = new LabelInsertor.InsertionStatus();
-		log.warn("init C");
+		log.info("initializing the collision-aware insertor...");
 		labelInsertor.initialize(outImg);
-		log.warn("init D");
+		log.trace("init D");
 
 		//sweep over the marker image
-		log.warn("starting the main sweep");
+		log.trace("starting the main sweep");
 		for (Map.Entry<Double,long[]> marker : markerBoxes.entrySet())
 		{
 			final int curMarker = marker.getKey().intValue();
@@ -240,11 +240,11 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 			//NB: the following condition should always be true....
 			if ( curMarker > 0 && (!mDiscovered.contains(curMarker)) )
 			{
-				log.warn("processing next marker: "+curMarker);
+				log.trace("processing next marker: "+curMarker);
 				//
 				//found next marker, copy out the AABB it spans over
 				final long[] fuseBox = marker.getValue();
-				log.warn("found its AABB: "+printBox(curMarker,fuseBox));
+				log.trace("found its AABB: "+printBox(curMarker,fuseBox));
 
 				//sweep over all input images
 				final Interval mInterval = createInterval(fuseBox);
@@ -253,14 +253,14 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 				int noOfMatchingImages = 0;
 				for (int i = 0; i < inImgs.size(); ++i)
 				{
-					log.warn("searching input image "+i+" for candidate");
+					log.trace("searching input image "+i+" for candidate");
 					//find the corresponding label in the input image (in the restricted interval)
 					final float matchingLabel = labelExtractor.findMatchingLabel(
 							Views.interval(inImgs.get(i), mInterval),
 							Views.interval(markerImg,     mInterval),
 							curMarker);
 					//System.out.println(i+". image: found label "+matchingLabel);
-					log.warn("finished the searching, found "+matchingLabel);
+					log.trace("finished the searching, found "+matchingLabel);
 
 					if (matchingLabel > 0)
 					{
@@ -268,8 +268,8 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 						selectedInLabels.add(matchingLabel);
 						++noOfMatchingImages;
 						unionBoxes(inBoxes.get(i).get((double)matchingLabel),fuseBox);
-						log.warn("AABB of candidate: "+printBox(matchingLabel,inBoxes.get(i).get((double)matchingLabel)));
-						log.warn("fuse AABB updated: "+printBox(curMarker,fuseBox));
+						log.trace("AABB of candidate: "+printBox(matchingLabel,inBoxes.get(i).get((double)matchingLabel)));
+						log.trace("fuse AABB updated: "+printBox(curMarker,fuseBox));
 					}
 					else
 					{
@@ -285,12 +285,12 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 
 					//reset the temporary image beforehand
 					LoopBuilder.setImages(Views.interval(tmpImg,fuseInterval)).forEachPixel(SetZero::setZero);
-					log.warn("zeroed tmpImg");
+					log.trace("zeroed tmpImg");
 
 					//fuse the selected labels into it
 					labelFuser.fuseMatchingLabels(selectedInImgs,selectedInLabels,
 					                              labelExtractor,inWeights, tmpImg, fuseInterval);
-					log.warn("fused into tmpImg");
+					log.trace("fused into tmpImg");
 
 					//save the debug image
 					//SimplifiedIO.saveImage(tmpImg, "/Users/ulman/DATA/dbgMerge__"+curMarker+".tif");
@@ -357,6 +357,7 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 			SimplifiedIO.saveImage(outImg, dbgImgFileName);
 		}
 
+		log.info("resolving the left-out collisions...");
 		final int allMarkers = mDiscovered.size();
 		final int[] collHistogram
 			= labelInsertor.finalize(outImg,markerImg,removeMarkersCollisionThreshold,removeMarkersAtBoundary);

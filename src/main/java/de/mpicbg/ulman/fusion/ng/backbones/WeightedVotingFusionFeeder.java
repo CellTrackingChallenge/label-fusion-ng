@@ -90,7 +90,7 @@ extends JobIO<IT,LT>
 					= (AbstractWeightedVotingRoisFusionAlgorithm<IT,LT,?>)algorithm;
 			algRoi.setupBoxes(inImgs,markerImg);
 			//DEBUG// algRoi.printBoxes();
-			log.warn("ROIs (boxes) are ready");
+			log.trace("ROIs (boxes) are ready");
 		}
 		return algorithm.fuse(inImgs, markerImg);
 	}
