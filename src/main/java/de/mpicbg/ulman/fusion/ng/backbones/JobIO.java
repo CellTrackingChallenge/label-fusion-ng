@@ -280,12 +280,14 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 		//check the job file exists
 		if (filePath == null) {
 			log.warn("The path to a job file was not provided.");
-			statusService.showStatus("The path to a job file was not provided.");
+			if (uiService != null && !uiService.isHeadless())
+				statusService.showStatus("The path to a job file was not provided.");
 			return false;
 		}
 		if (!filePath.exists()) {
 			log.warn("Job file \""+filePath.getAbsolutePath()+"\" does not exist.");
-			statusService.showStatus("Job file \""+filePath.getAbsolutePath()+"\" does not exist.");
+			if (uiService != null && !uiService.isHeadless())
+				statusService.showStatus("Job file \""+filePath.getAbsolutePath()+"\" does not exist.");
 			return false;
 		}
 
@@ -320,7 +322,7 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 					if (lineTokens.length == 1)
 					{
 						log.warn("Job file: Missing column with weights on line "+lineNo+".");
-						if (!uiService.isHeadless())
+						if (uiService != null && !uiService.isHeadless())
 						{
 							statusService.showStatus("Job file: Missing column with weights on line "+lineNo+".");
 							uiService.showDialog(    "Job file: Missing column with weights on line "+lineNo+".");
@@ -341,7 +343,7 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 					}
 					catch (Exception e) {
 						log.warn("Job file: The weight column \""+partTwo+"\" cannot be parsed as a real number on line "+lineNo+".");
-						if (!uiService.isHeadless())
+						if (uiService != null && !uiService.isHeadless())
 						{
 							statusService.showStatus("Job file: The weight column \""+partTwo+"\" cannot be parsed as a real number on line "+lineNo+".");
 							uiService.showDialog(    "Job file: The weight column \""+partTwo+"\" cannot be parsed as a real number on line "+lineNo+".");
@@ -363,7 +365,7 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 					catch (Exception e) { /* intentionally empty */ }
 					if (isNumber) {
 						log.warn("Job file: There seems to be present the weight column \""+possiblyNumber+"\" on line "+lineNo+".");
-						if (!uiService.isHeadless())
+						if (uiService != null && !uiService.isHeadless())
 						{
 							statusService.showStatus("Job file: There seems to be present the weight column \""+possiblyNumber+"\" on line "+lineNo+".");
 							uiService.showDialog(    "Job file: There seems to be present the weight column \""+possiblyNumber+"\" on line "+lineNo+".");
@@ -376,7 +378,7 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 			if (partOne.indexOf("TTT") == -1 || ( (partOne.lastIndexOf("TTT") - partOne.indexOf("TTT")) > 1 ))
 			{
 				log.warn("Job file: Filename \""+partOne+"\" does not contain TTT or TTTT pattern on line "+lineNo+".");
-				if (!uiService.isHeadless())
+				if (uiService != null && !uiService.isHeadless())
 				{
 					statusService.showStatus("Job file: Filename \""+partOne+"\" does not contain TTT or TTTT pattern on line "+lineNo+".");
 					uiService.showDialog(    "Job file: Filename \""+partOne+"\" does not contain TTT or TTTT pattern on line "+lineNo+".");
@@ -386,7 +388,8 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 		}
 
 		log.info("Job file feels sane.");
-		statusService.showStatus("Job file feels sane.");
+		if (uiService != null && !uiService.isHeadless())
+			statusService.showStatus("Job file feels sane.");
 		return true;
 	}
 }
