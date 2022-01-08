@@ -30,7 +30,7 @@ package de.mpicbg.ulman.fusion.ng;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.real.DoubleType;
-import org.scijava.log.LogService;
+import org.scijava.log.Logger;
 
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 import de.mpicbg.ulman.fusion.ng.fuse.WeightedVotingLabelFuser;
@@ -42,13 +42,13 @@ class BIC<IT extends RealType<IT>, LT extends IntegerType<LT>>
 extends AbstractWeightedVotingFusionAlgorithm<IT,LT,DoubleType>
 {
 	public
-	BIC(final LogService _log)
+	BIC(final Logger _log)
 	{
 		super(_log, new DoubleType());
 	}
 
 	public
-	BIC(final LogService _log, final String dbgImgSuffix)
+	BIC(final Logger _log, final String dbgImgSuffix)
 	{
 		super(_log, new DoubleType());
 

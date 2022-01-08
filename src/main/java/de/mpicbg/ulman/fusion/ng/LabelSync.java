@@ -35,7 +35,7 @@ import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.view.Views;
 
-import org.scijava.log.LogService;
+import org.scijava.log.Logger;
 import sc.fiji.simplifiedio.SimplifiedIO;
 import java.util.*;
 
@@ -61,7 +61,7 @@ public
 class LabelSync<IT extends RealType<IT>, LT extends IntegerType<LT>>
 extends JobIO<IT,LT>
 {
-	public LabelSync(final LogService _log)
+	public LabelSync(final Logger _log)
 	{
 		super(_log);
 	}

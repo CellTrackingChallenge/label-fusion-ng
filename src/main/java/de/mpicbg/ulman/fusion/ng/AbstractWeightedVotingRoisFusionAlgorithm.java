@@ -38,7 +38,7 @@ import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.operators.SetZero;
 import net.imglib2.view.Views;
-import org.scijava.log.LogService;
+import org.scijava.log.Logger;
 import sc.fiji.simplifiedio.SimplifiedIO;
 
 import java.util.Set;
@@ -55,7 +55,7 @@ public abstract
 class AbstractWeightedVotingRoisFusionAlgorithm<IT extends RealType<IT>, LT extends IntegerType<LT>, ET extends RealType<ET>>
 extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 {
-	public AbstractWeightedVotingRoisFusionAlgorithm(LogService _log, ET refType) {
+	public AbstractWeightedVotingRoisFusionAlgorithm(Logger _log, ET refType) {
 		super(_log, refType);
 	}
 

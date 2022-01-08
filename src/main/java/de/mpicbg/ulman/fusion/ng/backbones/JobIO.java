@@ -36,7 +36,7 @@ import sc.fiji.simplifiedio.SimplifiedIO;
 
 import org.scijava.app.StatusService;
 import org.scijava.ui.UIService;
-import org.scijava.log.LogService;
+import org.scijava.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -77,13 +77,13 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 	private JobIO()
 	{ log = null; } //this is to get rid of some warnings
 
-	protected final LogService log;
+	protected final Logger log;
 
 	public
-	JobIO(final LogService _log)
+	JobIO(final Logger _log)
 	{
 		if (_log == null)
-			throw new RuntimeException("Please, give me existing LogService.");
+			throw new RuntimeException("Please, give me existing Logger.");
 
 		log = _log;
 	}
@@ -387,7 +387,7 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 	static public
 	boolean inFileOKAY(final File filePath,
 	                   final boolean shouldCheckForWeights,
-	                   final LogService log,
+	                   final Logger log,
 	                   final StatusService statusService,
 	                   final UIService uiService)
 	{

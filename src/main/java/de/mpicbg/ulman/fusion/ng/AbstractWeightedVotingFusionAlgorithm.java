@@ -35,7 +35,7 @@ import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.operators.SetZero;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
-import org.scijava.log.LogService;
+import org.scijava.log.Logger;
 import sc.fiji.simplifiedio.SimplifiedIO;
 
 import java.util.Set;
@@ -69,14 +69,14 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 	AbstractWeightedVotingFusionAlgorithm()
 	{ log = null; referenceType = null; } //this is to get rid of some warnings
 
-	protected final LogService log;
+	protected final Logger log;
 	protected final ET referenceType;
 
 	public
-	AbstractWeightedVotingFusionAlgorithm(final LogService _log, final ET refType)
+	AbstractWeightedVotingFusionAlgorithm(final Logger _log, final ET refType)
 	{
 		if (_log == null)
-			throw new RuntimeException("Please, give me existing LogService.");
+			throw new RuntimeException("Please, give me existing Logger.");
 		log = _log;
 
 		if (refType == null)

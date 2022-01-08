@@ -193,6 +193,10 @@ abstract class CommonGUI
 
 	static class MyLog implements LogService
 	{
+		final String prefix;
+		public MyLog() { prefix = ""; }
+		public MyLog(final String prefix) { this.prefix = prefix; }
+
 		@Override
 		public void setLevel(int level) { }
 
@@ -212,7 +216,7 @@ abstract class CommonGUI
 		public int getLevel() { return 0; }
 
 		@Override
-		public Logger subLogger(String name, int level) { return null; }
+		public Logger subLogger(String name, int level) { return new MyLog(name); }
 
 		@Override
 		public void addLogListener(LogListener listener) { }
@@ -242,18 +246,18 @@ abstract class CommonGUI
 		public void setInfo(PluginInfo<?> info) { }
 
 		@Override
-		public void debug(Object msg) { System.out.println(msg); }
+		public void debug(Object msg) { System.out.println(prefix+"[DBG] "+msg); }
 
 		@Override
-		public void error(Object msg) { System.out.println("[ERROR] "+msg); }
+		public void error(Object msg) { System.out.println(prefix+"[ERROR] "+msg); }
 
 		@Override
-		public void info(Object msg) { System.out.println("[INFO] "+msg); }
+		public void info(Object msg) { System.out.println(prefix+"[INFO] "+msg); }
 
 		@Override
-		public void trace(Object msg) { System.out.println(msg); }
+		public void trace(Object msg) { System.out.println(prefix+"[TRACE] "+msg); }
 
 		@Override
-		public void warn(Object msg) { System.out.println("[WARN] "+msg); }
+		public void warn(Object msg) { System.out.println(prefix+"[WARN] "+msg); }
 	}
 }

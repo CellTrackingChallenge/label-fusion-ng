@@ -30,7 +30,7 @@ package de.mpicbg.ulman.fusion.ng;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.real.DoubleType;
-import org.scijava.log.LogService;
+import org.scijava.log.Logger;
 
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 import de.mpicbg.ulman.fusion.ng.fuse.SIMPLELabelFuser;
@@ -42,7 +42,7 @@ class SIMPLE<IT extends RealType<IT>, LT extends IntegerType<LT>>
 extends AbstractWeightedVotingFusionAlgorithm<IT,LT,DoubleType>
 {
 	public
-	SIMPLE(final LogService _log)
+	SIMPLE(final Logger _log)
 	{
 		super(_log, new DoubleType());
 	}

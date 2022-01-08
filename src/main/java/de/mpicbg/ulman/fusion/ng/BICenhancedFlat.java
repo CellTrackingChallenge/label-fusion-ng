@@ -30,7 +30,7 @@ package de.mpicbg.ulman.fusion.ng;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.integer.ByteType;
-import org.scijava.log.LogService;
+import org.scijava.log.Logger;
 
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 import de.mpicbg.ulman.fusion.ng.fuse.WeightedVotingLabelFuser;
@@ -43,13 +43,13 @@ class BICenhancedFlat<IT extends RealType<IT>, LT extends IntegerType<LT>>
 extends AbstractWeightedVotingRoisFusionAlgorithm<IT,LT,ByteType>
 {
 	public
-	BICenhancedFlat(final LogService _log)
+	BICenhancedFlat(final Logger _log)
 	{
 		super(_log, new ByteType());
 	}
 
 	public
-	BICenhancedFlat(final LogService _log, final String dbgImgSuffix)
+	BICenhancedFlat(final Logger _log, final String dbgImgSuffix)
 	{
 		super(_log, new ByteType());
 

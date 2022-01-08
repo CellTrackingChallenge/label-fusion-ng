@@ -33,7 +33,7 @@ import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
 import de.mpicbg.ulman.fusion.JobSpecification;
 
-import org.scijava.log.LogService;
+import org.scijava.log.Logger;
 import sc.fiji.simplifiedio.SimplifiedIO;
 
 import java.util.concurrent.ExecutorService;
@@ -60,7 +60,7 @@ class WeightedVotingFusionFeeder<IT extends RealType<IT>, LT extends IntegerType
 extends JobIO<IT,LT>
 {
 	public
-	WeightedVotingFusionFeeder(final LogService _log)
+	WeightedVotingFusionFeeder(final Logger _log)
 	{
 		super(_log);
 	}
@@ -149,6 +149,7 @@ extends JobIO<IT,LT>
 	public
 	void processJob(final JobSpecification job, final int time, final int noOfThreads)
 	{
+		log.info("Processing job with multithreading ("+noOfThreads+" threads)");
 		final ExecutorService w = Executors.newFixedThreadPool(noOfThreads);
 		try {
 			processJob(job,time, w);
