@@ -32,6 +32,7 @@ import net.imglib2.type.numeric.RealType;
 import org.scijava.ItemVisibility;
 import org.scijava.command.CommandModule;
 import org.scijava.command.CommandService;
+import org.scijava.log.Logger;
 import org.scijava.widget.FileWidget;
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
@@ -45,10 +46,10 @@ import java.text.ParseException;
 import java.util.concurrent.ExecutionException;
 import java.io.IOException;
 import java.io.File;
+
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
 import de.mpicbg.ulman.fusion.ng.backbones.JobIO;
 
-import net.imglib2.type.numeric.integer.UnsignedShortType;
 import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionFeeder;
 import de.mpicbg.ulman.fusion.ng.BIC;
 import de.mpicbg.ulman.fusion.ng.BICenhancedFlat;
@@ -122,6 +123,9 @@ public class Fusers extends CommonGUI implements Command
 
 	@Parameter(label = "Level of parallelism (no. of threads):", min="1")
 	int noOfThreads = 1;
+
+	@Parameter
+	boolean doCMV = false;
 
 	@Parameter
 	CommandService commandService;
@@ -217,7 +221,8 @@ public class Fusers extends CommonGUI implements Command
 	}
 
 
-	private void worker(final boolean useGui)
+	private <IT extends RealType<IT>, LT extends IntegerType<LT>>
+	void worker(final boolean useGui)
 	{
 		// ------------ checks ------------
 		if (!inFileOKAY())
@@ -276,8 +281,17 @@ public class Fusers extends CommonGUI implements Command
 		}
 
 		// ------------ preparing for action ------------
-		final WeightedVotingFusionFeeder<?, UnsignedShortType> feeder;
+		final List<OneCombination<IT,LT>> combinations; //NB: even for non-CMV
 
+		if (doCMV) {
+			combinations = new LinkedList<>();
+			cmv_fillInAllCombinations(job,combinations);
+		} else {
+			combinations = new ArrayList<>(1);
+			combinations.add( new OneCombination<>((1 << job.numberOfFusionInputs)-1,job.votingThreshold, job.numberOfFusionInputs) );
+		}
+
+		//NB: every combination get its own feeder (and logger and fuser consequently)
 		if (mergeModel.startsWith("SIMPLE"))
 		{
 			//yield additional SIMPLE-specific parameters
@@ -290,37 +304,65 @@ public class Fusers extends CommonGUI implements Command
 			if (fuserParamsObj == null || fuserParamsObj.isCanceled())
 				throw new RuntimeException("User requested not to run the SIMPLE fuser.");
 
-			//"forward" the parameters values
-			final SIMPLE fuser_SIMPLE = new SIMPLE(log);
-			fuser_SIMPLE.getFuserReference().maxIters = (int)fuserParamsObj.getInput("maxIters");
-			fuser_SIMPLE.getFuserReference().noOfNoUpdateIters = (int)fuserParamsObj.getInput("noOfNoUpdateIters");
-			fuser_SIMPLE.getFuserReference().initialQualityThreshold = (double)fuserParamsObj.getInput("initialQualityThreshold");
-			fuser_SIMPLE.getFuserReference().stepDownInQualityThreshold = (double)fuserParamsObj.getInput("stepDownInQualityThreshold");
-			fuser_SIMPLE.getFuserReference().minimalQualityThreshold = (double)fuserParamsObj.getInput("minimalQualityThreshold");
+			boolean reportOnce = true;
+			for (OneCombination c : combinations)
+			{
+				final Logger logger = log.subLogger(c.code);
+				final SIMPLE fuser_SIMPLE = new SIMPLE(logger);
+				//"forward" the parameters values
+				fuser_SIMPLE.getFuserReference().maxIters = (int)fuserParamsObj.getInput("maxIters");
+				fuser_SIMPLE.getFuserReference().noOfNoUpdateIters = (int)fuserParamsObj.getInput("noOfNoUpdateIters");
+				fuser_SIMPLE.getFuserReference().initialQualityThreshold = (double)fuserParamsObj.getInput("initialQualityThreshold");
+				fuser_SIMPLE.getFuserReference().stepDownInQualityThreshold = (double)fuserParamsObj.getInput("stepDownInQualityThreshold");
+				fuser_SIMPLE.getFuserReference().minimalQualityThreshold = (double)fuserParamsObj.getInput("minimalQualityThreshold");
+				c.feeder = new WeightedVotingFusionFeeder(logger).setAlgorithm(fuser_SIMPLE);
 
-			log.info("SIMPLE alg params: "+fuser_SIMPLE.getFuserReference().reportSettings());
-			feeder = new WeightedVotingFusionFeeder(log).setAlgorithm(fuser_SIMPLE);
+				if (reportOnce)
+				{
+					log.info("SIMPLE alg params: "+fuser_SIMPLE.getFuserReference().reportSettings());
+					reportOnce = false;
+				}
+			}
 		}
 		else
 		if (mergeModel.startsWith("BICv2 with Flat"))
 		{
-			feeder = new WeightedVotingFusionFeeder(log).setAlgorithm(new BICenhancedFlat(log));
+			for (OneCombination c : combinations) {
+				final Logger logger = log.subLogger(c.code);
+				c.feeder = new WeightedVotingFusionFeeder(logger).setAlgorithm(new BICenhancedFlat(logger));
+			}
 		}
 		else
 		if (mergeModel.startsWith("BICv2 with Weight"))
 		{
-			feeder = new WeightedVotingFusionFeeder(log).setAlgorithm(new BICenhancedWeighted(log));
+			for (OneCombination c : combinations) {
+				final Logger logger = log.subLogger(c.code);
+				c.feeder = new WeightedVotingFusionFeeder(logger).setAlgorithm(new BICenhancedWeighted(logger));
+			}
 		}
 		else
 		{
-			feeder = new WeightedVotingFusionFeeder(log).setAlgorithm(new BIC(log));
+			for (OneCombination c : combinations) {
+				final Logger logger = log.subLogger(c.code);
+				c.feeder = new WeightedVotingFusionFeeder(logger).setAlgorithm(new BIC(logger));
+			}
 		}
 
 		// ------------ action per time point ------------
-		iterateTimePoints(fileIdxList,useGui,time -> {
-			job.reportJobForTime(time,log);
-			feeder.processJob(job,time, noOfThreads);
-		});
+		if (!doCMV)
+		{
+			//NB: shortcut
+			final WeightedVotingFusionFeeder<IT,LT> feeder = combinations.get(0).feeder;
+			iterateTimePoints(fileIdxList,useGui,time -> {
+				job.reportJobForTime(time,log);
+				feeder.processJob(job,time, noOfThreads);
+			});
+		}
+		else
+		{
+			//CMV LAND HERE!
+
+		}
 	}
 
 
@@ -391,6 +433,9 @@ public class Fusers extends CommonGUI implements Command
 			sb.append(';').append(threshold);
 			return sb.toString();
 		}
+
+		// ----------- processing of the job -----------
+		WeightedVotingFusionFeeder<IT,LT> feeder;
 	}
 
 
