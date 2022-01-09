@@ -27,6 +27,8 @@
  */
 package de.mpicbg.ulman.fusion;
 
+import net.imglib2.type.numeric.IntegerType;
+import net.imglib2.type.numeric.RealType;
 import org.scijava.ItemVisibility;
 import org.scijava.command.CommandModule;
 import org.scijava.command.CommandService;
@@ -35,6 +37,9 @@ import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
+import java.util.LinkedList;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.TreeSet;
 import java.text.ParseException;
 import java.util.concurrent.ExecutionException;
@@ -316,6 +321,76 @@ public class Fusers extends CommonGUI implements Command
 			job.reportJobForTime(time,log);
 			feeder.processJob(job,time, noOfThreads);
 		});
+	}
+
+
+	static <IT extends RealType<IT>, LT extends IntegerType<LT>>
+	void cmv_fillInAllCombinations(final JobSpecification fullJobLooksLikeThis, final List<OneCombination<IT,LT>> combinations)
+	{
+		//over all combinations of inputs
+		for (int i = 1; i <= ((1<<fullJobLooksLikeThis.numberOfFusionInputs)-1); ++i)
+		{
+			//NB: this threshold level is always present
+			OneCombination<IT,LT> c = new OneCombination<>(i,1, fullJobLooksLikeThis.numberOfFusionInputs);
+			combinations.add(c);
+
+			//over all remaining possible thresholds
+			for (int t = 2; t <= c.relevantInputIndices.size(); ++t)
+				combinations.add( new OneCombination<>(i,t, fullJobLooksLikeThis.numberOfFusionInputs) );
+		}
+	}
+
+	static
+	String cmv_createFolderName(final OneCombination<?,?> combination, final int numberOfAllPossibleInputs)
+	{
+		final StringBuilder sb = new StringBuilder();
+		for (int i = numberOfAllPossibleInputs-1; i >= 0; --i)
+			if (combination.relevantInputIndices.contains(i)) sb.append('Y'); else sb.append('N');
+		sb.append('_').append((int)combination.threshold);
+		return sb.toString();
+	}
+
+	void cmv_printCombinations(final List<OneCombination<?,?>> combinations)
+	{
+		for (OneCombination<?,?> c : combinations) log.info(c);
+	}
+
+	static class OneCombination<IT extends RealType<IT>, LT extends IntegerType<LT>>
+	implements Callable<OneCombination<IT,LT>>
+	{
+		final List<Integer> relevantInputIndices;
+		final double threshold;
+		final String code;
+
+		OneCombination(final int combinationInDecimal, final double threshold, final int inputsWidth)
+		{
+			relevantInputIndices = new ArrayList<>(inputsWidth);
+			int leftCombinations = combinationInDecimal;
+			int bitPos = 0;
+			while (leftCombinations > 0)
+			{
+				int bitMask = 1 << bitPos;
+				if ((leftCombinations & bitMask) > 0)
+				{
+					relevantInputIndices.add(bitPos);
+					leftCombinations ^= bitMask;
+				}
+				++bitPos;
+			}
+
+			this.threshold = threshold;
+			this.code = cmv_createFolderName(this,inputsWidth);
+		}
+
+		@Override
+		public String toString()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.append(code).append(" -> ");
+			for (int idx : relevantInputIndices) sb.append(idx).append(',');
+			sb.append(';').append(threshold);
+			return sb.toString();
+		}
 	}
 
 
