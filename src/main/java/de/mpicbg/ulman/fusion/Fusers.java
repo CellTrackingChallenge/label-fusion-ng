@@ -373,6 +373,7 @@ public class Fusers extends CommonGUI implements Command
 		{
 			//CMV LAND HERE!
 			//main idea: the last combination is a full one, so we use it to load all images and share them among the rest
+			log.info("Doing CMV!   (job's threshold value is thus ignored)");
 
 			//own 'feeder' is already set in every combination; we take now the very last combination
 			//(which happens to include all original inputs -- the full job) and make it a
@@ -578,15 +579,17 @@ public class Fusers extends CommonGUI implements Command
 	{
 		final Fusers myself = new Fusers();
 
-		if (args.length != 5)
+		if (args.length != 5 && args.length != 6)
 		{
 			System.out.println("In this regime, it is always using the \"BICv2 with FlatVoting, SingleMaskFailSafe and CollisionResolver\"");
-			System.out.println("Usage: pathToJobFile threshold pathToOutputImages timePointsRangeSpecification numberOfThreads\n");
+			System.out.println("Usage: pathToJobFile threshold pathToOutputImages timePointsRangeSpecification numberOfThreads [CMV]\n");
 			System.out.println(myself.fileInfoA);
 			System.out.println(myself.fileInfoB);
 			System.out.println(myself.fileInfoE);
 			System.out.println(myself.fileInfoD);
 			System.out.println("timePointsRangeSpecification can be, e.g., 1-9,23,25");
+			System.out.println("Set numberOfThreads to 1 to enforce serial ssingle-threaded) processing.");
+			System.out.println("The CMV is optional param which enables the CMV combinatorial search...");
 			return;
 		}
 
@@ -597,6 +600,7 @@ public class Fusers extends CommonGUI implements Command
 		myself.outputPath = new File(args[2]);
 		myself.fileIdxStr = args[3];
 		myself.noOfThreads = Integer.parseInt(args[4]);
+		myself.doCMV = args.length == 6;
 		myself.worker(false); //false -> run without GUI
 	}
 }
