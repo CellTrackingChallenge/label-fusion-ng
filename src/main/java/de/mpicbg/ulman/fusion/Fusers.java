@@ -27,23 +27,40 @@
  */
 package de.mpicbg.ulman.fusion;
 
+import net.imglib2.img.Img;
+import sc.fiji.simplifiedio.SimplifiedIO;
+import net.imglib2.type.numeric.IntegerType;
+import net.imglib2.type.numeric.RealType;
+
 import org.scijava.ItemVisibility;
 import org.scijava.command.CommandModule;
 import org.scijava.command.CommandService;
+import org.scijava.log.Logger;
 import org.scijava.widget.FileWidget;
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
+import java.util.Map;
+import java.util.Vector;
+import java.util.List;
+import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.TreeSet;
 import java.text.ParseException;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.io.IOException;
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
 import de.mpicbg.ulman.fusion.ng.backbones.JobIO;
 
-import net.imglib2.type.numeric.integer.UnsignedShortType;
 import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionFeeder;
 import de.mpicbg.ulman.fusion.ng.BIC;
 import de.mpicbg.ulman.fusion.ng.BICenhancedFlat;
@@ -117,6 +134,9 @@ public class Fusers extends CommonGUI implements Command
 
 	@Parameter(label = "Level of parallelism (no. of threads):", min="1")
 	int noOfThreads = 1;
+
+	@Parameter
+	boolean doCMV = false;
 
 	@Parameter
 	CommandService commandService;
@@ -212,7 +232,8 @@ public class Fusers extends CommonGUI implements Command
 	}
 
 
-	private void worker(final boolean useGui)
+	private <IT extends RealType<IT>, LT extends IntegerType<LT>>
+	void worker(final boolean useGui)
 	{
 		// ------------ checks ------------
 		if (!inFileOKAY())
@@ -271,8 +292,17 @@ public class Fusers extends CommonGUI implements Command
 		}
 
 		// ------------ preparing for action ------------
-		final WeightedVotingFusionFeeder<?, UnsignedShortType> feeder;
+		final List<OneCombination<IT,LT>> combinations; //NB: even for non-CMV
 
+		if (doCMV) {
+			combinations = new LinkedList<>();
+			cmv_fillInAllCombinations(job,combinations);
+		} else {
+			combinations = new ArrayList<>(1);
+			combinations.add( new OneCombination<>((1 << job.numberOfFusionInputs)-1,job.votingThreshold, job.numberOfFusionInputs) );
+		}
+
+		//NB: every combination get its own feeder (and logger and fuser consequently)
 		if (mergeModel.startsWith("SIMPLE"))
 		{
 			//yield additional SIMPLE-specific parameters
@@ -285,37 +315,262 @@ public class Fusers extends CommonGUI implements Command
 			if (fuserParamsObj == null || fuserParamsObj.isCanceled())
 				throw new RuntimeException("User requested not to run the SIMPLE fuser.");
 
-			//"forward" the parameters values
-			final SIMPLE fuser_SIMPLE = new SIMPLE(log);
-			fuser_SIMPLE.getFuserReference().maxIters = (int)fuserParamsObj.getInput("maxIters");
-			fuser_SIMPLE.getFuserReference().noOfNoUpdateIters = (int)fuserParamsObj.getInput("noOfNoUpdateIters");
-			fuser_SIMPLE.getFuserReference().initialQualityThreshold = (double)fuserParamsObj.getInput("initialQualityThreshold");
-			fuser_SIMPLE.getFuserReference().stepDownInQualityThreshold = (double)fuserParamsObj.getInput("stepDownInQualityThreshold");
-			fuser_SIMPLE.getFuserReference().minimalQualityThreshold = (double)fuserParamsObj.getInput("minimalQualityThreshold");
+			boolean reportOnce = true;
+			for (OneCombination<IT,LT> c : combinations)
+			{
+				final Logger logger = log.subLogger(c.code);
+				final SIMPLE<IT,LT> fuser_SIMPLE = new SIMPLE<>(logger);
+				//"forward" the parameters values
+				fuser_SIMPLE.getFuserReference().maxIters = (int)fuserParamsObj.getInput("maxIters");
+				fuser_SIMPLE.getFuserReference().noOfNoUpdateIters = (int)fuserParamsObj.getInput("noOfNoUpdateIters");
+				fuser_SIMPLE.getFuserReference().initialQualityThreshold = (double)fuserParamsObj.getInput("initialQualityThreshold");
+				fuser_SIMPLE.getFuserReference().stepDownInQualityThreshold = (double)fuserParamsObj.getInput("stepDownInQualityThreshold");
+				fuser_SIMPLE.getFuserReference().minimalQualityThreshold = (double)fuserParamsObj.getInput("minimalQualityThreshold");
+				c.feeder = new WeightedVotingFusionFeeder<IT,LT>(logger).setAlgorithm(fuser_SIMPLE);
 
-			log.info("SIMPLE alg params: "+fuser_SIMPLE.getFuserReference().reportSettings());
-			feeder = new WeightedVotingFusionFeeder(log).setAlgorithm(fuser_SIMPLE);
+				if (reportOnce)
+				{
+					log.info("SIMPLE alg params: "+fuser_SIMPLE.getFuserReference().reportSettings());
+					reportOnce = false;
+				}
+			}
 		}
 		else
 		if (mergeModel.startsWith("BICv2 with Flat"))
 		{
-			feeder = new WeightedVotingFusionFeeder(log).setAlgorithm(new BICenhancedFlat(log));
+			for (OneCombination<IT,LT> c : combinations) {
+				final Logger logger = log.subLogger(c.code);
+				c.feeder = new WeightedVotingFusionFeeder<IT,LT>(logger).setAlgorithm(new BICenhancedFlat<>(logger));
+			}
 		}
 		else
 		if (mergeModel.startsWith("BICv2 with Weight"))
 		{
-			feeder = new WeightedVotingFusionFeeder(log).setAlgorithm(new BICenhancedWeighted(log));
+			for (OneCombination<IT,LT> c : combinations) {
+				final Logger logger = log.subLogger(c.code);
+				c.feeder = new WeightedVotingFusionFeeder<IT,LT>(logger).setAlgorithm(new BICenhancedWeighted<>(logger));
+			}
 		}
 		else
 		{
-			feeder = new WeightedVotingFusionFeeder(log).setAlgorithm(new BIC(log));
+			for (OneCombination<IT,LT> c : combinations) {
+				final Logger logger = log.subLogger(c.code);
+				c.feeder = new WeightedVotingFusionFeeder<IT,LT>(logger).setAlgorithm(new BIC<>(logger));
+			}
 		}
 
 		// ------------ action per time point ------------
-		iterateTimePoints(fileIdxList,useGui,time -> {
-			job.reportJobForTime(time,log);
-			feeder.processJob(job,time, noOfThreads);
-		});
+		if (!doCMV)
+		{
+			//NB: shortcut
+			final WeightedVotingFusionFeeder<IT,LT> feeder = combinations.get(0).feeder;
+			iterateTimePoints(fileIdxList,useGui,time -> {
+				job.reportJobForTime(time,log);
+				feeder.processJob(job,time, noOfThreads);
+			});
+		}
+		else
+		{
+			//CMV LAND HERE!
+			//main idea: the last combination is a full one, so we use it to load all images and share them among the rest
+			log.info("Doing CMV!   (job's threshold value is thus ignored)");
+
+			//own 'feeder' is already set in every combination; we take now the very last combination
+			//(which happens to include all original inputs -- the full job) and make it a
+			//'refLoadedImages' for all combinations (including the very last one)
+			final OneCombination<IT,LT> fullCombination = combinations.get( combinations.size()-1 );
+			for (OneCombination<IT,LT> c : combinations) c.refLoadedImages = fullCombination.feeder;
+			//
+			//prevent the 'refLoadedImages' to replace its data with empty initialized content, see OneCombination.call()
+			fullCombination.iAmTheRefence = true;
+
+			//prepare output folders
+			try {
+				for (OneCombination<IT,LT> c : combinations) c.setupOutputFolder(job.outputPattern);
+			} catch (IOException e) {
+				log.error(e.getMessage());
+				throw new RuntimeException("CMV: likely an error with output folders...",e);
+			}
+
+			final ExecutorService cmvers = Executors.newFixedThreadPool(noOfThreads);
+			iterateTimePoints(fileIdxList,useGui,time -> {
+				try {
+					job.reportJobForTime(time,log);
+					for (OneCombination<IT,LT> c : combinations) c.currentTime = time;
+
+					//processJob() is loadJob(), calcBoxes() and fuse() (both are inside useAlgorithm())
+					fullCombination.feeder.loadJob( job.instantiateForTime(time), cmvers);
+					fullCombination.feeder.calcBoxes( cmvers );
+
+					//here: all images loaded, boxes possibly computed, therefore...
+					//here: ready to start all fusers who start themselves with "stealing" data from the 'fullCombination'
+
+					cmvers.invokeAll(combinations); //calls useAlgorithmWithoutUpdatingBoxes() -> fuse()
+					log.info("All combinations for time "+time+" got processed just now.");
+				} catch (InterruptedException e) {
+					log.error("multithreading error: "+e.getMessage());
+					e.printStackTrace();
+					throw new RuntimeException("multithreading error",e);
+				}
+			});
+			log.info("Shutting down thread pool..."); //NB: to show/debug the code always got here
+			cmvers.shutdownNow();
+		}
+	}
+
+
+	static <IT extends RealType<IT>, LT extends IntegerType<LT>>
+	void cmv_fillInAllCombinations(final JobSpecification fullJobLooksLikeThis, final List<OneCombination<IT,LT>> combinations)
+	{
+		//over all combinations of inputs
+		for (int i = 1; i <= ((1<<fullJobLooksLikeThis.numberOfFusionInputs)-1); ++i)
+		{
+			//NB: this threshold level is always present
+			OneCombination<IT,LT> c = new OneCombination<>(i,1, fullJobLooksLikeThis.numberOfFusionInputs);
+			combinations.add(c);
+
+			//over all remaining possible thresholds
+			for (int t = 2; t <= c.relevantInputIndices.size(); ++t)
+				combinations.add( new OneCombination<>(i,t, fullJobLooksLikeThis.numberOfFusionInputs) );
+		}
+	}
+
+	static
+	String cmv_createFolderName(final OneCombination<?,?> combination, final int numberOfAllPossibleInputs)
+	{
+		final StringBuilder sb = new StringBuilder();
+		for (int i = numberOfAllPossibleInputs-1; i >= 0; --i)
+			if (combination.relevantInputIndices.contains(i)) sb.append('Y'); else sb.append('N');
+		sb.append('_').append((int)combination.threshold);
+		return sb.toString();
+	}
+
+	void cmv_printCombinations(final List<OneCombination<?,?>> combinations)
+	{
+		for (OneCombination<?,?> c : combinations) log.info(c);
+	}
+
+	static class OneCombination<IT extends RealType<IT>, LT extends IntegerType<LT>>
+	implements Callable<OneCombination<IT,LT>>
+	{
+		final List<Integer> relevantInputIndices;
+		final double threshold;
+		final String code;
+
+		OneCombination(final int combinationInDecimal, final double threshold, final int inputsWidth)
+		{
+			relevantInputIndices = new ArrayList<>(inputsWidth);
+			int leftCombinations = combinationInDecimal;
+			int bitPos = 0;
+			while (leftCombinations > 0)
+			{
+				int bitMask = 1 << bitPos;
+				if ((leftCombinations & bitMask) > 0)
+				{
+					relevantInputIndices.add(bitPos);
+					leftCombinations ^= bitMask;
+				}
+				++bitPos;
+			}
+
+			this.threshold = threshold;
+			this.code = cmv_createFolderName(this,inputsWidth);
+		}
+
+		@Override
+		public String toString()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.append(code).append(" -> ");
+			for (int idx : relevantInputIndices) sb.append(idx).append(',');
+			sb.append(';').append(threshold);
+			return sb.toString();
+		}
+
+		// ----------- processing of the job -----------
+		WeightedVotingFusionFeeder<IT,LT> feeder;
+		WeightedVotingFusionFeeder<IT,LT> refLoadedImages;
+		boolean iAmTheRefence = false;
+
+		private
+		void reInitMe()
+		{
+			feeder.threshold = (float)this.threshold;
+			//NB: this is reset even for the reference one because feeder.loadJob()
+			//always resets it to the GUI/CLI options which is irrelevant in the CMV mode
+
+			if (iAmTheRefence) return;
+
+			//assumes actual data is already present in 'refLoadedImages',
+			//so we cherry-pick from it according to 'releventInputIndices"
+			//into 'feeder' and make the feeder do the fusion (in a single thread)
+
+			//first run?
+			if (feeder.inImgs == null)
+			{
+				final int size = relevantInputIndices.size();
+				feeder.shareLogger().info("Allocating containers for the shadowed input images of size "+size);
+
+				feeder.inImgs = new Vector<>(size);
+				for (int i = 0; i < size; ++i) feeder.inImgs.add(null);
+
+				feeder.inWeights = new Vector<>(size);
+				for (int i = 0; i < size; ++i) feeder.inWeights.add(null);
+
+				Vector<Map<Double,long[]>> boxes = new Vector<>(size);
+				for (int i = 0; i < size; ++i) boxes.add(null);
+				feeder.setInBoxes(boxes);
+			}
+
+			Vector<Map<Double,long[]>> refBoxes = refLoadedImages.getInBoxes();
+			Vector<Map<Double,long[]>>  myBoxes = feeder.getInBoxes();
+			for (int i = 0; i < relevantInputIndices.size(); ++i)
+			{
+				feeder.inImgs.set(i, refLoadedImages.inImgs.get( relevantInputIndices.get(i) ));
+				feeder.inWeights.set(i, refLoadedImages.inWeights.get( relevantInputIndices.get(i) ));
+				myBoxes.set(i, refBoxes.get( relevantInputIndices.get(i) ));
+			}
+			feeder.markerImg = refLoadedImages.markerImg;
+			feeder.setMarkerBoxes( refLoadedImages.getMarkerBoxes() );
+		}
+
+		@Override
+		public OneCombination<IT,LT> call()
+		{
+			reInitMe();
+
+			final Img<LT> outImg = feeder.useAlgorithmWithoutUpdatingBoxes();
+
+			final String outFile = JobSpecification.expandFilenamePattern(outputFilenamePattern,currentTime);
+			feeder.shareLogger().info("Saving file: "+outFile);
+			SimplifiedIO.saveImage(outImg, outFile);
+			return this;
+		}
+
+		// ----------- saving output images -----------
+		String outputFilenamePattern;
+		int currentTime;
+
+		void setupOutputFolder(String outputPattern) throws IOException
+		{
+			//inject this.code before filename
+			final int sepPos = outputPattern.lastIndexOf(File.separatorChar);
+			String outFolder = (sepPos > -1 ? outputPattern.substring(0,sepPos+1) : "") +code;
+
+			final Path fPath = Paths.get(outFolder);
+			if (Files.exists(fPath))
+			{
+				if (!Files.isDirectory(fPath))
+					throw new IOException(outFolder + " seems to exist but it is not a directory!");
+			} else {
+				feeder.shareLogger().info("Creating output folder: "+outFolder);
+				Files.createDirectory(fPath);
+			}
+
+			outputFilenamePattern = outFolder + File.separator
+					+ (sepPos > -1 ? outputPattern.substring(sepPos+1) : outputPattern);
+			feeder.shareLogger().info("new output pattern: "+outputFilenamePattern);
+		}
 	}
 
 
@@ -324,15 +579,17 @@ public class Fusers extends CommonGUI implements Command
 	{
 		final Fusers myself = new Fusers();
 
-		if (args.length != 5)
+		if (args.length != 5 && args.length != 6)
 		{
 			System.out.println("In this regime, it is always using the \"BICv2 with FlatVoting, SingleMaskFailSafe and CollisionResolver\"");
-			System.out.println("Usage: pathToJobFile threshold pathToOutputImages timePointsRangeSpecification numberOfThreads\n");
+			System.out.println("Usage: pathToJobFile threshold pathToOutputImages timePointsRangeSpecification numberOfThreads [CMV]\n");
 			System.out.println(myself.fileInfoA);
 			System.out.println(myself.fileInfoB);
 			System.out.println(myself.fileInfoE);
 			System.out.println(myself.fileInfoD);
 			System.out.println("timePointsRangeSpecification can be, e.g., 1-9,23,25");
+			System.out.println("Set numberOfThreads to 1 to enforce serial ssingle-threaded) processing.");
+			System.out.println("The CMV is optional param which enables the CMV combinatorial search...");
 			return;
 		}
 
@@ -343,6 +600,7 @@ public class Fusers extends CommonGUI implements Command
 		myself.outputPath = new File(args[2]);
 		myself.fileIdxStr = args[3];
 		myself.noOfThreads = Integer.parseInt(args[4]);
+		myself.doCMV = args.length == 6;
 		myself.worker(false); //false -> run without GUI
 	}
 }

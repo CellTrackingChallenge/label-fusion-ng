@@ -36,6 +36,8 @@ import de.mpicbg.ulman.fusion.JobSpecification;
 import org.scijava.log.Logger;
 import sc.fiji.simplifiedio.SimplifiedIO;
 
+import java.util.Map;
+import java.util.Vector;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -101,6 +103,7 @@ extends JobIO<IT,LT>
 		}
 	}
 
+
 	public
 	Img<LT> useAlgorithm(final ExecutorService threadWorkers)
 			throws InterruptedException
@@ -111,7 +114,29 @@ extends JobIO<IT,LT>
 		log.info("calling weighted voting algorithm with threshold="+threshold);
 		algorithm.setWeights(inWeights);
 		algorithm.setThreshold(threshold);
-		if (algorithm instanceof AbstractWeightedVotingRoisFusionAlgorithm) {
+		calcBoxes(threadWorkers);
+		return algorithm.fuse(inImgs, markerImg);
+	}
+
+	public //NB: because of CMV
+	Img<LT> useAlgorithmWithoutUpdatingBoxes()
+	{
+		if (algorithm == null)
+			throw new RuntimeException("Cannot work without an algorithm.");
+
+		log.info("calling weighted voting algorithm with threshold="+threshold);
+		algorithm.setWeights(inWeights);
+		algorithm.setThreshold(threshold);
+		return algorithm.fuse(inImgs, markerImg);
+	}
+
+
+	public //NB: because of CMV
+	void calcBoxes(final ExecutorService threadWorkers)
+			throws InterruptedException
+	{
+		if (algorithm instanceof AbstractWeightedVotingRoisFusionAlgorithm)
+		{
 			AbstractWeightedVotingRoisFusionAlgorithm<IT,LT,?> algRoi
 					= (AbstractWeightedVotingRoisFusionAlgorithm<IT,LT,?>)algorithm;
 			if (threadWorkers != null)
@@ -121,7 +146,52 @@ extends JobIO<IT,LT>
 			//DEBUG// algRoi.printBoxes();
 			log.trace("ROIs (boxes) are ready");
 		}
-		return algorithm.fuse(inImgs, markerImg);
+	}
+
+	public //NB: because of CMV
+	Map<Double,long[]> getMarkerBoxes()
+	{
+		if (algorithm instanceof AbstractWeightedVotingRoisFusionAlgorithm)
+		{
+			AbstractWeightedVotingRoisFusionAlgorithm<IT, LT, ?> algRoi
+					= (AbstractWeightedVotingRoisFusionAlgorithm<IT, LT, ?>) algorithm;
+			return algRoi.markerBoxes;
+		}
+		else return null;
+	}
+
+	public //NB: because of CMV
+	void setMarkerBoxes(final Map<Double,long[]> mBoxes)
+	{
+		if (algorithm instanceof AbstractWeightedVotingRoisFusionAlgorithm)
+		{
+			AbstractWeightedVotingRoisFusionAlgorithm<IT, LT, ?> algRoi
+					= (AbstractWeightedVotingRoisFusionAlgorithm<IT, LT, ?>) algorithm;
+			algRoi.markerBoxes = mBoxes;
+		}
+	}
+
+	public //NB: because of CMV
+	Vector<Map<Double,long[]>> getInBoxes()
+	{
+		if (algorithm instanceof AbstractWeightedVotingRoisFusionAlgorithm)
+		{
+			AbstractWeightedVotingRoisFusionAlgorithm<IT, LT, ?> algRoi
+					= (AbstractWeightedVotingRoisFusionAlgorithm<IT, LT, ?>) algorithm;
+			return algRoi.inBoxes;
+		}
+		else return null;
+	}
+
+	public //NB: because of CMV
+	void setInBoxes(final Vector<Map<Double,long[]>> inBoxes)
+	{
+		if (algorithm instanceof AbstractWeightedVotingRoisFusionAlgorithm)
+		{
+			AbstractWeightedVotingRoisFusionAlgorithm<IT, LT, ?> algRoi
+					= (AbstractWeightedVotingRoisFusionAlgorithm<IT, LT, ?>) algorithm;
+			algRoi.inBoxes = inBoxes;
+		}
 	}
 
 
