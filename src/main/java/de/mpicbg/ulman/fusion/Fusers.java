@@ -27,8 +27,11 @@
  */
 package de.mpicbg.ulman.fusion;
 
+import net.imglib2.img.Img;
+import sc.fiji.simplifiedio.SimplifiedIO;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
+
 import org.scijava.ItemVisibility;
 import org.scijava.command.CommandModule;
 import org.scijava.command.CommandService;
@@ -38,14 +41,22 @@ import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
-import java.util.LinkedList;
+import java.util.Map;
+import java.util.Vector;
 import java.util.List;
+import java.util.LinkedList;
 import java.util.ArrayList;
 import java.util.TreeSet;
 import java.text.ParseException;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.io.IOException;
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
 import de.mpicbg.ulman.fusion.ng.backbones.JobIO;
@@ -361,7 +372,48 @@ public class Fusers extends CommonGUI implements Command
 		else
 		{
 			//CMV LAND HERE!
+			//main idea: the last combination is a full one, so we use it to load all images and share them among the rest
 
+			//own 'feeder' is already set in every combination; we take now the very last combination
+			//(which happens to include all original inputs -- the full job) and make it a
+			//'refLoadedImages' for all combinations (including the very last one)
+			final OneCombination<IT,LT> fullCombination = combinations.get( combinations.size()-1 );
+			for (OneCombination<IT,LT> c : combinations) c.refLoadedImages = fullCombination.feeder;
+			//
+			//prevent the 'refLoadedImages' to replace its data with empty initialized content, see OneCombination.call()
+			fullCombination.iAmTheRefence = true;
+
+			//prepare output folders
+			try {
+				for (OneCombination<IT,LT> c : combinations) c.setupOutputFolder(job.outputPattern);
+			} catch (IOException e) {
+				log.error(e.getMessage());
+				throw new RuntimeException("CMV: likely an error with output folders...",e);
+			}
+
+			final ExecutorService cmvers = Executors.newFixedThreadPool(noOfThreads);
+			iterateTimePoints(fileIdxList,useGui,time -> {
+				try {
+					job.reportJobForTime(time,log);
+					for (OneCombination<IT,LT> c : combinations) c.currentTime = time;
+
+					//processJob() is loadJob(), calcBoxes() and fuse() (both are inside useAlgorithm())
+					fullCombination.feeder.loadJob( job.instantiateForTime(time), cmvers);
+					fullCombination.feeder.calcBoxes( cmvers );
+
+					//here: all images loaded, boxes possibly computed, therefore...
+					//here: ready to start all fusers who start themselves with "stealing" data from the 'fullCombination'
+
+					cmvers.invokeAll(combinations); //calls useAlgorithmWithoutUpdatingBoxes() -> fuse()
+					log.info("All combinations for time "+time+" got processed just now.");
+				} catch (InterruptedException e) {
+					log.error("multithreading error: "+e.getMessage());
+					e.printStackTrace();
+					throw new RuntimeException("multithreading error",e);
+				}
+			});
+			log.info("Shutting down thread pool..."); //NB: to show/debug the code always got here
+			cmvers.shutdownNow();
 		}
 	}
 
@@ -436,6 +488,88 @@ public class Fusers extends CommonGUI implements Command
 
 		// ----------- processing of the job -----------
 		WeightedVotingFusionFeeder<IT,LT> feeder;
+		WeightedVotingFusionFeeder<IT,LT> refLoadedImages;
+		boolean iAmTheRefence = false;
+
+		private
+		void reInitMe()
+		{
+			feeder.threshold = (float)this.threshold;
+			//NB: this is reset even for the reference one because feeder.loadJob()
+			//always resets it to the GUI/CLI options which is irrelevant in the CMV mode
+
+			if (iAmTheRefence) return;
+
+			//assumes actual data is already present in 'refLoadedImages',
+			//so we cherry-pick from it according to 'releventInputIndices"
+			//into 'feeder' and make the feeder do the fusion (in a single thread)
+
+			//first run?
+			if (feeder.inImgs == null)
+			{
+				final int size = relevantInputIndices.size();
+				feeder.shareLogger().info("Allocating containers for the shadowed input images of size "+size);
+
+				feeder.inImgs = new Vector<>(size);
+				for (int i = 0; i < size; ++i) feeder.inImgs.add(null);
+
+				feeder.inWeights = new Vector<>(size);
+				for (int i = 0; i < size; ++i) feeder.inWeights.add(null);
+
+				Vector<Map<Double,long[]>> boxes = new Vector<>(size);
+				for (int i = 0; i < size; ++i) boxes.add(null);
+				feeder.setInBoxes(boxes);
+			}
+
+			Vector<Map<Double,long[]>> refBoxes = refLoadedImages.getInBoxes();
+			Vector<Map<Double,long[]>>  myBoxes = feeder.getInBoxes();
+			for (int i = 0; i < relevantInputIndices.size(); ++i)
+			{
+				feeder.inImgs.set(i, refLoadedImages.inImgs.get( relevantInputIndices.get(i) ));
+				feeder.inWeights.set(i, refLoadedImages.inWeights.get( relevantInputIndices.get(i) ));
+				myBoxes.set(i, refBoxes.get( relevantInputIndices.get(i) ));
+			}
+			feeder.markerImg = refLoadedImages.markerImg;
+			feeder.setMarkerBoxes( refLoadedImages.getMarkerBoxes() );
+		}
+
+		@Override
+		public OneCombination<IT,LT> call()
+		{
+			reInitMe();
+
+			final Img<LT> outImg = feeder.useAlgorithmWithoutUpdatingBoxes();
+
+			final String outFile = JobSpecification.expandFilenamePattern(outputFilenamePattern,currentTime);
+			feeder.shareLogger().info("Saving file: "+outFile);
+			SimplifiedIO.saveImage(outImg, outFile);
+			return this;
+		}
+
+		// ----------- saving output images -----------
+		String outputFilenamePattern;
+		int currentTime;
+
+		void setupOutputFolder(String outputPattern) throws IOException
+		{
+			//inject this.code before filename
+			final int sepPos = outputPattern.lastIndexOf(File.separatorChar);
+			String outFolder = (sepPos > -1 ? outputPattern.substring(0,sepPos+1) : "") +code;
+
+			final Path fPath = Paths.get(outFolder);
+			if (Files.exists(fPath))
+			{
+				if (!Files.isDirectory(fPath))
+					throw new IOException(outFolder + " seems to exist but it is not a directory!");
+			} else {
+				feeder.shareLogger().info("Creating output folder: "+outFolder);
+				Files.createDirectory(fPath);
+			}
+
+			outputFilenamePattern = outFolder + File.separator
+					+ (sepPos > -1 ? outputPattern.substring(sepPos+1) : outputPattern);
+			feeder.shareLogger().info("new output pattern: "+outputFilenamePattern);
+		}
 	}
 
 
