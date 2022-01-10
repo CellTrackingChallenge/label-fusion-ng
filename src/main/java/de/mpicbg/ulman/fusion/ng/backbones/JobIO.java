@@ -78,6 +78,7 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 	{ log = null; } //this is to get rid of some warnings
 
 	protected final Logger log;
+	public Logger shareLogger() { return log; }
 
 	public
 	JobIO(final Logger _log)
@@ -328,7 +329,7 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 	}
 
 
-	// ----------- static helpers for the outter world -----------
+	// ----------- static helpers for the outer world -----------
 	static public
 	JobSpecification.Builder parseJobFileWithoutWeights(final String pathToJobFile)
 	throws IOException
