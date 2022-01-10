@@ -305,17 +305,17 @@ public class Fusers extends CommonGUI implements Command
 				throw new RuntimeException("User requested not to run the SIMPLE fuser.");
 
 			boolean reportOnce = true;
-			for (OneCombination c : combinations)
+			for (OneCombination<IT,LT> c : combinations)
 			{
 				final Logger logger = log.subLogger(c.code);
-				final SIMPLE fuser_SIMPLE = new SIMPLE(logger);
+				final SIMPLE<IT,LT> fuser_SIMPLE = new SIMPLE<>(logger);
 				//"forward" the parameters values
 				fuser_SIMPLE.getFuserReference().maxIters = (int)fuserParamsObj.getInput("maxIters");
 				fuser_SIMPLE.getFuserReference().noOfNoUpdateIters = (int)fuserParamsObj.getInput("noOfNoUpdateIters");
 				fuser_SIMPLE.getFuserReference().initialQualityThreshold = (double)fuserParamsObj.getInput("initialQualityThreshold");
 				fuser_SIMPLE.getFuserReference().stepDownInQualityThreshold = (double)fuserParamsObj.getInput("stepDownInQualityThreshold");
 				fuser_SIMPLE.getFuserReference().minimalQualityThreshold = (double)fuserParamsObj.getInput("minimalQualityThreshold");
-				c.feeder = new WeightedVotingFusionFeeder(logger).setAlgorithm(fuser_SIMPLE);
+				c.feeder = new WeightedVotingFusionFeeder<IT,LT>(logger).setAlgorithm(fuser_SIMPLE);
 
 				if (reportOnce)
 				{
@@ -327,24 +327,24 @@ public class Fusers extends CommonGUI implements Command
 		else
 		if (mergeModel.startsWith("BICv2 with Flat"))
 		{
-			for (OneCombination c : combinations) {
+			for (OneCombination<IT,LT> c : combinations) {
 				final Logger logger = log.subLogger(c.code);
-				c.feeder = new WeightedVotingFusionFeeder(logger).setAlgorithm(new BICenhancedFlat(logger));
+				c.feeder = new WeightedVotingFusionFeeder<IT,LT>(logger).setAlgorithm(new BICenhancedFlat<>(logger));
 			}
 		}
 		else
 		if (mergeModel.startsWith("BICv2 with Weight"))
 		{
-			for (OneCombination c : combinations) {
+			for (OneCombination<IT,LT> c : combinations) {
 				final Logger logger = log.subLogger(c.code);
-				c.feeder = new WeightedVotingFusionFeeder(logger).setAlgorithm(new BICenhancedWeighted(logger));
+				c.feeder = new WeightedVotingFusionFeeder<IT,LT>(logger).setAlgorithm(new BICenhancedWeighted<>(logger));
 			}
 		}
 		else
 		{
-			for (OneCombination c : combinations) {
+			for (OneCombination<IT,LT> c : combinations) {
 				final Logger logger = log.subLogger(c.code);
-				c.feeder = new WeightedVotingFusionFeeder(logger).setAlgorithm(new BIC(logger));
+				c.feeder = new WeightedVotingFusionFeeder<IT,LT>(logger).setAlgorithm(new BIC<>(logger));
 			}
 		}
 
