@@ -1,7 +1,7 @@
 /*
  * BSD 2-Clause License
  *
- * Copyright (c) 2020, Vladimír Ulman
+ * Copyright (c) 2020,2022, Vladimír Ulman
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.view.Views;
 
-import org.scijava.log.LogService;
+import org.scijava.log.Logger;
 import sc.fiji.simplifiedio.SimplifiedIO;
 import java.util.*;
 
@@ -61,7 +61,7 @@ public
 class LabelSync<IT extends RealType<IT>, LT extends IntegerType<LT>>
 extends JobIO<IT,LT>
 {
-	public LabelSync(final LogService _log)
+	public LabelSync(final Logger _log)
 	{
 		super(_log);
 	}
@@ -181,7 +181,7 @@ extends JobIO<IT,LT>
 	ImagesWithOrigin syncAllInputsAndStreamIt(final String... jobSpec)
 	{
 		//load the image data
-		super.processJob(jobSpec);
+		super.loadJob(jobSpec);
 
 		//return the data fetching object
 		return new ImagesWithOrigin();
@@ -193,6 +193,12 @@ extends JobIO<IT,LT>
 	                                   final Img<LT> markerImg)
 	{
 		saveStreamedImages( syncAllInputsAndStreamIt(inImgs,markerImg) );
+	}
+
+	public
+	void syncAllOwnInputsAndSaveAllToDisk()
+	{
+		saveStreamedImages( syncAllInputsAndStreamIt(this.inImgs,this.markerImg) );
 	}
 
 

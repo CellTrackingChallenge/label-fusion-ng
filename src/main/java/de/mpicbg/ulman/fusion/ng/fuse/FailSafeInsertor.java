@@ -1,7 +1,7 @@
 /*
  * BSD 2-Clause License
  *
- * Copyright (c) 2020, Vladimír Ulman
+ * Copyright (c) 2020,2022, Vladimír Ulman
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,7 @@ package de.mpicbg.ulman.fusion.ng.fuse;
 
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.img.Img;
+import net.imglib2.view.Views;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.operators.SetZero;
@@ -66,9 +66,9 @@ public class FailSafeInsertor
 	                               final float inLabel,
 	                               final LabelExtractor<IT,?,ET> le,
 	                               final double outValue,
-	                               final Img<ET> outImg)
+	                               final RandomAccessibleInterval<ET> outImg)
 	{
-		final ET outputValue = outImg.firstElement().createVariable();
+		final ET outputValue = Views.flatIterable(outImg).firstElement().createVariable();
 		outputValue.setReal( outValue );
 
 		//clear...
@@ -84,7 +84,7 @@ public class FailSafeInsertor
 	                                    final Vector<Float> inLabels,
 	                                    final LabelExtractor<IT,?,ET> le,
 	                                    final Vector<Double> inWeights,
-	                                    final Img<ET> outImg)
+	                                    final RandomAccessibleInterval<ET> outImg)
 	{
 		int bestWeightIdx = getBestWeightIndex(inImgs, inWeights);
 		if (bestWeightIdx == -1)

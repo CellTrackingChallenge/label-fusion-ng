@@ -1,7 +1,7 @@
 /*
  * BSD 2-Clause License
  *
- * Copyright (c) 2020, Vladimír Ulman
+ * Copyright (c) 2020,2022, Vladimír Ulman
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,7 @@ package de.mpicbg.ulman.fusion.ng.fuse;
 
 import net.imglib2.Cursor;
 import net.imglib2.type.numeric.RealType; import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.img.Img;
+import net.imglib2.view.Views;
 import java.util.Vector;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 
@@ -57,7 +57,7 @@ implements LabelFuser<IT,ET>
 	                        final Vector<Float> inLabels,
 	                        final LabelExtractor<IT,?,ET> le,
 	                        final Vector<Double> inWeights,
-	                        final Img<ET> outImg)
+	                        final RandomAccessibleInterval<ET> outImg)
 	{
 		//prepare aux flat weights
 		if (flatWeightsCache.size() != inWeights.size())
@@ -71,7 +71,7 @@ implements LabelFuser<IT,ET>
 
 		//check if fusion managed to create something
 		boolean isEmpty = true;
-		final Cursor<ET> oC = outImg.cursor();
+		final Cursor<ET> oC = Views.flatIterable(outImg).cursor();
 		while (isEmpty && oC.hasNext())
 			isEmpty = oC.next().getRealFloat() == 0;
 

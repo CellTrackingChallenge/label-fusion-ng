@@ -1,7 +1,7 @@
 /*
  * BSD 2-Clause License
  *
- * Copyright (c) 2020, Vladimír Ulman
+ * Copyright (c) 2020,2022, Vladimír Ulman
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,11 +27,13 @@
  */
 package de.mpicbg.ulman.fusion.ng.postprocess;
 
+import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.Cursor;
 import net.imglib2.Interval;
 import net.imglib2.FinalInterval;
 import net.imglib2.img.Img;
+import net.imglib2.type.operators.SetZero;
 import net.imglib2.view.Views;
 import net.imglib2.view.IntervalView;
 import net.imglib2.algorithm.labeling.ConnectedComponents;
@@ -46,54 +48,58 @@ import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 public class KeepLargestCCALabelPostprocessor<LT extends IntegerType<LT>>
 implements LabelPostprocessor<LT>
 {
-	private Img<LT> ccaInImg  = null; //copy of just one label
-	private Img<LT> ccaOutImg = null; //result of CCA on this one label
-	private long[] minBound = null, maxBound = null;
-
-	protected
-	void resetAuxAttribs(final Img<LT> templateImg)
-	{
-		ccaInImg  = templateImg.factory().create(templateImg);
-		ccaOutImg = templateImg.factory().create(templateImg);
-		minBound = new long[templateImg.numDimensions()];
-		maxBound = new long[templateImg.numDimensions()];
-	}
-
-
 	@Override
 	public
 	void processLabel(final Img<LT> img,
 	                  final int markerValue)
 	{
-		//TODO: should change everytime the img is not compatible with any of the aux attribs
-		if (ccaInImg == null || minBound == null) resetAuxAttribs(img);
-
 		//localize the marker in the processed image
 		final Cursor<LT> markerCursor = img.localizingCursor();
 		while (markerCursor.hasNext() && markerCursor.next().getInteger() != markerValue) ;
 
 		//determine marker's size and the AABB it spans
+		final long[] minBound = new long[img.numDimensions()];
+		final long[] maxBound = new long[img.numDimensions()];
 		MajorityOverlapBasedLabelExtractor.findAABB(markerCursor, minBound,maxBound);
-		final Interval ccaInterval = new FinalInterval(minBound, maxBound); //TODO: can't I be reusing the same Interval?
+		final Interval ccaInterval = new FinalInterval(minBound, maxBound);
 
-		//copy out only this marker
-		final IntervalView<LT> ccaInView = Views.interval(ccaInImg,ccaInterval);
-		      Cursor<LT> ccaCursor = ccaInView.cursor();
-		final Cursor<LT> outCursor = Views.interval(img,ccaInterval).cursor();
-		while (ccaCursor.hasNext())
+		processLabel(img,markerValue,ccaInterval);
+	}
+
+
+	//copy of just one label, and result of CCA on this one label
+	private Img<LT> ccaInImg, ccaOutImg;
+
+	@Override
+	public
+	void processLabel(final Img<LT> img,
+	                  final int markerValue,
+	                  final Interval ROI)
+	{
+		if (ccaInImg == null)
 		{
-			ccaCursor.next().setInteger( outCursor.next().getInteger() == markerValue ? 1 : 0 );
+			System.out.println("allocating CCA tmp images");
+			ccaInImg = img.factory().create(img);
+			ccaOutImg = img.factory().create(img);
+			System.out.println("allocating done");
 		}
 
-		//CCA to this View
-		final IntervalView<LT> ccaOutView = Views.interval(ccaOutImg,ccaInterval);
+		final IntervalView<LT> imgView = Views.interval(img,ROI);
+		final IntervalView<LT> ccaInView = Views.interval(ccaInImg,ROI);
+		final IntervalView<LT> ccaOutView = Views.interval(ccaOutImg,ROI);
+
+		//copy out only the currently examined marker
+		LoopBuilder.setImages(imgView,ccaInView)
+				.forEachPixel( (s,t) -> t.setInteger(s.getInteger() == markerValue ? 1 : 0) );
+
 		//since the View comes from one shared large image, there might be results of CCA for other markers,
 		//we better clear it before (so that the CCA function cannot be fooled by some previous result)
-		ccaCursor = ccaOutView.cursor();
-		while (ccaCursor.hasNext()) ccaCursor.next().setZero();
+		LoopBuilder.setImages(ccaOutView).forEachPixel(SetZero::setZero);
 
+		//CCA to this View
 		final int noOfLabels
-			= ConnectedComponents.labelAllConnectedComponents(ccaInView,ccaOutView, ConnectedComponents.StructuringElement.EIGHT_CONNECTED);
+			= ConnectedComponents.labelAllConnectedComponents(ccaInView,ccaOutView,
+				ConnectedComponents.StructuringElement.EIGHT_CONNECTED);
 
 		//is there anything to change?
 		if (noOfLabels > 1)
@@ -102,20 +108,19 @@ implements LabelPostprocessor<LT>
 
 			//calculate sizes of the detected labels
 			final HashMap<Integer,Integer> hist = new HashMap<>(10);
-			ccaCursor.reset();
-			while (ccaCursor.hasNext())
+			final Cursor<LT> ccaOutCursor = ccaOutView.cursor();
+			while (ccaOutCursor.hasNext())
 			{
-				final int curLabel = ccaCursor.next().getInteger();
+				final int curLabel = ccaOutCursor.next().getInteger();
 				if (curLabel == 0) continue; //skip over the background component
-				final Integer count = hist.get(curLabel);
-				hist.put(curLabel, count == null ? 1 : count+1 );
+				hist.put(curLabel, 1 + hist.getOrDefault(curLabel,0) );
 			}
 
 			//find the most frequent pixel value (the largest label)
 			int largestCC = -1;
 			int largestSize = 0;
 			int totalSize = 0;
-			for (Integer lab : hist.keySet())
+			for (int lab : hist.keySet())
 			{
 				final int size = hist.get(lab);
 				if (size > largestSize)
@@ -129,13 +134,14 @@ implements LabelPostprocessor<LT>
 									 +(float)largestSize/(float)totalSize+" % of the original size");
 
 			//remove anything from the current marker that does not overlap with the largest CCA component
-			ccaCursor.reset();
-			outCursor.reset();
-			while (ccaCursor.hasNext())
+			final Cursor<LT> imgCursor = imgView.cursor();
+			ccaOutCursor.reset();
+			while (ccaOutCursor.hasNext())
 			{
-				ccaCursor.next();
-				if ( outCursor.next().getInteger() == markerValue && ccaCursor.get().getInteger() != largestCC )
-					outCursor.get().setZero();
+				//'totalSize' is borrowed to be a component value/id in the CCA image
+				totalSize = ccaOutCursor.next().getInteger();
+				if ( imgCursor.next().getInteger() == markerValue && totalSize != largestCC )
+					imgCursor.get().setZero();
 			}
 		}
 	}

@@ -1,7 +1,7 @@
 /*
  * BSD 2-Clause License
  *
- * Copyright (c) 2020, Vladimír Ulman
+ * Copyright (c) 2020,2022, Vladimír Ulman
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
  */
 package de.mpicbg.ulman.fusion.ng.insert;
 
-import net.imglib2.img.Img;
+import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
 import java.util.HashSet;
@@ -78,8 +78,17 @@ public interface LabelInsertor<LT extends IntegerType<LT>, ET extends RealType<E
 	 * The information regarding the insertion is stored in the 'operationStatus',
 	 * if caller supplies it (yes, that parameter may be set to null).
 	 */
-	void insertLabel(final Img<ET> inSingleLabelImg,
-	                 final Img<LT> outResultImg,
+	void insertLabel(final RandomAccessibleInterval<ET> inSingleLabelImg,
+	                 final RandomAccessibleInterval<LT> outResultImg,
 	                 final int outMarker,
 	                 final InsertionStatus operationStatus);
+
+	/**
+	 * Some implementations of the {@link #insertLabel(RAI,RAI,int,InsertionStatus)}
+	 * may detect when insertion of an label may lead to overwriting of some other
+	 * previously inserted label -- a collision situation, and some implementations
+	 * may mark/denote such "colliding pixels" with a special value. This method
+	 * allows to read what is that special value.
+	 */
+	int getValueOfCollisionPixels();
 }

@@ -1,7 +1,7 @@
 /*
  * BSD 2-Clause License
  *
- * Copyright (c) 2020, Vladimír Ulman
+ * Copyright (c) 2020,2022, Vladimír Ulman
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,7 @@ package de.mpicbg.ulman.fusion.ng;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.real.DoubleType;
-import org.scijava.log.LogService;
+import org.scijava.log.Logger;
 
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 import de.mpicbg.ulman.fusion.ng.fuse.SIMPLELabelFuser;
@@ -39,12 +39,12 @@ import de.mpicbg.ulman.fusion.ng.insert.CollisionsAwareLabelInsertor;
 
 public
 class SIMPLE<IT extends RealType<IT>, LT extends IntegerType<LT>>
-extends AbstractWeightedVotingFusionAlgorithm<IT,LT>
+extends AbstractWeightedVotingFusionAlgorithm<IT,LT,DoubleType>
 {
 	public
-	SIMPLE(final LogService _log)
+	SIMPLE(final Logger _log)
 	{
-		super(_log);
+		super(_log, new DoubleType());
 	}
 
 	@Override

@@ -27,154 +27,182 @@
  */
 package de.mpicbg.ulman.fusion.ng;
 
+import de.mpicbg.ulman.fusion.ng.insert.LabelInsertor;
 import net.imglib2.Cursor;
+import net.imglib2.FinalInterval;
+import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
-import net.imglib2.view.Views;
 import net.imglib2.loops.LoopBuilder;
-import net.imglib2.type.operators.SetZero;
-import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.operators.SetZero;
+import net.imglib2.view.Views;
 import org.scijava.log.Logger;
 import sc.fiji.simplifiedio.SimplifiedIO;
 
 import java.util.Set;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.Vector;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
 
-import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionAlgorithm;
-import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
-import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
-import de.mpicbg.ulman.fusion.ng.fuse.LabelFuser;
-import de.mpicbg.ulman.fusion.ng.insert.LabelInsertor;
-import de.mpicbg.ulman.fusion.ng.insert.CollisionsAwareLabelInsertor;
-import de.mpicbg.ulman.fusion.ng.postprocess.LabelPostprocessor;
-
-/**
- * Skeleton that iterates over the individual markers from the marker image,
- * extracts the marker and collects incident segmentation masks (labels) from
- * the input images (using some method from the 'extract' folder), fuses them
- * collected labels (using some method from the 'fuse' folder), and inserts
- * the fused (created) segment (using some method from the 'insert' folder),
- * and finally cleans up the results after all of them are inserted (using some
- * method from the 'postprocess' folder).
- */
 public abstract
-class AbstractWeightedVotingFusionAlgorithm<IT extends RealType<IT>, LT extends IntegerType<LT>, ET extends RealType<ET>>
-implements WeightedVotingFusionAlgorithm<IT,LT>
+class AbstractWeightedVotingRoisFusionAlgorithm<IT extends RealType<IT>, LT extends IntegerType<LT>, ET extends RealType<ET>>
+extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 {
-	///prevent from creating the class without any connection
-	@SuppressWarnings("unused")
-	private
-	AbstractWeightedVotingFusionAlgorithm()
-	{ log = null; referenceType = null; } //this is to get rid of some warnings
+	public AbstractWeightedVotingRoisFusionAlgorithm(Logger _log, ET refType) {
+		super(_log, refType);
+	}
 
-	protected final Logger log;
-	protected final ET referenceType;
+	//per image, per label, AABB as 2*imgDim-long-array
+	public Vector<Map<Double,long[]>> inBoxes;
+	public Map<Double,long[]> markerBoxes;
 
 	public
-	AbstractWeightedVotingFusionAlgorithm(final Logger _log, final ET refType)
+	void setupBoxes(final Vector<RandomAccessibleInterval<IT>> inImgs,
+	                final RandomAccessibleInterval<LT> markerImg)
 	{
-		if (_log == null)
-			throw new RuntimeException("Please, give me existing Logger.");
-		log = _log;
-
-		if (refType == null)
-			throw new RuntimeException("Provide pixel type -- precision of the fusion.");
-		referenceType = refType.createVariable();
-
-		//setup the required components
-		setFusionComponents();
-
-		//inevitable sanity test to see if the user has
-		//implemented the setFusionComponents() correctly
-		testFusionComponents();
+		setupBoxes(inImgs);
+		markerBoxes = findBoxes(markerImg);
 	}
 
-
-	private
-	void testFusionComponents()
+	public
+	void setupBoxes(final Vector<RandomAccessibleInterval<IT>> inImgs)
 	{
-		if (labelExtractor == null)
-			throw new RuntimeException("this.labelExtractor must be set");
-
-		if (labelFuser == null)
-			throw new RuntimeException("this.labelFuser must be set");
-
-		if (labelInsertor == null)
-			throw new RuntimeException("this.labelInsertor must be set");
-
-		if (labelCleaner == null)
-			throw new RuntimeException("this.labelCleaner must be set");
+		inBoxes = new Vector<>(inImgs.size());
+		for (RandomAccessibleInterval<IT> inImg : inImgs)
+		{
+			inBoxes.add( findBoxes(inImg) );
+		}
 	}
 
-	/** Any class that extends this one must implement this method.
-	    The purpose of this method is to define this.labelExtractor,
-	    this.labelFuser, this.labelInsertor and this.labelCleaner. */
-	protected abstract
-	void setFusionComponents();
+	public
+	void setupBoxes(final Vector<RandomAccessibleInterval<IT>> inImgs,
+	                final RandomAccessibleInterval<LT> markerImg,
+	                final ExecutorService workerThreads)
+			throws InterruptedException
+	{
+		inBoxes = new Vector<>(inImgs.size());
 
-	//setup extract, fuse, insert, postprocess (clean up)
-	LabelExtractor<IT,LT,ET> labelExtractor = null;
-	LabelFuser<IT,ET> labelFuser = null;
-	CollisionsAwareLabelInsertor<LT,ET> labelInsertor = null;
-	LabelPostprocessor<LT> labelCleaner = null;
+		List<Callable<Object>> tasks = new ArrayList<>(inImgs.size()+1);
+		for (int i = 0; i < inImgs.size(); ++i) {
+			inBoxes.add(null);
+			final int idx = i;
+			tasks.add( () -> inBoxes.set( idx, findBoxes(inImgs.get(idx)) ) );
+		}
+		tasks.add( () -> markerBoxes = findBoxes(markerImg) );
 
+		workerThreads.invokeAll(tasks);
+	}
 
-	protected Vector<Double> inWeights;
-	protected double threshold;
+	public <T extends RealType<T>>
+	Map<Double,long[]> findBoxes(final RandomAccessibleInterval<T> inImg)
+	{
+		//aux variables for re-using
+		final int numDimensions = inImg.numDimensions();
+		final long[] pos = new long[numDimensions];
+
+		final Map<Double,long[]> boxes = new HashMap<>(3000);
+		log.info("pre-calculating ROIs (boxes) for one image");
+
+		final Cursor<T> mCursor = Views.flatIterable(inImg).localizingCursor();
+		while (mCursor.hasNext())
+		{
+			final double label = mCursor.next().getRealDouble();
+			if (label > 0)
+			{
+				mCursor.localize(pos);
+
+				long[] box = boxes.getOrDefault(label,null);
+				if (box == null)
+				{
+					box = new long[2*numDimensions];
+					boxes.put(label,box);
+
+					for (int n = 0; n < numDimensions; ++n) {
+						box[n] = pos[n];
+						box[n+numDimensions] = pos[n];
+					}
+				}
+
+				for (int n = 0; n < numDimensions; ++n) {
+					if (pos[n] < box[n]) box[n] = pos[n];
+					if (pos[n] > box[n+numDimensions]) box[n+numDimensions] = pos[n];
+				}
+			}
+		}
+
+		log.trace("done pre-calculating ROIs (boxes) for the image");
+		return boxes;
+	}
+
+	static public
+	void unionBoxes(final long[] box, final long[] targetBox)
+	{
+		final int dim = box.length / 2;
+		int j = dim;
+		for (int i = 0; i < dim; ++i) {
+			if (box[i] < targetBox[i]) targetBox[i] = box[i];
+			if (box[j] > targetBox[j]) targetBox[j] = box[j];
+			++j;
+		}
+	}
+
+	public
+	String printBox(final double label, final long[] bbox)
+	{
+		final StringBuilder sb = new StringBuilder();
+		sb.append("  label ").append(label).append(": [").append(bbox[0]);
+		int n = 1;
+		for (; n < bbox.length/2; ++n) sb.append(',').append(bbox[n]);
+		sb.append("] -> [").append(bbox[n]);
+		++n;
+		for (; n < bbox.length; ++n) sb.append(',').append(bbox[n]);
+		sb.append("]");
+		return sb.toString();
+	}
+
+	public
+	void printBoxes()
+	{
+		for (int i = 0; i < inBoxes.size(); ++i)
+		{
+			final Map<Double,long[]> boxes = inBoxes.get(i);
+			log.info("Image "+i+":");
+
+			for (Map.Entry<Double,long[]> box : boxes.entrySet())
+				log.info(printBox(box.getKey(),box.getValue()));
+
+			log.info("==========================");
+		}
+
+		log.info("Marker image");
+		for (Map.Entry<Double,long[]> box : markerBoxes.entrySet())
+			log.info(printBox(box.getKey(),box.getValue()));
+		log.info("==========================");
+	}
+
+	public static
+	Interval createInterval(final long[] box)
+	{
+		final int dim = box.length/2;
+		final long[] min = new long[dim];
+		final long[] max = new long[dim];
+		for (int n = 0; n < dim; ++n) {
+			min[n] = box[n];
+			max[n] = box[n+dim];
+		}
+		return new FinalInterval(min,max);
+	}
 
 	@Override
-	public
-	void setWeights(final Vector<Double> weights)
-	{
-		inWeights = weights;
-	}
-
-	@Override
-	public
-	void setThreshold(final double minSumOfWeights)
-	{
-		threshold = minSumOfWeights;
-	}
-
-
-
-	/// Flag the "operational mode" regarding labels touching image boundary
-	public boolean removeMarkersAtBoundary = false;
-
-	/**
-	 * Remove the whole colliding marker if the volume of its colliding portion
-	 * is larger than this value. Set to zero (0) if even a single colliding
-	 * voxel shall trigger removal of the whole marker.
-	 */
-	public float removeMarkersCollisionThreshold = 0.1f;
-
-	/**
-	 * Flag if original TRA labels should be used for labels for which collision
-	 * was detected and the merging process was not able to recover them, or the
-	 * marker was not discovered at all.
-	 */
-	public Boolean insertTRAforCollidingOrMissingMarkers = false;
-
-	public String dbgImgFileName;
-
-	public String reportImageSize(final RandomAccessibleInterval<?> img)
-	{ return reportImageSize(img, referenceType.getBitsPerPixel()/8); }
-	//
-	public String reportImageSize(final RandomAccessibleInterval<?> img, final long pixelInBytes)
-	{
-		long pixels = 1;
-		for (long d : img.dimensionsAsLongArray()) pixels *= d;
-		pixels /= 1 << 20;
-		return "Size in Mpixels: " + pixels +
-		     "\nSize in MBytes:  " + pixels * pixelInBytes;
-	}
-
-	@Override
-	public
-	Img<LT> fuse(final Vector<RandomAccessibleInterval<IT>> inImgs,
-	             final Img<LT> markerImg)
+	public Img<LT> fuse(final Vector<RandomAccessibleInterval<IT>> inImgs,
+	                    final Img<LT> markerImg)
 	{
 		if (inImgs.size() != inWeights.size())
 			throw new RuntimeException("Arrays with input images and weights are of different lengths.");
@@ -195,86 +223,76 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 		//later post-processing
 
 		//create a temporary image (of the same iteration order as the markerImg)
-		log.warn("tmpImg: "+reportImageSize(markerImg));
-		log.warn("outImg: "+reportImageSize(markerImg,2));
-		log.warn("starting to create images...");
+		log.info("tmpImg: "+reportImageSize(markerImg));
+		log.info("outImg: "+reportImageSize(markerImg,2));
+		log.info("allocating tmp+out (2) images...");
 		final Img<ET> tmpImg
 			= markerImg.factory().imgFactory(referenceType).create(markerImg);
-		log.warn("created tmpImg");
+		log.trace("created tmpImg");
 
 		//create the output image (of the same iteration order as the markerImg),
 		//and init it
 		final Img<LT> outImg = markerImg.factory().create(markerImg);
-		log.warn("created outImg");
+		log.trace("created outImg");
 		LoopBuilder.setImages(outImg).forEachPixel(SetZero::setZero);
-		log.warn("zeroed outImg");
+		log.trace("zeroed outImg");
 
 		//aux params for the fusion
 		final Vector<RandomAccessibleInterval<IT>> selectedInImgs  = new Vector<>(inWeights.size());
 		final Vector<Float>                       selectedInLabels = new Vector<>(inWeights.size());
-		log.warn("init A");
+		log.trace("init A");
 
 		//set to remember already discovered TRA markers
 		//(with initial capacity set for 100 markers)
 		Set<Integer> mDiscovered = new HashSet<>(100);
-		log.warn("init B");
+		log.trace("init B");
 
 		//init insertion (includes to create (re-usable) insertion status object)
 		final LabelInsertor.InsertionStatus insStatus = new LabelInsertor.InsertionStatus();
-		log.warn("init C");
+		log.info("initializing the collision-aware insertor...");
 		labelInsertor.initialize(outImg);
-		log.warn("init D");
-
-		//also prepare the positions holding aux array, and bbox corners
-		final long[] minBound = new long[markerImg.numDimensions()];
-		final long[] maxBound = new long[markerImg.numDimensions()];
+		log.trace("init D");
 
 		//sweep over the marker image
-		log.warn("starting the main sweep");
-		final Cursor<LT> mCursor = markerImg.localizingCursor();
-		while (mCursor.hasNext())
+		log.trace("starting the main sweep");
+		for (Map.Entry<Double,long[]> marker : markerBoxes.entrySet())
 		{
-			final int curMarker = mCursor.next().getInteger();
+			final int curMarker = marker.getKey().intValue();
 
 			//scan for not yet observed markers (and ignore background values...)
+			//NB: the following condition should always be true....
 			if ( curMarker > 0 && (!mDiscovered.contains(curMarker)) )
 			{
-				log.warn("discovered new marker: "+curMarker);
-				//found a new marker, determine its size and the AABB it spans
-				MajorityOverlapBasedLabelExtractor.findAABB(mCursor, minBound,maxBound);
-				log.warn("found its AABB");
-/*
-				//report detected markers just for debug
-				System.out.print("marker "+mCursor.get().getInteger()+": lower corner: (");
-				for (int d=0; d < minBound.length-1; ++d)
-					System.out.print(minBound[d]+",");
-				System.out.println(minBound[minBound.length-1]+")");
-				System.out.print("marker "+mCursor.get().getInteger()+": upper corner: (");
-				for (int d=0; d < maxBound.length-1; ++d)
-					System.out.print(maxBound[d]+",");
-				System.out.println(maxBound[maxBound.length-1]+")");
-*/
+				log.trace("processing next marker: "+curMarker);
+				//
+				//found next marker, copy out the AABB it spans over
+				final long[] fuseBox = marker.getValue();
+				log.trace("found its AABB: "+printBox(curMarker,fuseBox));
 
 				//sweep over all input images
+				final Interval mInterval = createInterval(fuseBox);
 				selectedInImgs.clear();
 				selectedInLabels.clear();
 				int noOfMatchingImages = 0;
 				for (int i = 0; i < inImgs.size(); ++i)
 				{
-					log.warn("searching input image "+i+" for candidate");
+					log.trace("searching input image "+i+" for candidate");
 					//find the corresponding label in the input image (in the restricted interval)
 					final float matchingLabel = labelExtractor.findMatchingLabel(
-							Views.interval(inImgs.get(i), minBound,maxBound),
-							Views.interval(markerImg,     minBound,maxBound),
+							Views.interval(inImgs.get(i), mInterval),
+							Views.interval(markerImg,     mInterval),
 							curMarker);
 					//System.out.println(i+". image: found label "+matchingLabel);
-					log.warn("finished the searching, found "+matchingLabel);
+					log.trace("finished the searching, found "+matchingLabel);
 
 					if (matchingLabel > 0)
 					{
 						selectedInImgs.add(inImgs.get(i));
 						selectedInLabels.add(matchingLabel);
 						++noOfMatchingImages;
+						unionBoxes(inBoxes.get(i).get((double)matchingLabel),fuseBox);
+						log.trace("AABB of candidate: "+printBox(matchingLabel,inBoxes.get(i).get((double)matchingLabel)));
+						log.trace("fuse AABB updated: "+printBox(curMarker,fuseBox));
 					}
 					else
 					{
@@ -285,20 +303,24 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 
 				if (noOfMatchingImages > 0)
 				{
+					//process within the union'ed interval (of candidates' boxes)
+					final Interval fuseInterval = createInterval(fuseBox);
+
 					//reset the temporary image beforehand
-					LoopBuilder.setImages(tmpImg).forEachPixel(SetZero::setZero);
-					log.warn("zeroed tmpImg");
+					LoopBuilder.setImages(Views.interval(tmpImg,fuseInterval)).forEachPixel(SetZero::setZero);
+					log.trace("zeroed tmpImg");
 
 					//fuse the selected labels into it
 					labelFuser.fuseMatchingLabels(selectedInImgs,selectedInLabels,
-					                              labelExtractor,inWeights, tmpImg);
-					log.warn("fused into tmpImg");
+					                              labelExtractor,inWeights, tmpImg, fuseInterval);
+					log.trace("fused into tmpImg");
 
 					//save the debug image
 					//SimplifiedIO.saveImage(tmpImg, "/Users/ulman/DATA/dbgMerge__"+curMarker+".tif");
 
 					//insert the fused segment into the output image
-					labelInsertor.insertLabel(tmpImg, outImg,curMarker, insStatus);
+					labelInsertor.insertLabel(Views.interval(tmpImg,fuseInterval),
+							Views.interval(outImg,fuseInterval),curMarker, insStatus);
 				}
 				else
 				{
@@ -346,6 +368,10 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 				//finally, mark we have processed this marker
 				mDiscovered.add(curMarker);
 			} //after marker processing
+			else
+			{
+				log.error("SOMETHING WEIRD!");
+			}
 		} //after all voxel looping
 
 		//save now a debug image
@@ -354,6 +380,7 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 			SimplifiedIO.saveImage(outImg, dbgImgFileName);
 		}
 
+		log.info("resolving the left-out collisions...");
 		final int allMarkers = mDiscovered.size();
 		final int[] collHistogram
 			= labelInsertor.finalize(outImg,markerImg,removeMarkersCollisionThreshold,removeMarkersAtBoundary);
@@ -378,7 +405,8 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 			if (curMarker == collisionValue) outFICursor.get().setZero();
 			else if ( curMarker > 0 && (!mDiscovered.contains(curMarker)) )
 			{
-				labelCleaner.processLabel(outImg, curMarker);
+				final Interval resultROI = createInterval(markerBoxes.get((double)curMarker));
+				labelCleaner.processLabel(outImg, curMarker, resultROI);
 
 				//and mark we have processed this marker
 				mDiscovered.add(curMarker);

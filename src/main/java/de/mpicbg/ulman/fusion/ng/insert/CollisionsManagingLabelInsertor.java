@@ -1,7 +1,7 @@
 /*
  * BSD 2-Clause License
  *
- * Copyright (c) 2020, Vladimír Ulman
+ * Copyright (c) 2020,2022, Vladimír Ulman
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -108,6 +108,9 @@ implements LabelInsertor<LT,ET>
 		p.claimingLabels.add( claimer );
 		pxInINTERSECTION.add( p );
 		pxInINTERSECTION_map_RA.get().setInt( pxInINTERSECTION.size() );
+		//
+		if (pxInINTERSECTION.size() == pxInINTERSECTION_map.firstElement().getMaxValue())
+			System.out.println("WARNING: pxInINTERSECTION map cannot hold more PxCoords!");
 	}
 
 	List<PxCoord> pxInINTERSECTION;

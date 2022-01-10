@@ -1,7 +1,7 @@
 /*
  * BSD 2-Clause License
  *
- * Copyright (c) 2020, Vladimír Ulman
+ * Copyright (c) 2020,2022, Vladimír Ulman
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,7 @@
  */
 package de.mpicbg.ulman.fusion.ng.insert;
 
+import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.Cursor;
@@ -152,8 +153,8 @@ implements LabelInsertor<LT,ET>
 	 */
 	@Override
 	public
-	void insertLabel(final Img<ET> inSingleLabelImg,
-	                 final Img<LT> outResultImg,
+	void insertLabel(final RandomAccessibleInterval<ET> inSingleLabelImg,
+	                 final RandomAccessibleInterval<LT> outResultImg,
 	                 final int outMarker,
 	                 final InsertionStatus status)
 	{
@@ -223,4 +224,9 @@ implements LabelInsertor<LT,ET>
 	 */
 	void registerPxInCollision(final int[] pos, final int claimer)
 	{ /* intentionally empty */ }
+
+	@Override
+	public
+	int getValueOfCollisionPixels()
+	{ return INTERSECTION; }
 }

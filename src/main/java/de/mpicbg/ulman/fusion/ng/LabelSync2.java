@@ -1,7 +1,7 @@
 /*
  * BSD 2-Clause License
  *
- * Copyright (c) 2020, Vladimír Ulman
+ * Copyright (c) 2020,2022, Vladimír Ulman
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,14 +34,14 @@ import de.mpicbg.ulman.fusion.ng.postprocess.VoidLabelPostprocessor;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.DoubleType;
-import org.scijava.log.LogService;
+import org.scijava.log.Logger;
 
 public
 class LabelSync2<IT extends RealType<IT>, LT extends IntegerType<LT>>
-extends AbstractWeightedVotingFusionAlgorithm<IT,LT>
+extends AbstractWeightedVotingFusionAlgorithm<IT,LT,DoubleType>
 {
-	public LabelSync2(LogService _log) {
-		super(_log);
+	public LabelSync2(Logger _log) {
+		super(_log, new DoubleType());
 	}
 
 	@Override

@@ -1,7 +1,7 @@
 /*
  * BSD 2-Clause License
  *
- * Copyright (c) 2020, Vladimír Ulman
+ * Copyright (c) 2020,2022, Vladimír Ulman
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,6 +38,6 @@ public class testPluginGTviaMarkersNG
 		ij.ui().showUI();
 
 		//run this class as if from GUI
-		ij.command().run(plugin_GTviaMarkersNG.class, true);
+		ij.command().run(Fusers.class, true);
 	}
 }

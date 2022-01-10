@@ -29,28 +29,29 @@ package de.mpicbg.ulman.fusion.ng;
 
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
-import net.imglib2.type.numeric.real.DoubleType;
+import net.imglib2.type.numeric.integer.ByteType;
 import org.scijava.log.Logger;
 
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 import de.mpicbg.ulman.fusion.ng.fuse.WeightedVotingLabelFuser;
+import de.mpicbg.ulman.fusion.ng.fuse.ForcedFlatVotingLabelFuserWithFailSafe;
 import de.mpicbg.ulman.fusion.ng.postprocess.KeepLargestCCALabelPostprocessor;
-import de.mpicbg.ulman.fusion.ng.insert.CollisionsAwareLabelInsertor;
+import de.mpicbg.ulman.fusion.ng.insert.CollisionsManagingLabelInsertor;
 
 public
-class BIC<IT extends RealType<IT>, LT extends IntegerType<LT>>
-extends AbstractWeightedVotingFusionAlgorithm<IT,LT,DoubleType>
+class BICenhancedFlat<IT extends RealType<IT>, LT extends IntegerType<LT>>
+extends AbstractWeightedVotingRoisFusionAlgorithm<IT,LT,ByteType>
 {
 	public
-	BIC(final Logger _log)
+	BICenhancedFlat(final Logger _log)
 	{
-		super(_log, new DoubleType());
+		super(_log, new ByteType());
 	}
 
 	public
-	BIC(final Logger _log, final String dbgImgSuffix)
+	BICenhancedFlat(final Logger _log, final String dbgImgSuffix)
 	{
-		super(_log, new DoubleType());
+		super(_log, new ByteType());
 
 		//enable debug output
 		this.dbgImgFileName = dbgImgSuffix;
@@ -61,13 +62,14 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,DoubleType>
 	void setFusionComponents()
 	{
 		//setup the individual stages
-		final MajorityOverlapBasedLabelExtractor<IT,LT,DoubleType> e = new MajorityOverlapBasedLabelExtractor<>();
+		final MajorityOverlapBasedLabelExtractor<IT,LT,ByteType> e = new MajorityOverlapBasedLabelExtractor<>();
 		e.minFractionOfMarker = 0.5f;
 
-		final WeightedVotingLabelFuser<IT,DoubleType> f = new WeightedVotingLabelFuser<>();
+		final WeightedVotingLabelFuser<IT,ByteType> f = new ForcedFlatVotingLabelFuserWithFailSafe<>();
 		f.minAcceptableWeight = this.threshold;
 
-		final CollisionsAwareLabelInsertor<LT, DoubleType> i = new CollisionsAwareLabelInsertor<>();
+		final CollisionsManagingLabelInsertor<LT, ByteType> i = new CollisionsManagingLabelInsertor<>();
+		this.removeMarkersCollisionThreshold = 0.2f;
 
 		final KeepLargestCCALabelPostprocessor<LT> p = new KeepLargestCCALabelPostprocessor<>();
 

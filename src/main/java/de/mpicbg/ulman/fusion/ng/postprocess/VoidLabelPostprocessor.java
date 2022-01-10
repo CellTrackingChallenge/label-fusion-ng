@@ -1,7 +1,7 @@
 /*
  * BSD 2-Clause License
  *
- * Copyright (c) 2020, Vladimír Ulman
+ * Copyright (c) 2020,2022, Vladimír Ulman
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,7 @@
  */
 package de.mpicbg.ulman.fusion.ng.postprocess;
 
+import net.imglib2.Interval;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.IntegerType;
 
@@ -37,6 +38,7 @@ implements LabelPostprocessor<LT>
 	@Override
 	public
 	void processLabel(final Img<LT> img,
-	                  final int markerValue)
+	                  final int markerValue,
+	                  final Interval ROI)
 	{}
 }
