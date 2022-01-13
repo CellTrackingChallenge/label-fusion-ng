@@ -112,7 +112,7 @@ public class Fusers extends CommonGUI implements Command
 		//check it has understandable content:
 		//is there additional column with weights?
 		final boolean weightAvail = mergeModel.startsWith("Threshold - user") ||
-		                            mergeModel.startsWith("BICv2 with Weight");
+		                            mergeModel.startsWith("BICv2");
 		return JobIO.inFileOKAY(filePath,weightAvail,log,statusService,uiService);
 	}
 
@@ -145,7 +145,7 @@ public class Fusers extends CommonGUI implements Command
 	//callbacks:
 	private void mergeModelChanged()
 	{
-		if (mergeModel.startsWith("Threshold - flat") || mergeModel.startsWith("BICv2 with Flat"))
+		if (mergeModel.startsWith("Threshold - flat"))
 		{
 			fileInfoA = "The job file should list one input filename pattern per line.";
 			fileInfoB = "The job file should end with tracking markers filename pattern.";
@@ -153,7 +153,7 @@ public class Fusers extends CommonGUI implements Command
 			fileInfoD = " ";
 		}
 		else
-		if (mergeModel.startsWith("Threshold - user") || mergeModel.startsWith("BICv2 with Weight"))
+		if (mergeModel.startsWith("Threshold - user") || mergeModel.startsWith("BICv2"))
 		{
 			fileInfoA = "The job file should list one input filename pattern per line";
 			fileInfoB = "and space separated single real number weight.";
@@ -267,7 +267,7 @@ public class Fusers extends CommonGUI implements Command
 		try {
 			//should there be an additional column with weights in the job file?
 			final boolean weightAvail = mergeModel.startsWith("Threshold - user") ||
-			                            mergeModel.startsWith("BICv2 with Weight");
+			                            mergeModel.startsWith("BICv2");
 
 			//initiate the building of the job specification...
 			JobSpecification.Builder jobSpecsBuilder = JobIO.parseJobFile(filePath.getAbsolutePath(), weightAvail);
@@ -588,7 +588,7 @@ public class Fusers extends CommonGUI implements Command
 			System.out.println(myself.fileInfoE);
 			System.out.println(myself.fileInfoD);
 			System.out.println("timePointsRangeSpecification can be, e.g., 1-9,23,25");
-			System.out.println("Set numberOfThreads to 1 to enforce serial ssingle-threaded) processing.");
+			System.out.println("Set numberOfThreads to 1 to enforce serial (single-threaded) processing.");
 			System.out.println("The CMV is optional param which enables the CMV combinatorial search...");
 			return;
 		}
