@@ -583,6 +583,8 @@ public class Fusers extends CommonGUI implements Command
 	public static void main(String[] args)
 	{
 		final Fusers myself = new Fusers();
+		myself.mergeModel="BICv2 with FlatVoting, SingleMaskFailSafe and CollisionResolver";
+		myself.mergeModelChanged();
 
 		if (args.length != 5 && args.length != 6)
 		{
@@ -590,6 +592,7 @@ public class Fusers extends CommonGUI implements Command
 			System.out.println("Usage: pathToJobFile threshold pathToOutputImages timePointsRangeSpecification numberOfThreads [CMV]\n");
 			System.out.println(myself.fileInfoA);
 			System.out.println(myself.fileInfoB);
+			System.out.println(myself.fileInfoC);
 			System.out.println(myself.fileInfoE);
 			System.out.println(myself.fileInfoD);
 			System.out.println("timePointsRangeSpecification can be, e.g., 1-9,23,25");
@@ -599,7 +602,6 @@ public class Fusers extends CommonGUI implements Command
 		}
 
 		myself.log = new CommonGUI.MyLog();
-		myself.mergeModel="BICv2 with FlatVoting, SingleMaskFailSafe and CollisionResolver";
 		myself.filePath = new File(args[0]);
 		myself.mergeThreshold = Float.parseFloat(args[1]);
 		myself.outputPath = new File(args[2]);
