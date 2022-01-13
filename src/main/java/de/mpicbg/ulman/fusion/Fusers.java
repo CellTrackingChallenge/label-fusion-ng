@@ -580,6 +580,20 @@ public class Fusers extends CommonGUI implements Command
 
 
 	// ==========================================================================================
+	static class MyLessVerboseLog extends MyLog
+	{
+		MyLessVerboseLog() { super(); }
+		MyLessVerboseLog(final String prefix) { super(prefix);}
+
+		@Override //NB: fork into itself again (to preserve the verbosity level)
+		public Logger subLogger(String name, int level) { return new MyLessVerboseLog(name); }
+
+		@Override
+		public void debug(Object msg) { /* empty */ }
+		@Override
+		public void trace(Object msg) { /* empty); */ }
+	}
+
 	public static void main(String[] args)
 	{
 		final Fusers myself = new Fusers();
@@ -601,7 +615,7 @@ public class Fusers extends CommonGUI implements Command
 			return;
 		}
 
-		myself.log = new CommonGUI.MyLog();
+		myself.log = new MyLessVerboseLog();
 		myself.filePath = new File(args[0]);
 		myself.mergeThreshold = Float.parseFloat(args[1]);
 		myself.outputPath = new File(args[2]);
