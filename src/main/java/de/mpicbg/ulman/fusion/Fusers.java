@@ -86,7 +86,7 @@ public class Fusers extends CommonGUI implements Command
 			           "SIMPLE",
 			           "BICv2 with FlatVoting, SingleMaskFailSafe and CollisionResolver",
 			           "BICv2 with WeightedVoting, SingleMaskFailSafe and CollisionResolver"},
-			callback = "mergeModelChanged")
+			callback = "mergeModelChangedAndTestJobFile")
 	private String mergeModel;
 
 	@Parameter(visibility = ItemVisibility.MESSAGE, persist = false, required = false)
@@ -143,6 +143,12 @@ public class Fusers extends CommonGUI implements Command
 
 
 	//callbacks:
+	private void mergeModelChangedAndTestJobFile()
+	{
+		mergeModelChanged();
+		inFileOKAY();
+	}
+	//
 	private void mergeModelChanged()
 	{
 		if (mergeModel.startsWith("Threshold - flat"))
@@ -183,7 +189,6 @@ public class Fusers extends CommonGUI implements Command
 			fileInfoC = " ";
 			fileInfoD = " ";
 		}
-		inFileOKAY();
 	}
 
 	//will be also used for sanity checking, thus returns boolean
