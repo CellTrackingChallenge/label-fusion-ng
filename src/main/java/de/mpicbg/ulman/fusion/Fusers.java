@@ -428,7 +428,7 @@ public class Fusers extends CommonGUI implements Command
 	void cmv_fillInAllCombinations(final JobSpecification fullJobLooksLikeThis, final List<OneCombination<IT,LT>> combinations)
 	{
 		//over all combinations of inputs
-		for (int i = 1; i <= ((1<<fullJobLooksLikeThis.numberOfFusionInputs)-1); ++i)
+		for (int i = 1; i < (1<<fullJobLooksLikeThis.numberOfFusionInputs); ++i)
 		{
 			//NB: this threshold level is always present
 			OneCombination<IT,LT> c = new OneCombination<>(i,1, fullJobLooksLikeThis.numberOfFusionInputs);
@@ -462,6 +462,9 @@ public class Fusers extends CommonGUI implements Command
 		final double threshold;
 		final String code;
 
+		static final int MAXNUMBEROFSUBFOLDERS = 4096;
+		final String batchSubFolder;
+
 		OneCombination(final int combinationInDecimal, final double threshold, final int inputsWidth)
 		{
 			relevantInputIndices = new ArrayList<>(inputsWidth);
@@ -480,6 +483,10 @@ public class Fusers extends CommonGUI implements Command
 
 			this.threshold = threshold;
 			this.code = cmv_createFolderName(this,inputsWidth);
+			this.batchSubFolder = ((1<<inputsWidth)*(inputsWidth/2)) > MAXNUMBEROFSUBFOLDERS ?
+					"batch"+(combinationInDecimal / MAXNUMBEROFSUBFOLDERS) : null;
+			//NB: flag "subfoldering" if the expected number of combinations exceeds
+			//    the max number of subfolders
 		}
 
 		@Override
@@ -560,21 +567,31 @@ public class Fusers extends CommonGUI implements Command
 		{
 			//inject this.code before filename
 			final int sepPos = outputPattern.lastIndexOf(File.separatorChar);
-			String outFolder = (sepPos > -1 ? outputPattern.substring(0,sepPos+1) : "") +code;
-
-			final Path fPath = Paths.get(outFolder);
-			if (Files.exists(fPath))
+			String outFolder = (sepPos > -1 ? outputPattern.substring(0,sepPos+1) : "");
+			if (batchSubFolder != null)
 			{
-				if (!Files.isDirectory(fPath))
-					throw new IOException(outFolder + " seems to exist but it is not a directory!");
-			} else {
-				feeder.shareLogger().info("Creating output folder: "+outFolder);
-				Files.createDirectory(fPath);
+				makeSureFolderExists(outFolder+ batchSubFolder);
+				outFolder += batchSubFolder +File.separatorChar;
 			}
+			outFolder += code;
+			makeSureFolderExists(outFolder);
 
 			outputFilenamePattern = outFolder + File.separator
 					+ (sepPos > -1 ? outputPattern.substring(sepPos+1) : outputPattern);
 			feeder.shareLogger().info("new output pattern: "+outputFilenamePattern);
+		}
+
+		private void makeSureFolderExists(final String folderName) throws IOException
+		{
+			final Path fPath = Paths.get(folderName);
+			if (Files.exists(fPath))
+			{
+				if (!Files.isDirectory(fPath))
+					throw new IOException(folderName+" seems to exist but it is not a directory!");
+			} else {
+				feeder.shareLogger().info("Creating output folder: "+folderName);
+				Files.createDirectory(fPath);
+			}
 		}
 	}
 
