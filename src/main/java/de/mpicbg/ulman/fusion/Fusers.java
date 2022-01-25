@@ -464,6 +464,7 @@ public class Fusers extends CommonGUI implements Command
 
 		static final int MAXNUMBEROFSUBFOLDERS = 4096;
 		final String batchSubFolder;
+		String logFolder = ".";
 
 		OneCombination(final int combinationInDecimal, final double threshold, final int inputsWidth)
 		{
@@ -573,10 +574,10 @@ public class Fusers extends CommonGUI implements Command
 				makeSureFolderExists(outFolder+ batchSubFolder);
 				outFolder += batchSubFolder +File.separatorChar;
 			}
-			outFolder += code;
-			makeSureFolderExists(outFolder);
+			logFolder = outFolder+code;
+			makeSureFolderExists(logFolder);
 
-			outputFilenamePattern = outFolder + File.separator
+			outputFilenamePattern = logFolder + File.separator
 					+ (sepPos > -1 ? outputPattern.substring(sepPos+1) : outputPattern);
 			feeder.shareLogger().info("new output pattern: "+outputFilenamePattern);
 		}
