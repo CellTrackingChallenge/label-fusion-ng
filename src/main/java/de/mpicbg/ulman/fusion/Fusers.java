@@ -323,7 +323,7 @@ public class Fusers extends CommonGUI implements Command
 			boolean reportOnce = true;
 			for (OneCombination<IT,LT> c : combinations)
 			{
-				final Logger logger = log.subLogger(c.code);
+				final Logger logger = getSubLoggerFrom(log,c);
 				final SIMPLE<IT,LT> fuser_SIMPLE = new SIMPLE<>(logger);
 				//"forward" the parameters values
 				fuser_SIMPLE.getFuserReference().maxIters = (int)fuserParamsObj.getInput("maxIters");
@@ -344,7 +344,7 @@ public class Fusers extends CommonGUI implements Command
 		if (mergeModel.startsWith("BICv2 with Flat"))
 		{
 			for (OneCombination<IT,LT> c : combinations) {
-				final Logger logger = log.subLogger(c.code);
+				final Logger logger = getSubLoggerFrom(log,c);
 				c.feeder = new WeightedVotingFusionFeeder<IT,LT>(logger).setAlgorithm(new BICenhancedFlat<>(logger));
 			}
 		}
@@ -352,14 +352,14 @@ public class Fusers extends CommonGUI implements Command
 		if (mergeModel.startsWith("BICv2 with Weight"))
 		{
 			for (OneCombination<IT,LT> c : combinations) {
-				final Logger logger = log.subLogger(c.code);
+				final Logger logger = getSubLoggerFrom(log,c);
 				c.feeder = new WeightedVotingFusionFeeder<IT,LT>(logger).setAlgorithm(new BICenhancedWeighted<>(logger));
 			}
 		}
 		else
 		{
 			for (OneCombination<IT,LT> c : combinations) {
-				final Logger logger = log.subLogger(c.code);
+				final Logger logger = getSubLoggerFrom(log,c);
 				c.feeder = new WeightedVotingFusionFeeder<IT,LT>(logger).setAlgorithm(new BIC<>(logger));
 			}
 		}
@@ -596,6 +596,13 @@ public class Fusers extends CommonGUI implements Command
 		}
 	}
 
+	private Logger getSubLoggerFrom(final Logger log, final OneCombination<?,?> c)
+	{
+		if (log instanceof MyDiskSavingLessVerboseLog)
+			return ((MyDiskSavingLessVerboseLog)log).subLogger(c);
+		//
+		return log.subLogger(c.code+" ");
+	}
 
 	// ==========================================================================================
 	static class MyLessVerboseLog extends MyLog
@@ -610,6 +617,65 @@ public class Fusers extends CommonGUI implements Command
 		public void debug(Object msg) { /* empty */ }
 		@Override
 		public void trace(Object msg) { /* empty); */ }
+	}
+
+	static class MyDiskSavingLessVerboseLog extends MyLog
+	{
+		String prefix = "";
+		final java.util.logging.Logger javaLogger;
+
+		MyDiskSavingLessVerboseLog() {
+			this(".");
+		}
+		MyDiskSavingLessVerboseLog(final String logFolder) {
+			this(logFolder,"log.txt");
+		}
+
+		MyDiskSavingLessVerboseLog(final String logFolder, final String fileName) {
+			super();
+			javaLogger = java.util.logging.Logger.getLogger("FuserLog_"+logFolder+"/"+fileName);
+			javaLogger.setUseParentHandlers(false);
+
+			final String logFilePath = logFolder + File.separator + fileName;
+			try {
+				super.info("Starting new logger: "+logFilePath);
+				final java.util.logging.FileHandler fh
+						= new java.util.logging.FileHandler(logFilePath);
+				fh.setFormatter( EASYFORMATTER );
+				javaLogger.addHandler(fh);
+			} catch (IOException e) {
+				System.out.println("Going to be a silent logger because I failed to open the log file.");
+				e.printStackTrace();
+				//NB: no handler added, the logger should thus remain silent but happy otherwise...
+			}
+		}
+
+		public Logger subLogger(final OneCombination<?,?> c) {
+			MyDiskSavingLessVerboseLog l =
+					new MyDiskSavingLessVerboseLog(c.logFolder,"log_"+c.code+".txt");
+			l.prefix = c.code+" ";
+			return l;
+		}
+
+		static public
+		java.util.logging.Formatter EASYFORMATTER = new java.util.logging.Formatter() {
+			@Override
+			public String format(java.util.logging.LogRecord logRecord) {
+				return logRecord.getMessage()+"\n";
+			}
+		};
+
+		@Override
+		public void debug(Object msg) { /* empty */ }
+		@Override
+		public void trace(Object msg) { /* empty); */ }
+
+		@Override
+		public void error(Object msg) { javaLogger.info(prefix+"[ERROR] "+msg); }
+		@Override
+		public void info(Object msg) { javaLogger.info(prefix+"[INFO] "+msg); }
+		@Override
+		public void warn(Object msg) { javaLogger.info(prefix+"[WARN] "+msg); }
 	}
 
 	public static void main(String[] args)
@@ -633,13 +699,13 @@ public class Fusers extends CommonGUI implements Command
 			return;
 		}
 
-		myself.log = new MyLessVerboseLog();
+		myself.doCMV = args.length == 6;
+		myself.log = myself.doCMV ? new MyDiskSavingLessVerboseLog() : new MyLessVerboseLog();
 		myself.filePath = new File(args[0]);
 		myself.mergeThreshold = Float.parseFloat(args[1]);
 		myself.outputPath = new File(args[2]);
 		myself.fileIdxStr = args[3];
 		myself.noOfThreads = Integer.parseInt(args[4]);
-		myself.doCMV = args.length == 6;
 		myself.worker(false); //false -> run without GUI
 	}
 }
