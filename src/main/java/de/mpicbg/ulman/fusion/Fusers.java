@@ -27,6 +27,7 @@
  */
 package de.mpicbg.ulman.fusion;
 
+import de.mpicbg.ulman.fusion.util.loggers.SimpleConsoleLogger;
 import net.imglib2.img.Img;
 import sc.fiji.simplifiedio.SimplifiedIO;
 import net.imglib2.type.numeric.IntegerType;
@@ -605,7 +606,7 @@ public class Fusers extends CommonGUI implements Command
 	}
 
 	// ==========================================================================================
-	static class MyLessVerboseLog extends MyLog
+	static class MyLessVerboseLog extends SimpleConsoleLogger
 	{
 		MyLessVerboseLog() { super(); }
 		MyLessVerboseLog(final String prefix) { super(prefix);}
@@ -619,7 +620,7 @@ public class Fusers extends CommonGUI implements Command
 		public void trace(Object msg) { /* empty); */ }
 	}
 
-	static class MyDiskSavingLessVerboseLog extends MyLog
+	static class MyDiskSavingLessVerboseLog extends SimpleConsoleLogger
 	{
 		String prefix = "";
 		final java.util.logging.Logger javaLogger;
