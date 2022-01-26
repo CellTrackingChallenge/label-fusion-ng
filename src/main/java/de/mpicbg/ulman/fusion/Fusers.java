@@ -456,16 +456,16 @@ public class Fusers extends CommonGUI implements Command
 		for (OneCombination<?,?> c : combinations) log.info(c);
 	}
 
-	static class OneCombination<IT extends RealType<IT>, LT extends IntegerType<LT>>
+	static public class OneCombination<IT extends RealType<IT>, LT extends IntegerType<LT>>
 	implements Callable<OneCombination<IT,LT>>
 	{
 		final List<Integer> relevantInputIndices;
 		final double threshold;
-		final String code;
+		public final String code;
 
 		static final int MAXNUMBEROFSUBFOLDERS = 4096;
 		final String batchSubFolder;
-		String logFolder = ".";
+		public String logFolder = ".";
 
 		OneCombination(final int combinationInDecimal, final double threshold, final int inputsWidth)
 		{
