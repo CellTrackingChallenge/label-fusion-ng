@@ -1,6 +1,7 @@
 package de.mpicbg.ulman.fusion;
 
 import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionFeeder;
+import de.mpicbg.ulman.fusion.util.loggers.SimpleDiskSavingLogger;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import org.scijava.log.Logger;
 
@@ -8,8 +9,8 @@ import java.io.IOException;
 
 public class testFileLogging {
 	public static void main(String[] args) {
-		Fusers.MyDiskSavingLessVerboseLog mainLog
-				= new Fusers.MyDiskSavingLessVerboseLog(".");
+		SimpleDiskSavingLogger mainLog
+				= new SimpleDiskSavingLogger(".");
 		mainLog.info("Hi, me da main");
 		mainLog.info("You? No!");
 		mainLog.warn("I'm the main here!");
