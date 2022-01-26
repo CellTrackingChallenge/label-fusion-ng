@@ -27,17 +27,11 @@
  */
 package de.mpicbg.ulman.fusion;
 
-import org.scijava.Context;
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
-import org.scijava.plugin.PluginInfo;
 import org.scijava.app.StatusService;
 import org.scijava.log.LogService;
-import org.scijava.log.LogSource;
-import org.scijava.log.Logger;
-import org.scijava.log.LogListener;
-import org.scijava.log.LogMessage;
 import org.scijava.ui.UIService;
 
 import java.text.ParseException;
@@ -188,76 +182,5 @@ abstract class CommonGUI
 				frame.dispose();
 			}
 		}
-	}
-
-
-	static class MyLog implements LogService
-	{
-		final String prefix;
-		public MyLog() { prefix = ""; }
-		public MyLog(final String prefix) { this.prefix = prefix; }
-
-		@Override
-		public void setLevel(int level) { }
-
-		@Override
-		public void setLevel(String classOrPackageName, int level) { }
-
-		@Override
-		public void setLevelForLogger(String source, int level) { }
-
-		@Override
-		public void alwaysLog(int level, Object msg, Throwable t) { }
-
-		@Override
-		public LogSource getSource() { return null; }
-
-		@Override
-		public int getLevel() { return 0; }
-
-		@Override
-		public Logger subLogger(String name, int level) { return new MyLog(name); }
-
-		@Override
-		public void addLogListener(LogListener listener) { }
-
-		@Override
-		public void removeLogListener(LogListener listener) { }
-
-		@Override
-		public void notifyListeners(LogMessage message) { }
-
-		@Override
-		public Context context() { return null; }
-
-		@Override
-		public Context getContext() { return null; }
-
-		@Override
-		public double getPriority() { return 0; }
-
-		@Override
-		public void setPriority(double priority) { }
-
-		@Override
-		public PluginInfo<?> getInfo() { return null; }
-
-		@Override
-		public void setInfo(PluginInfo<?> info) { }
-
-		@Override
-		public void debug(Object msg) { System.out.println(prefix+"[DBG] "+msg); }
-
-		@Override
-		public void error(Object msg) { System.out.println(prefix+"[ERROR] "+msg); }
-
-		@Override
-		public void info(Object msg) { System.out.println(prefix+"[INFO] "+msg); }
-
-		@Override
-		public void trace(Object msg) { System.out.println(prefix+"[TRACE] "+msg); }
-
-		@Override
-		public void warn(Object msg) { System.out.println(prefix+"[WARN] "+msg); }
 	}
 }

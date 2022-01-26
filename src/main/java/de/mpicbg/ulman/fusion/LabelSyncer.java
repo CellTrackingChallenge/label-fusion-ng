@@ -27,6 +27,7 @@
  */
 package de.mpicbg.ulman.fusion;
 
+import de.mpicbg.ulman.fusion.util.loggers.SimpleConsoleLogger;
 import org.scijava.ItemVisibility;
 import org.scijava.command.Command;
 import org.scijava.plugin.Plugin;
@@ -267,7 +268,7 @@ public class LabelSyncer extends CommonGUI implements Command
 			return;
 		}
 
-		myself.log = new CommonGUI.MyLog();
+		myself.log = new SimpleConsoleLogger();
 		myself.filePath = new File(args[0]);
 		myself.outputPath = new File(args[1]);
 		myself.fileIdxStr = args[2];

@@ -27,6 +27,7 @@
  */
 package de.mpicbg.ulman.fusion;
 
+import de.mpicbg.ulman.fusion.util.loggers.SimpleConsoleLogger;
 import org.scijava.command.Command;
 import org.scijava.plugin.Plugin;
 import org.scijava.plugin.Parameter;
@@ -168,7 +169,7 @@ public class LabelSyncer2 implements Command
 		void processImages()
 		{
 			//prepare the syncing code
-			final Fusers.MyLog myLog = new Fusers.MyLog();
+			final SimpleConsoleLogger myLog = new SimpleConsoleLogger();
 			final LabelSync2<T,T> labelSync = new LabelSync2<>(myLog);
 
 			//prepare the syncing containers

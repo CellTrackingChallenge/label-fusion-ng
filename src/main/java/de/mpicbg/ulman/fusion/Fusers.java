@@ -35,11 +35,14 @@ import net.imglib2.type.numeric.RealType;
 import org.scijava.ItemVisibility;
 import org.scijava.command.CommandModule;
 import org.scijava.command.CommandService;
-import org.scijava.log.Logger;
 import org.scijava.widget.FileWidget;
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
+
+import org.scijava.log.Logger;
+import de.mpicbg.ulman.fusion.util.loggers.SimpleDiskSavingLogger;
+import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
 
 import java.util.Map;
 import java.util.Vector;
@@ -455,16 +458,16 @@ public class Fusers extends CommonGUI implements Command
 		for (OneCombination<?,?> c : combinations) log.info(c);
 	}
 
-	static class OneCombination<IT extends RealType<IT>, LT extends IntegerType<LT>>
+	static public class OneCombination<IT extends RealType<IT>, LT extends IntegerType<LT>>
 	implements Callable<OneCombination<IT,LT>>
 	{
 		final List<Integer> relevantInputIndices;
 		final double threshold;
-		final String code;
+		public final String code;
 
 		static final int MAXNUMBEROFSUBFOLDERS = 4096;
 		final String batchSubFolder;
-		String logFolder = ".";
+		public String logFolder = ".";
 
 		OneCombination(final int combinationInDecimal, final double threshold, final int inputsWidth)
 		{
@@ -598,85 +601,12 @@ public class Fusers extends CommonGUI implements Command
 
 	private Logger getSubLoggerFrom(final Logger log, final OneCombination<?,?> c)
 	{
-		if (log instanceof MyDiskSavingLessVerboseLog)
-			return ((MyDiskSavingLessVerboseLog)log).subLogger(c);
+		if (log instanceof SimpleDiskSavingLogger)
+			return ((SimpleDiskSavingLogger)log).subLogger(c);
 		//
 		return log.subLogger(c.code+" ");
 	}
 
-	// ==========================================================================================
-	static class MyLessVerboseLog extends MyLog
-	{
-		MyLessVerboseLog() { super(); }
-		MyLessVerboseLog(final String prefix) { super(prefix);}
-
-		@Override //NB: fork into itself again (to preserve the verbosity level)
-		public Logger subLogger(String name, int level) { return new MyLessVerboseLog(name); }
-
-		@Override
-		public void debug(Object msg) { /* empty */ }
-		@Override
-		public void trace(Object msg) { /* empty); */ }
-	}
-
-	static class MyDiskSavingLessVerboseLog extends MyLog
-	{
-		String prefix = "";
-		final java.util.logging.Logger javaLogger;
-
-		MyDiskSavingLessVerboseLog() {
-			this(".");
-		}
-		MyDiskSavingLessVerboseLog(final String logFolder) {
-			this(logFolder,"log.txt");
-		}
-
-		MyDiskSavingLessVerboseLog(final String logFolder, final String fileName) {
-			super();
-			javaLogger = java.util.logging.Logger.getLogger("FuserLog_"+logFolder+"/"+fileName);
-			javaLogger.setUseParentHandlers(false);
-
-			final String logFilePath = logFolder + File.separator + fileName;
-			try {
-				super.info("Starting new logger: "+logFilePath);
-				final java.util.logging.FileHandler fh
-						= new java.util.logging.FileHandler(logFilePath);
-				fh.setFormatter( EASYFORMATTER );
-				javaLogger.addHandler(fh);
-			} catch (IOException e) {
-				System.out.println("Going to be a silent logger because I failed to open the log file.");
-				e.printStackTrace();
-				//NB: no handler added, the logger should thus remain silent but happy otherwise...
-			}
-		}
-
-		public Logger subLogger(final OneCombination<?,?> c) {
-			MyDiskSavingLessVerboseLog l =
-					new MyDiskSavingLessVerboseLog(c.logFolder,"log_"+c.code+".txt");
-			l.prefix = c.code+" ";
-			return l;
-		}
-
-		static public
-		java.util.logging.Formatter EASYFORMATTER = new java.util.logging.Formatter() {
-			@Override
-			public String format(java.util.logging.LogRecord logRecord) {
-				return logRecord.getMessage()+"\n";
-			}
-		};
-
-		@Override
-		public void debug(Object msg) { /* empty */ }
-		@Override
-		public void trace(Object msg) { /* empty); */ }
-
-		@Override
-		public void error(Object msg) { javaLogger.info(prefix+"[ERROR] "+msg); }
-		@Override
-		public void info(Object msg) { javaLogger.info(prefix+"[INFO] "+msg); }
-		@Override
-		public void warn(Object msg) { javaLogger.info(prefix+"[WARN] "+msg); }
-	}
 
 	public static void main(String[] args)
 	{
@@ -700,7 +630,7 @@ public class Fusers extends CommonGUI implements Command
 		}
 
 		myself.doCMV = args.length == 6;
-		myself.log = myself.doCMV ? new MyDiskSavingLessVerboseLog() : new MyLessVerboseLog();
+		myself.log = myself.doCMV ? new SimpleDiskSavingLogger() : new SimpleRestrictedLogger();
 		myself.filePath = new File(args[0]);
 		myself.mergeThreshold = Float.parseFloat(args[1]);
 		myself.outputPath = new File(args[2]);
