@@ -60,6 +60,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
+import de.mpicbg.ulman.fusion.util.SegGtImageLoader;
 import de.mpicbg.ulman.fusion.ng.backbones.JobIO;
 
 import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionFeeder;
@@ -138,6 +139,9 @@ public class Fusers extends CommonGUI implements Command
 
 	@Parameter
 	boolean doCMV = false;
+
+	@Parameter(description = "Leave empty if you're not interested in doing SEG evaluation of the fusion result.")
+	String SEGfolder = "leave empty when unsure";
 
 	@Parameter
 	boolean saveFusionResults = true;
@@ -369,6 +373,10 @@ public class Fusers extends CommonGUI implements Command
 		}
 
 		// ------------ action per time point ------------
+		final SegGtImageLoader<LT> SEGevaluator
+			= SEGfolder.length() > 0 && !SEGfolder.startsWith("leave empty") ?
+				new SegGtImageLoader<>(SEGfolder,log) : null;
+
 		if (!doCMV)
 		{
 			//NB: shortcut
@@ -377,6 +385,12 @@ public class Fusers extends CommonGUI implements Command
 				job.reportJobForTime(time,log);
 				feeder.processJob(job,time, noOfThreads);
 				if (saveFusionResults) feeder.saveJob(job,time);
+				//
+				if (SEGevaluator != null && SEGevaluator.managedToLoadImageForTimepoint(time))
+				{
+					//TODO prepare boxes...
+					feeder.scoreJob(SEGevaluator);
+				}
 			});
 		}
 		else
@@ -389,7 +403,11 @@ public class Fusers extends CommonGUI implements Command
 			//(which happens to include all original inputs -- the full job) and make it a
 			//'refLoadedImages' for all combinations (including the very last one)
 			final OneCombination<IT,LT> fullCombination = combinations.get( combinations.size()-1 );
-			for (OneCombination<IT,LT> c : combinations) c.refLoadedImages = fullCombination.feeder;
+			for (OneCombination<IT,LT> c : combinations) {
+				c.refLoadedImages = fullCombination.feeder;
+				//also share the one SEG evaluator among all combination cases
+				c.SEGevaluator = SEGevaluator;
+			}
 			//
 			//prevent the 'refLoadedImages' to replace its data with empty initialized content, see OneCombination.call()
 			fullCombination.iAmTheRefence = true;
@@ -411,6 +429,13 @@ public class Fusers extends CommonGUI implements Command
 					//processJob() is loadJob(), calcBoxes() and fuse() (both are inside useAlgorithm())
 					fullCombination.feeder.loadJob( job.instantiateForTime(time), cmvers);
 					fullCombination.feeder.calcBoxes( cmvers );
+
+					//also pre-load the shared SEG image before the fusion and evaluation
+					if (SEGevaluator != null && SEGevaluator.managedToLoadImageForTimepoint(time))
+					{
+						//NB: the status of loading is also available from SEGevaluator.lastLoadedTimepoint == time
+						//NB: if loaded now something, scoreJob() is then called later by each combination
+					}
 
 					//here: all images loaded, boxes possibly computed, therefore...
 					//here: ready to start all fusers who start themselves with "stealing" data from the 'fullCombination'
@@ -508,6 +533,7 @@ public class Fusers extends CommonGUI implements Command
 		WeightedVotingFusionFeeder<IT,LT> feeder;
 		WeightedVotingFusionFeeder<IT,LT> refLoadedImages;
 		boolean iAmTheRefence = false;
+		SegGtImageLoader<LT> SEGevaluator;
 
 		private
 		void reInitMe()
@@ -560,6 +586,9 @@ public class Fusers extends CommonGUI implements Command
 
 			if (saveFusionResults)
 				feeder.saveJob( JobSpecification.expandFilenamePattern(outputFilenamePattern,currentTime) );
+
+			if (SEGevaluator != null && SEGevaluator.lastLoadedTimepoint == currentTime)
+				feeder.scoreJob(SEGevaluator);
 
 			return this;
 		}

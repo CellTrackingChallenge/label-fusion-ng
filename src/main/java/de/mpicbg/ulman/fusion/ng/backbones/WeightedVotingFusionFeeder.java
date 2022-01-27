@@ -28,6 +28,7 @@
 package de.mpicbg.ulman.fusion.ng.backbones;
 
 import de.mpicbg.ulman.fusion.ng.AbstractWeightedVotingRoisFusionAlgorithm;
+import de.mpicbg.ulman.fusion.util.SegGtImageLoader;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
@@ -261,5 +262,11 @@ extends JobIO<IT,LT>
 	{
 		log.info("Saving file: "+outFile);
 		SimplifiedIO.saveImage(outFusedImg, outFile);
+	}
+
+	public
+	void scoreJob(final SegGtImageLoader<LT> SEGevaluator)
+	{
+		log.info("Doing SEG score now...");
 	}
 }
