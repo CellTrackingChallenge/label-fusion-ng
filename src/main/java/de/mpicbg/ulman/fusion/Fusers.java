@@ -426,7 +426,7 @@ public class Fusers extends CommonGUI implements Command
 	}
 
 
-	static <IT extends RealType<IT>, LT extends IntegerType<LT>>
+	<IT extends RealType<IT>, LT extends IntegerType<LT>>
 	void cmv_fillInAllCombinations(final JobSpecification fullJobLooksLikeThis, final List<OneCombination<IT,LT>> combinations)
 	{
 		//over all combinations of inputs
@@ -442,7 +442,6 @@ public class Fusers extends CommonGUI implements Command
 		}
 	}
 
-	static
 	String cmv_createFolderName(final OneCombination<?,?> combination, final int numberOfAllPossibleInputs)
 	{
 		final StringBuilder sb = new StringBuilder();
@@ -457,7 +456,7 @@ public class Fusers extends CommonGUI implements Command
 		for (OneCombination<?,?> c : combinations) log.info(c);
 	}
 
-	static public class OneCombination<IT extends RealType<IT>, LT extends IntegerType<LT>>
+	public class OneCombination<IT extends RealType<IT>, LT extends IntegerType<LT>>
 	implements Callable<OneCombination<IT,LT>>
 	{
 		final List<Integer> relevantInputIndices;

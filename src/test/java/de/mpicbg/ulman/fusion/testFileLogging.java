@@ -19,9 +19,9 @@ public class testFileLogging {
 				= new WeightedVotingFusionFeeder<>(mainLog);
 
 		Fusers.OneCombination<UnsignedShortType,UnsignedShortType> c1
-				= new Fusers.OneCombination<>(2,1,3);
+				= new Fusers().new OneCombination<>(2,1,3);
 		Fusers.OneCombination<UnsignedShortType,UnsignedShortType> c2
-				= new Fusers.OneCombination<>(5,2,14);
+				= new Fusers().new OneCombination<>(5,2,14);
 		try {
 			c1.feeder = feeder;
 			c2.feeder = feeder;
