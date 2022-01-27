@@ -140,6 +140,9 @@ public class Fusers extends CommonGUI implements Command
 	boolean doCMV = false;
 
 	@Parameter
+	boolean saveFusionResults = true;
+
+	@Parameter
 	CommandService commandService;
 
 
@@ -373,7 +376,7 @@ public class Fusers extends CommonGUI implements Command
 			iterateTimePoints(fileIdxList,useGui,time -> {
 				job.reportJobForTime(time,log);
 				feeder.processJob(job,time, noOfThreads);
-				feeder.saveJob(job,time);
+				if (saveFusionResults) feeder.saveJob(job,time);
 			});
 		}
 		else
@@ -555,7 +558,8 @@ public class Fusers extends CommonGUI implements Command
 
 			feeder.useAlgorithmWithoutUpdatingBoxes();
 
-			feeder.saveJob( JobSpecification.expandFilenamePattern(outputFilenamePattern,currentTime) );
+			if (saveFusionResults)
+				feeder.saveJob( JobSpecification.expandFilenamePattern(outputFilenamePattern,currentTime) );
 
 			return this;
 		}
