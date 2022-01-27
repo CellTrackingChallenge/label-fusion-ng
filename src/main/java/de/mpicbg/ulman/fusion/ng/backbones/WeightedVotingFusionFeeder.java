@@ -195,6 +195,7 @@ extends JobIO<IT,LT>
 	}
 
 
+	@Deprecated(since = "processJob(JobSpecification) came to replace this one", forRemoval = true)
 	public
 	void processJob(final String... args)
 	{
@@ -202,10 +203,8 @@ extends JobIO<IT,LT>
 			throw new RuntimeException("Cannot work without an algorithm.");
 
 		super.loadJob(args);
-		final Img<LT> outImg = useAlgorithm();
-
-		log.info("Saving file: "+args[args.length-1]);
-		SimplifiedIO.saveImage(outImg, args[args.length-1]);
+		outFusedImg = useAlgorithm();
+		//saveJob(args[args.length-1]);
 	}
 
 
@@ -237,17 +236,32 @@ extends JobIO<IT,LT>
 			throw new RuntimeException("Cannot work without an algorithm.");
 		//NB: expand now... and fail possibly soon before possibly lengthy loading of images
 		final String outFile = JobSpecification.expandFilenamePattern(job.outputPattern,time);
-		Img<LT> outImg;
 
 		if (workerThreads != null) {
 			super.loadJob(job.instantiateForTime(time), workerThreads);
-			outImg = useAlgorithm(workerThreads);
+			outFusedImg = useAlgorithm(workerThreads);
 		} else {
 			super.loadJob(job,time);
-			outImg = useAlgorithm(null);
+			outFusedImg = useAlgorithm(null);
 		}
+	}
 
+	private Img<LT> outFusedImg;
+
+	public Img<LT> getOutFusedImg()
+	{ return outFusedImg; }
+
+	public
+	void saveJob(final JobSpecification job, final int time)
+	{
+		final String outFile = JobSpecification.expandFilenamePattern(job.outputPattern,time);
+		saveJob( outFile );
+	}
+
+	public
+	void saveJob(final String outFile)
+	{
 		log.info("Saving file: "+outFile);
-		SimplifiedIO.saveImage(outImg, outFile);
+		SimplifiedIO.saveImage(outFusedImg, outFile);
 	}
 }
