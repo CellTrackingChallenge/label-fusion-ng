@@ -10,9 +10,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.PathMatcher;
+import java.util.Collections;
 import java.util.Optional;
 
 import org.scijava.log.Logger;
+import java.util.Map;
+import de.mpicbg.ulman.fusion.ng.AbstractWeightedVotingRoisFusionAlgorithm;
 
 public class SegGtImageLoader<LT extends IntegerType<LT>>
 {
@@ -125,5 +128,19 @@ public class SegGtImageLoader<LT extends IntegerType<LT>>
 			throw new InvalidPathException(tiffFilename,"Path does not include any number");
 
 		return Integer.parseInt(tiffFilename.substring(startPos+1,dotPos), 10);
+	}
+
+
+	Map<Double,long[]> lastCalculatedBoxes;
+
+	public void calcBoxes()
+	{
+		lastCalculatedBoxes = AbstractWeightedVotingRoisFusionAlgorithm.findBoxes(
+				lastLoadedImage,log,"SEG GT");
+	}
+
+	public Map<Double,long[]> getLastCalculatedBoxes()
+	{
+		return Collections.unmodifiableMap(lastCalculatedBoxes);
 	}
 }

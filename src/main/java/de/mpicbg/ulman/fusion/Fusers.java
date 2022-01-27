@@ -388,7 +388,7 @@ public class Fusers extends CommonGUI implements Command
 				//
 				if (SEGevaluator != null && SEGevaluator.managedToLoadImageForTimepoint(time))
 				{
-					//TODO prepare boxes...
+					SEGevaluator.calcBoxes();
 					feeder.scoreJob(SEGevaluator);
 				}
 			});
@@ -433,6 +433,7 @@ public class Fusers extends CommonGUI implements Command
 					//also pre-load the shared SEG image before the fusion and evaluation
 					if (SEGevaluator != null && SEGevaluator.managedToLoadImageForTimepoint(time))
 					{
+						SEGevaluator.calcBoxes();
 						//NB: the status of loading is also available from SEGevaluator.lastLoadedTimepoint == time
 						//NB: if loaded now something, scoreJob() is then called later by each combination
 					}
