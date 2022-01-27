@@ -27,8 +27,6 @@
  */
 package de.mpicbg.ulman.fusion;
 
-import net.imglib2.img.Img;
-import sc.fiji.simplifiedio.SimplifiedIO;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
 
@@ -375,6 +373,7 @@ public class Fusers extends CommonGUI implements Command
 			iterateTimePoints(fileIdxList,useGui,time -> {
 				job.reportJobForTime(time,log);
 				feeder.processJob(job,time, noOfThreads);
+				feeder.saveJob(job,time);
 			});
 		}
 		else
@@ -555,11 +554,10 @@ public class Fusers extends CommonGUI implements Command
 		{
 			reInitMe();
 
-			final Img<LT> outImg = feeder.useAlgorithmWithoutUpdatingBoxes();
+			feeder.useAlgorithmWithoutUpdatingBoxes();
 
-			final String outFile = JobSpecification.expandFilenamePattern(outputFilenamePattern,currentTime);
-			feeder.shareLogger().info("Saving file: "+outFile);
-			SimplifiedIO.saveImage(outImg, outFile);
+			feeder.saveJob( JobSpecification.expandFilenamePattern(outputFilenamePattern,currentTime) );
+
 			return this;
 		}
 
