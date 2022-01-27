@@ -82,20 +82,18 @@ extends JobIO<IT,LT>
 
 
 	public
-	Img<LT> useAlgorithm()
+	void useAlgorithm()
 	{
-		Img<LT> img = null;
-		try { img = useAlgorithm(null); }
+		try { useAlgorithm(null); }
 		catch (InterruptedException e) { /* cannot happen 'cause no MT */ }
-		return img;
 	}
 
 	public
-	Img<LT> useAlgorithm(final int noOfThreads)
+	void useAlgorithm(final int noOfThreads)
 	{
 		final ExecutorService w = Executors.newFixedThreadPool(noOfThreads);
 		try {
-			return useAlgorithm(w);
+			useAlgorithm(w);
 		} catch (InterruptedException e) {
 			throw new RuntimeException("Error in multithreading",e);
 		} finally {
@@ -105,8 +103,8 @@ extends JobIO<IT,LT>
 
 
 	public
-	Img<LT> useAlgorithm(final ExecutorService threadWorkers)
-			throws InterruptedException
+	void useAlgorithm(final ExecutorService threadWorkers)
+	throws InterruptedException
 	{
 		if (algorithm == null)
 			throw new RuntimeException("Cannot work without an algorithm.");
@@ -115,11 +113,11 @@ extends JobIO<IT,LT>
 		algorithm.setWeights(inWeights);
 		algorithm.setThreshold(threshold);
 		calcBoxes(threadWorkers);
-		return algorithm.fuse(inImgs, markerImg);
+		outFusedImg = algorithm.fuse(inImgs, markerImg);
 	}
 
 	public //NB: because of CMV
-	Img<LT> useAlgorithmWithoutUpdatingBoxes()
+	void useAlgorithmWithoutUpdatingBoxes()
 	{
 		if (algorithm == null)
 			throw new RuntimeException("Cannot work without an algorithm.");
@@ -127,7 +125,7 @@ extends JobIO<IT,LT>
 		log.info("calling weighted voting algorithm with threshold="+threshold);
 		algorithm.setWeights(inWeights);
 		algorithm.setThreshold(threshold);
-		return algorithm.fuse(inImgs, markerImg);
+		outFusedImg = algorithm.fuse(inImgs, markerImg);
 	}
 
 
@@ -203,7 +201,7 @@ extends JobIO<IT,LT>
 			throw new RuntimeException("Cannot work without an algorithm.");
 
 		super.loadJob(args);
-		outFusedImg = useAlgorithm();
+		useAlgorithm();
 		//saveJob(args[args.length-1]);
 	}
 
@@ -239,10 +237,10 @@ extends JobIO<IT,LT>
 
 		if (workerThreads != null) {
 			super.loadJob(job.instantiateForTime(time), workerThreads);
-			outFusedImg = useAlgorithm(workerThreads);
+			useAlgorithm(workerThreads);
 		} else {
 			super.loadJob(job,time);
-			outFusedImg = useAlgorithm(null);
+			useAlgorithm(null);
 		}
 	}
 
