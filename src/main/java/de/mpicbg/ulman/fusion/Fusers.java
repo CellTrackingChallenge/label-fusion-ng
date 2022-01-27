@@ -27,8 +27,6 @@
  */
 package de.mpicbg.ulman.fusion;
 
-import net.imglib2.img.Img;
-import sc.fiji.simplifiedio.SimplifiedIO;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
 
@@ -140,6 +138,9 @@ public class Fusers extends CommonGUI implements Command
 
 	@Parameter
 	boolean doCMV = false;
+
+	@Parameter
+	boolean saveFusionResults = true;
 
 	@Parameter
 	CommandService commandService;
@@ -375,6 +376,7 @@ public class Fusers extends CommonGUI implements Command
 			iterateTimePoints(fileIdxList,useGui,time -> {
 				job.reportJobForTime(time,log);
 				feeder.processJob(job,time, noOfThreads);
+				if (saveFusionResults) feeder.saveJob(job,time);
 			});
 		}
 		else
@@ -427,7 +429,7 @@ public class Fusers extends CommonGUI implements Command
 	}
 
 
-	static <IT extends RealType<IT>, LT extends IntegerType<LT>>
+	<IT extends RealType<IT>, LT extends IntegerType<LT>>
 	void cmv_fillInAllCombinations(final JobSpecification fullJobLooksLikeThis, final List<OneCombination<IT,LT>> combinations)
 	{
 		//over all combinations of inputs
@@ -443,7 +445,6 @@ public class Fusers extends CommonGUI implements Command
 		}
 	}
 
-	static
 	String cmv_createFolderName(final OneCombination<?,?> combination, final int numberOfAllPossibleInputs)
 	{
 		final StringBuilder sb = new StringBuilder();
@@ -458,7 +459,7 @@ public class Fusers extends CommonGUI implements Command
 		for (OneCombination<?,?> c : combinations) log.info(c);
 	}
 
-	static public class OneCombination<IT extends RealType<IT>, LT extends IntegerType<LT>>
+	public class OneCombination<IT extends RealType<IT>, LT extends IntegerType<LT>>
 	implements Callable<OneCombination<IT,LT>>
 	{
 		final List<Integer> relevantInputIndices;
@@ -555,11 +556,11 @@ public class Fusers extends CommonGUI implements Command
 		{
 			reInitMe();
 
-			final Img<LT> outImg = feeder.useAlgorithmWithoutUpdatingBoxes();
+			feeder.useAlgorithmWithoutUpdatingBoxes();
 
-			final String outFile = JobSpecification.expandFilenamePattern(outputFilenamePattern,currentTime);
-			feeder.shareLogger().info("Saving file: "+outFile);
-			SimplifiedIO.saveImage(outImg, outFile);
+			if (saveFusionResults)
+				feeder.saveJob( JobSpecification.expandFilenamePattern(outputFilenamePattern,currentTime) );
+
 			return this;
 		}
 

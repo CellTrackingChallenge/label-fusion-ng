@@ -82,20 +82,18 @@ extends JobIO<IT,LT>
 
 
 	public
-	Img<LT> useAlgorithm()
+	void useAlgorithm()
 	{
-		Img<LT> img = null;
-		try { img = useAlgorithm(null); }
+		try { useAlgorithm(null); }
 		catch (InterruptedException e) { /* cannot happen 'cause no MT */ }
-		return img;
 	}
 
 	public
-	Img<LT> useAlgorithm(final int noOfThreads)
+	void useAlgorithm(final int noOfThreads)
 	{
 		final ExecutorService w = Executors.newFixedThreadPool(noOfThreads);
 		try {
-			return useAlgorithm(w);
+			useAlgorithm(w);
 		} catch (InterruptedException e) {
 			throw new RuntimeException("Error in multithreading",e);
 		} finally {
@@ -105,8 +103,8 @@ extends JobIO<IT,LT>
 
 
 	public
-	Img<LT> useAlgorithm(final ExecutorService threadWorkers)
-			throws InterruptedException
+	void useAlgorithm(final ExecutorService threadWorkers)
+	throws InterruptedException
 	{
 		if (algorithm == null)
 			throw new RuntimeException("Cannot work without an algorithm.");
@@ -115,11 +113,11 @@ extends JobIO<IT,LT>
 		algorithm.setWeights(inWeights);
 		algorithm.setThreshold(threshold);
 		calcBoxes(threadWorkers);
-		return algorithm.fuse(inImgs, markerImg);
+		outFusedImg = algorithm.fuse(inImgs, markerImg);
 	}
 
 	public //NB: because of CMV
-	Img<LT> useAlgorithmWithoutUpdatingBoxes()
+	void useAlgorithmWithoutUpdatingBoxes()
 	{
 		if (algorithm == null)
 			throw new RuntimeException("Cannot work without an algorithm.");
@@ -127,7 +125,7 @@ extends JobIO<IT,LT>
 		log.info("calling weighted voting algorithm with threshold="+threshold);
 		algorithm.setWeights(inWeights);
 		algorithm.setThreshold(threshold);
-		return algorithm.fuse(inImgs, markerImg);
+		outFusedImg = algorithm.fuse(inImgs, markerImg);
 	}
 
 
@@ -195,6 +193,7 @@ extends JobIO<IT,LT>
 	}
 
 
+	@Deprecated(since = "processJob(JobSpecification) came to replace this one", forRemoval = true)
 	public
 	void processJob(final String... args)
 	{
@@ -202,10 +201,8 @@ extends JobIO<IT,LT>
 			throw new RuntimeException("Cannot work without an algorithm.");
 
 		super.loadJob(args);
-		final Img<LT> outImg = useAlgorithm();
-
-		log.info("Saving file: "+args[args.length-1]);
-		SimplifiedIO.saveImage(outImg, args[args.length-1]);
+		useAlgorithm();
+		//saveJob(args[args.length-1]);
 	}
 
 
@@ -237,17 +234,32 @@ extends JobIO<IT,LT>
 			throw new RuntimeException("Cannot work without an algorithm.");
 		//NB: expand now... and fail possibly soon before possibly lengthy loading of images
 		final String outFile = JobSpecification.expandFilenamePattern(job.outputPattern,time);
-		Img<LT> outImg;
 
 		if (workerThreads != null) {
 			super.loadJob(job.instantiateForTime(time), workerThreads);
-			outImg = useAlgorithm(workerThreads);
+			useAlgorithm(workerThreads);
 		} else {
 			super.loadJob(job,time);
-			outImg = useAlgorithm(null);
+			useAlgorithm(null);
 		}
+	}
 
+	private Img<LT> outFusedImg;
+
+	public Img<LT> getOutFusedImg()
+	{ return outFusedImg; }
+
+	public
+	void saveJob(final JobSpecification job, final int time)
+	{
+		final String outFile = JobSpecification.expandFilenamePattern(job.outputPattern,time);
+		saveJob( outFile );
+	}
+
+	public
+	void saveJob(final String outFile)
+	{
 		log.info("Saving file: "+outFile);
-		SimplifiedIO.saveImage(outImg, outFile);
+		SimplifiedIO.saveImage(outFusedImg, outFile);
 	}
 }
