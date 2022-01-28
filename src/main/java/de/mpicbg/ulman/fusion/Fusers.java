@@ -664,10 +664,10 @@ public class Fusers extends CommonGUI implements Command
 		myself.mergeModel="BICv2 with FlatVoting, SingleMaskFailSafe and CollisionResolver";
 		myself.mergeModelChanged();
 
-		if (args.length != 5 && args.length != 6)
+		if (args.length != 5 && args.length != 6 && args.length != 7)
 		{
 			System.out.println("In this regime, it is always using the \"BICv2 with FlatVoting, SingleMaskFailSafe and CollisionResolver\"");
-			System.out.println("Usage: pathToJobFile threshold pathToOutputImages timePointsRangeSpecification numberOfThreads [CMV]\n");
+			System.out.println("Usage: pathToJobFile threshold pathToOutputImages timePointsRangeSpecification numberOfThreads [CMV] [SEGfolder]\n");
 			System.out.println(myself.fileInfoA);
 			System.out.println(myself.fileInfoB);
 			System.out.println(myself.fileInfoC);
@@ -675,17 +675,30 @@ public class Fusers extends CommonGUI implements Command
 			System.out.println(myself.fileInfoD);
 			System.out.println("timePointsRangeSpecification can be, e.g., 1-9,23,25");
 			System.out.println("Set numberOfThreads to 1 to enforce serial (single-threaded) processing.");
-			System.out.println("The CMV is optional param which enables the CMV combinatorial search...");
+			System.out.println("The CMV is optional param which enables the CMV combinatorial search.");
+			System.out.println("The SEGfolder is optional param which:");
+			System.out.println("  - enables SEG scoring of individual and overall time points,");
+			System.out.println("  - disables saving of the output images (because one likely wants");
+			System.out.println("    to run again for the full timelapse using the best combination).");
 			return;
 		}
 
-		myself.doCMV = args.length == 6;
+		myself.doCMV =  args.length >= 6  &&  (args[5].startsWith("cmv") || args[5].startsWith("CMV"));
 		myself.log = myself.doCMV ? new SimpleDiskSavingLogger() : new SimpleRestrictedLogger();
 		myself.filePath = new File(args[0]);
 		myself.mergeThreshold = Float.parseFloat(args[1]);
 		myself.outputPath = new File(args[2]);
 		myself.fileIdxStr = args[3];
 		myself.noOfThreads = Integer.parseInt(args[4]);
+		if (args.length == 6 && !myself.doCMV) {
+			myself.SEGfolder = args[5];
+			myself.saveFusionResults = false;
+		}
+		else if (args.length == 7) {
+			myself.SEGfolder = args[6];
+			myself.saveFusionResults = false;
+		}
+
 		myself.worker(false); //false -> run without GUI
 	}
 }
