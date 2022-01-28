@@ -60,8 +60,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
-import de.mpicbg.ulman.fusion.util.SegGtImageLoader;
 import de.mpicbg.ulman.fusion.ng.backbones.JobIO;
+import de.mpicbg.ulman.fusion.util.SegGtImageLoader;
+import de.mpicbg.ulman.fusion.util.SegGtCumulativeScore;
 
 import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionFeeder;
 import de.mpicbg.ulman.fusion.ng.BIC;
@@ -379,6 +380,8 @@ public class Fusers extends CommonGUI implements Command
 
 		if (!doCMV)
 		{
+			final SegGtCumulativeScore runningSEGscore = new SegGtCumulativeScore();
+
 			//NB: shortcut
 			final WeightedVotingFusionFeeder<IT,LT> feeder = combinations.get(0).feeder;
 			iterateTimePoints(fileIdxList,useGui,time -> {
@@ -389,9 +392,15 @@ public class Fusers extends CommonGUI implements Command
 				if (SEGevaluator != null && SEGevaluator.managedToLoadImageForTimepoint(time))
 				{
 					SEGevaluator.calcBoxes();
-					feeder.scoreJob(SEGevaluator);
+					feeder.scoreJob(SEGevaluator, runningSEGscore);
 				}
 			});
+
+			if (SEGevaluator != null)
+				log.info("Done, final avg SEG = "+runningSEGscore.getOverallScore()+" obtained over "
+						+runningSEGscore.getNumberOfAllCases()+" segments");
+			else
+				log.info("Done fusion");
 		}
 		else
 		{
@@ -449,8 +458,11 @@ public class Fusers extends CommonGUI implements Command
 					throw new RuntimeException("multithreading error",e);
 				}
 			});
-			log.info("Shutting down thread pool..."); //NB: to show/debug the code always got here
+			log.info("Done all fusions, shutting down thread pool..."); //NB: to show/debug the code always got here
 			cmvers.shutdownNow();
+
+			if (SEGevaluator != null)
+				for (OneCombination<IT,LT> c : combinations) c.reportSEG();
 		}
 	}
 
@@ -535,6 +547,7 @@ public class Fusers extends CommonGUI implements Command
 		WeightedVotingFusionFeeder<IT,LT> refLoadedImages;
 		boolean iAmTheRefence = false;
 		SegGtImageLoader<LT> SEGevaluator;
+		SegGtCumulativeScore runningSEGscore = new SegGtCumulativeScore();
 
 		private
 		void reInitMe()
@@ -589,9 +602,15 @@ public class Fusers extends CommonGUI implements Command
 				feeder.saveJob( JobSpecification.expandFilenamePattern(outputFilenamePattern,currentTime) );
 
 			if (SEGevaluator != null && SEGevaluator.lastLoadedTimepoint == currentTime)
-				feeder.scoreJob(SEGevaluator);
+				feeder.scoreJob(SEGevaluator, runningSEGscore);
 
 			return this;
+		}
+
+		public void reportSEG()
+		{
+			feeder.shareLogger().info("Final avg SEG = "+runningSEGscore.getOverallScore()+" obtained over "
+					+runningSEGscore.getNumberOfAllCases()+" segments");
 		}
 
 		// ----------- saving output images -----------

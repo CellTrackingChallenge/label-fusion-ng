@@ -28,8 +28,15 @@
 package de.mpicbg.ulman.fusion.ng.backbones;
 
 import de.mpicbg.ulman.fusion.ng.AbstractWeightedVotingRoisFusionAlgorithm;
+import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
+import de.mpicbg.ulman.fusion.util.SegGtCumulativeScore;
 import de.mpicbg.ulman.fusion.util.SegGtImageLoader;
+import net.celltrackingchallenge.measures.util.Jaccard;
+
+import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
+import net.imglib2.Interval;
+import net.imglib2.view.Views;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
 import de.mpicbg.ulman.fusion.JobSpecification;
@@ -37,6 +44,7 @@ import de.mpicbg.ulman.fusion.JobSpecification;
 import org.scijava.log.Logger;
 import sc.fiji.simplifiedio.SimplifiedIO;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.ExecutorService;
@@ -265,8 +273,59 @@ extends JobIO<IT,LT>
 	}
 
 	public
-	void scoreJob(final SegGtImageLoader<LT> SEGevaluator)
+	void scoreJob(final SegGtImageLoader<LT> SEGloader, final SegGtCumulativeScore score)
 	{
 		log.info("Doing SEG score now...");
+		score.startSection();
+
+		//shortcuts:
+		final RandomAccessibleInterval<LT> gtImg = SEGloader.lastLoadedImage;
+		final Map<Double,long[]> gtBoxes = SEGloader.getLastCalculatedBoxes();
+		//
+		final RandomAccessibleInterval<LT> resImg = SEGloader.lastLoadedIs2D ?
+				Views.hyperSlice(outFusedImg, 2, SEGloader.lastLoaded2DSlice) : outFusedImg;
+
+		//check res and gt images are of the same size/dimensionality
+		if (!Arrays.equals(gtImg.minAsLongArray(), resImg.minAsLongArray())
+			|| !Arrays.equals(gtImg.maxAsLongArray(), resImg.maxAsLongArray()))
+		{
+			log.warn("...skipping because of image sizes mismatch.");
+			return;
+		}
+
+		final Map<Double,long[]> resBoxes = AbstractWeightedVotingRoisFusionAlgorithm.findBoxes(
+				resImg,log,"fusion result");
+
+		for (Map.Entry<Double,long[]> gtBox : gtBoxes.entrySet())
+		{
+			final double gtLabel = gtBox.getKey();
+			final Interval gtInterval
+					= AbstractWeightedVotingRoisFusionAlgorithm.createInterval(gtBox.getValue());
+
+			final double resLabel = extractor.findMatchingLabel(
+					Views.interval(resImg, gtInterval),
+					Views.interval(gtImg,  gtInterval),
+					(int)gtLabel);
+			log.trace("finished the searching, for GT "+gtLabel+" found fusion "+resLabel);
+
+			if (resLabel > 0)
+			{
+				final long[] resBox = resBoxes.get(resLabel);
+				AbstractWeightedVotingRoisFusionAlgorithm.unionBoxes(gtBox.getValue(),resBox);
+
+				final Interval i = AbstractWeightedVotingRoisFusionAlgorithm.createInterval(resBox);
+				double seg = Jaccard.Jaccard(Views.interval(resImg,i), resLabel,
+						Views.interval(gtImg,i), gtLabel);
+				score.addCase(seg);
+				log.trace("...with seg = "+seg);
+			}
+			else score.addCase(0.0); //nothing found for this SEG instance
+		}
+
+		log.info("...for this time point only: avg SEG = "+score.getSectionScore()+" obtained over "
+				+score.getNumberOfSectionCases()+" segments");
 	}
+
+	final MajorityOverlapBasedLabelExtractor<LT,LT,?> extractor
+			= new MajorityOverlapBasedLabelExtractor<>();
 }
