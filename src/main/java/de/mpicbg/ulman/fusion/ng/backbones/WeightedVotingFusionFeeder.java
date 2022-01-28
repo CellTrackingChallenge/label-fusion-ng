@@ -202,7 +202,7 @@ extends JobIO<IT,LT>
 	}
 
 
-	@Deprecated(since = "processJob(JobSpecification) came to replace this one", forRemoval = true)
+	@Deprecated //waits for Fiji w 1.9+ JVM (since = "processJob(JobSpecification) came to replace this one", forRemoval = true)
 	public
 	void processJob(final String... args)
 	{
