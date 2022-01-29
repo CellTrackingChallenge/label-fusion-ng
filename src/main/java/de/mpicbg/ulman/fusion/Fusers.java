@@ -42,6 +42,7 @@ import org.scijava.log.Logger;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleDiskSavingLogger;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
 
+import java.nio.file.InvalidPathException;
 import java.util.Map;
 import java.util.Vector;
 import java.util.List;
@@ -374,9 +375,16 @@ public class Fusers extends CommonGUI implements Command
 		}
 
 		// ------------ action per time point ------------
-		final SegGtImageLoader<LT> SEGevaluator
-			= SEGfolder.length() > 0 && !SEGfolder.startsWith("leave empty") ?
-				new SegGtImageLoader<>(SEGfolder,log) : null;
+		final SegGtImageLoader<LT> SEGevaluator;
+		try {
+			SEGevaluator = SEGfolder.length() > 0 && !SEGfolder.startsWith("leave empty") ?
+					new SegGtImageLoader<>(SEGfolder, log) : null;
+		}
+		catch (InvalidPathException e) {
+			log.error("SEG GT folder is problematic: "+e.getMessage());
+			if (useGui) uiService.showDialog("SEG GT folder is problematic: "+e.getMessage());
+			return;
+		}
 
 		if (!doCMV)
 		{

@@ -3,7 +3,7 @@ package de.mpicbg.ulman.fusion.util;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.IntegerType;
 import sc.fiji.simplifiedio.SimplifiedIO;
-
+import sc.fiji.simplifiedio.SimplifiedIOException;
 import java.io.IOException;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Files;
@@ -81,8 +81,9 @@ public class SegGtImageLoader<LT extends IntegerType<LT>>
 				return true;
 			}
 		}
-		catch (IOException e) {
-			throw new RuntimeException("Error loading SEG reference image for timepoint "+timepoint,e);
+		catch (IOException | SimplifiedIOException e) {
+			throw new RuntimeException("Error loading SEG reference image for timepoint "
+					+timepoint+": "+e.getMessage(),e);
 		}
 
 		log.info("No SEG GT loaded for TP "+lastLoadedTimepoint);

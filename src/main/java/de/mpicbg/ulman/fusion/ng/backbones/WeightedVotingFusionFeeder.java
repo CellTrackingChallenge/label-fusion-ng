@@ -322,7 +322,8 @@ extends JobIO<IT,LT>
 			else score.addCase(0.0); //nothing found for this SEG instance
 		}
 
-		log.info("...for this time point only: avg SEG = "+score.getSectionScore()+" obtained over "
+		log.info("...for this time point "+SEGloader.lastLoadedTimepoint
+				+" only: avg SEG = "+score.getSectionScore()+" obtained over "
 				+score.getNumberOfSectionCases()+" segments");
 	}
 
