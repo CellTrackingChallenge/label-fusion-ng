@@ -440,8 +440,10 @@ public class Fusers extends CommonGUI implements Command
 			final ExecutorService cmvers = Executors.newFixedThreadPool(noOfThreads);
 			iterateTimePoints(fileIdxList,useGui,time -> {
 				try {
-					job.reportJobForTime(time,log);
-					for (OneCombination<IT,LT> c : combinations) c.currentTime = time;
+					for (OneCombination<IT,LT> c : combinations) {
+						c.currentTime = time;
+						job.reportJobForTimeForCombination(time, c, c.feeder.shareLogger());
+					}
 
 					//processJob() is loadJob(), calcBoxes() and fuse() (both are inside useAlgorithm())
 					fullCombination.feeder.loadJob( job.instantiateForTime(time), cmvers);
@@ -640,7 +642,6 @@ public class Fusers extends CommonGUI implements Command
 
 			outputFilenamePattern = logFolder + File.separator
 					+ (sepPos > -1 ? outputPattern.substring(sepPos+1) : outputPattern);
-			feeder.shareLogger().info("new output pattern: "+outputFilenamePattern);
 		}
 
 		private void makeSureFolderExists(final String folderName) throws IOException

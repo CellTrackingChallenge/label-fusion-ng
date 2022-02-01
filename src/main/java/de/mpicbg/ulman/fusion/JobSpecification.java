@@ -194,6 +194,22 @@ public class JobSpecification
 		log.info(i+": "+expandFilenamePattern(outputPattern,timepoint));
 	}
 
+	public void reportJobForTimeForCombination(final int timepoint, final Fusers.OneCombination<?,?> combination, final Logger log)
+	{
+		log.info("new job:");
+		int i=0, pairIdx=0;
+		for (InputPair p : inputs) {
+			if (combination.relevantInputIndices.contains(pairIdx)) {
+				log.info(i+": "+expandFilenamePattern(p.filePathPattern,timepoint)+"  "+p.weight);
+				++i;
+			}
+			++pairIdx;
+		}
+		log.info(i+": "+expandFilenamePattern(markerPattern,timepoint)); ++i;
+		log.info(i+": "+combination.threshold); ++i;
+		log.info(i+": "+expandFilenamePattern(combination.outputFilenamePattern,timepoint));
+	}
+
 	// ============= building =============
 	static public Builder builder() { return new Builder(); }
 
