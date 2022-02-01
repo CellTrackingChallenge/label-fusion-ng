@@ -312,6 +312,14 @@ public class Fusers extends CommonGUI implements Command
 		if (doCMV) {
 			combinations = new LinkedList<>();
 			cmv_fillInAllCombinations(job,combinations);
+
+			//prepare output folders
+			try {
+				for (OneCombination<IT,LT> c : combinations) c.setupOutputFolder(job.outputPattern);
+			} catch (IOException e) {
+				log.error(e.getMessage());
+				throw new RuntimeException("CMV: likely an error with output folders...",e);
+			}
 		} else {
 			combinations = new ArrayList<>(1);
 			combinations.add( new OneCombination<>((1 << job.numberOfFusionInputs)-1,job.votingThreshold, job.numberOfFusionInputs) );
@@ -428,14 +436,6 @@ public class Fusers extends CommonGUI implements Command
 			//
 			//prevent the 'refLoadedImages' to replace its data with empty initialized content, see OneCombination.call()
 			fullCombination.iAmTheRefence = true;
-
-			//prepare output folders
-			try {
-				for (OneCombination<IT,LT> c : combinations) c.setupOutputFolder(job.outputPattern);
-			} catch (IOException e) {
-				log.error(e.getMessage());
-				throw new RuntimeException("CMV: likely an error with output folders...",e);
-			}
 
 			final ExecutorService cmvers = Executors.newFixedThreadPool(noOfThreads);
 			iterateTimePoints(fileIdxList,useGui,time -> {
@@ -651,7 +651,7 @@ public class Fusers extends CommonGUI implements Command
 				if (!Files.isDirectory(fPath))
 					throw new IOException(folderName+" seems to exist but it is not a directory!");
 			} else {
-				feeder.shareLogger().info("Creating output folder: "+folderName);
+				log.info("Creating output folder: "+folderName);
 				Files.createDirectory(fPath);
 			}
 		}
