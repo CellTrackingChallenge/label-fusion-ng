@@ -120,17 +120,17 @@ implements LabelInsertor<LT,ET>
 				if (label == INTERSECTION)
 				{
 					a.setZero();
-					//System.out.println("cleaning: collision intersection");
+					log.trace("cleaning: collision intersection");
 				}
 				else if (mColliding.contains(label))
 				{
 					a.setZero();
-					//System.out.println("cleaning: rest of a colliding marker");
+					log.trace("cleaning: rest of a colliding marker");
 				}
 				else if (removeMarkersAtBoundary && mBordering.contains(label))
 				{
 					a.setZero();
-					//System.out.println("cleaning: marker at boundary");
+					log.trace("cleaning: marker at boundary");
 				}
 			} );
 

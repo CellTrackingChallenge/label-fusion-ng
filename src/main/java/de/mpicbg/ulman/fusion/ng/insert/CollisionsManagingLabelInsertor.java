@@ -99,7 +99,7 @@ implements LabelInsertor<LT,ET>
 			p.claimingLabels.add( claimer );
 			//TODO remove debug test
 			if (p.x != pos[0] || p.y != pos[1] || p.z != pos[2])
-				System.out.println("WARNING: pxInINTERSECTION map refers to wrong PxCoord!");
+				log.warn("WARNING: pxInINTERSECTION map refers to wrong PxCoord!");
 			return;
 		}
 
@@ -110,7 +110,7 @@ implements LabelInsertor<LT,ET>
 		pxInINTERSECTION_map_RA.get().setInt( pxInINTERSECTION.size() );
 		//
 		if (pxInINTERSECTION.size() == pxInINTERSECTION_map.firstElement().getMaxValue())
-			System.out.println("WARNING: pxInINTERSECTION map cannot hold more PxCoords!");
+			log.warn("WARNING: pxInINTERSECTION map cannot hold more PxCoords!");
 	}
 
 	List<PxCoord> pxInINTERSECTION;
@@ -218,7 +218,7 @@ implements LabelInsertor<LT,ET>
 		while (pxInINTERSECTION.size() > 0 && pxInINTERSECTION.size() != lastSize && --safetyCounter > 0)
 		{
 			//debug:
-			//System.out.println(cnt+": Eroding collision zone of size "+pxInINTERSECTION.size());
+			//log.trace(cnt+": Eroding collision zone of size "+pxInINTERSECTION.size());
 
 			lastSize = pxInINTERSECTION.size();
 			erodeCollisionRegion(oRA, posMax);
@@ -247,7 +247,7 @@ implements LabelInsertor<LT,ET>
 		}
 
 		if (pxInINTERSECTION.size() > 0)
-			System.out.println("WARNING: Collisions resolving failed on "+pxInINTERSECTION.size()+" voxels");
+			log.warn("WARNING: Collisions resolving failed on "+pxInINTERSECTION.size()+" voxels");
 
 		return collHistogram;
 	}
