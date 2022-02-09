@@ -34,6 +34,9 @@ import net.imglib2.loops.LoopBuilder;
 import java.util.Vector;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 
+import org.scijava.log.Logger;
+import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
+
 public class WeightedVotingLabelFuser<IT extends RealType<IT>, ET extends RealType<ET>>
 implements LabelFuser<IT,ET>
 {
@@ -78,4 +81,10 @@ implements LabelFuser<IT,ET>
 		LoopBuilder.setImages(outImg).forEachPixel(
 			(a) -> a.setReal( a.getRealFloat() >= minAcceptableWeight ? 1 : 0 ) );
 	}
+
+	// ---------------- logging ----------------
+	Logger log = new SimpleRestrictedLogger();
+	@Override
+	public void useNowThisLog(final Logger log)
+	{ this.log = log; }
 }

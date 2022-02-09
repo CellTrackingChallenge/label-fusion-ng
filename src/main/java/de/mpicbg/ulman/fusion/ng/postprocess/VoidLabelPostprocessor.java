@@ -31,6 +31,9 @@ import net.imglib2.Interval;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.IntegerType;
 
+import org.scijava.log.Logger;
+import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
+
 public class VoidLabelPostprocessor<LT extends IntegerType<LT>>
 implements LabelPostprocessor<LT>
 {
@@ -41,4 +44,10 @@ implements LabelPostprocessor<LT>
 	                  final int markerValue,
 	                  final Interval ROI)
 	{}
+
+	// ---------------- logging ----------------
+	Logger log = new SimpleRestrictedLogger();
+	@Override
+	public void useNowThisLog(final Logger log)
+	{ this.log = log; }
 }

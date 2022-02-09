@@ -35,6 +35,9 @@ import java.util.Vector;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 import net.celltrackingchallenge.measures.util.Jaccard;
 
+import org.scijava.log.Logger;
+import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
+
 public class SIMPLELabelFuser<IT extends RealType<IT>, ET extends RealType<ET>>
 implements LabelFuser<IT,ET>
 {
@@ -72,8 +75,7 @@ implements LabelFuser<IT,ET>
 		//   setting their respective inImgs[i] to null
 
 		//DEBUG
-		System.out.print("it: 0 ");
-		reportCurrentWeights(inImgs,inWeights);
+		reportCurrentWeights("it: 0 ",inImgs,inWeights);
 
 		//make sure the majorityFuser is available
 		if (majorityFuser == null) majorityFuser = new WeightedVotingLabelFuser<>();
@@ -104,8 +106,8 @@ implements LabelFuser<IT,ET>
 			}
 
 			//DEBUG
-			System.out.print("it: "+iterationCnt+", thres: "+currentQualityThreshold+" ");
-			reportCurrentWeights(inImgs,myWeights);
+			reportCurrentWeights("it: "+iterationCnt+", thres: "+currentQualityThreshold+" ",
+					inImgs,myWeights);
 
 			//create a new candidate
 			LoopBuilder.setImages(outImg).forEachPixel(SetZero::setZero);
@@ -146,12 +148,19 @@ implements LabelFuser<IT,ET>
 
 
 	private
-	void reportCurrentWeights(final Vector<RandomAccessibleInterval<IT>> inImgs,
+	void reportCurrentWeights(final String preMsg,
+	                          final Vector<RandomAccessibleInterval<IT>> inImgs,
 	                          final Vector<Double> inWeights)
 	{
-		System.out.print("weights: ");
+		final StringBuilder sb = new StringBuilder(preMsg+"weights: ");
 		for (int i=0; i < inImgs.size(); ++i)
-			System.out.printf("%+.3f\t",inImgs.get(i) != null ? inWeights.get(i).floatValue() : -1.f);
-		System.out.println();
+			sb.append(String.format("%+.3f\t",inImgs.get(i) != null ? inWeights.get(i).floatValue() : -1.f));
+		log.info(sb.toString());
 	}
+
+	// ---------------- logging ----------------
+	Logger log = new SimpleRestrictedLogger();
+	@Override
+	public void useNowThisLog(final Logger log)
+	{ this.log = log; }
 }

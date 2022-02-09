@@ -30,6 +30,7 @@ package de.mpicbg.ulman.fusion.ng.postprocess;
 import net.imglib2.Interval;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.IntegerType;
+import org.scijava.log.Logger;
 
 public interface LabelPostprocessor<LT extends IntegerType<LT>>
 {
@@ -48,4 +49,7 @@ public interface LabelPostprocessor<LT extends IntegerType<LT>>
 	{
 		processLabel(img,markerValue,img);
 	}
+
+	// ---------------- logging ----------------
+	void useNowThisLog(final Logger log);
 }

@@ -284,7 +284,6 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 							Views.interval(inImgs.get(i), mInterval),
 							Views.interval(markerImg,     mInterval),
 							curMarker);
-					//System.out.println(i+". image: found label "+matchingLabel);
 					log.trace("finished the searching, found "+matchingLabel);
 
 					if (matchingLabel > 0)
