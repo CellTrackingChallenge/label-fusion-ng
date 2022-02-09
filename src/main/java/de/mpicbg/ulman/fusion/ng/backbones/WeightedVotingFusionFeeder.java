@@ -28,7 +28,15 @@
 package de.mpicbg.ulman.fusion.ng.backbones;
 
 import de.mpicbg.ulman.fusion.ng.AbstractWeightedVotingRoisFusionAlgorithm;
+import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
+import de.mpicbg.ulman.fusion.util.SegGtCumulativeScore;
+import de.mpicbg.ulman.fusion.util.SegGtImageLoader;
+import net.celltrackingchallenge.measures.util.Jaccard;
+
+import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
+import net.imglib2.Interval;
+import net.imglib2.view.Views;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
 import de.mpicbg.ulman.fusion.JobSpecification;
@@ -36,6 +44,7 @@ import de.mpicbg.ulman.fusion.JobSpecification;
 import org.scijava.log.Logger;
 import sc.fiji.simplifiedio.SimplifiedIO;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.ExecutorService;
@@ -82,20 +91,18 @@ extends JobIO<IT,LT>
 
 
 	public
-	Img<LT> useAlgorithm()
+	void useAlgorithm()
 	{
-		Img<LT> img = null;
-		try { img = useAlgorithm(null); }
+		try { useAlgorithm(null); }
 		catch (InterruptedException e) { /* cannot happen 'cause no MT */ }
-		return img;
 	}
 
 	public
-	Img<LT> useAlgorithm(final int noOfThreads)
+	void useAlgorithm(final int noOfThreads)
 	{
 		final ExecutorService w = Executors.newFixedThreadPool(noOfThreads);
 		try {
-			return useAlgorithm(w);
+			useAlgorithm(w);
 		} catch (InterruptedException e) {
 			throw new RuntimeException("Error in multithreading",e);
 		} finally {
@@ -105,8 +112,8 @@ extends JobIO<IT,LT>
 
 
 	public
-	Img<LT> useAlgorithm(final ExecutorService threadWorkers)
-			throws InterruptedException
+	void useAlgorithm(final ExecutorService threadWorkers)
+	throws InterruptedException
 	{
 		if (algorithm == null)
 			throw new RuntimeException("Cannot work without an algorithm.");
@@ -115,11 +122,11 @@ extends JobIO<IT,LT>
 		algorithm.setWeights(inWeights);
 		algorithm.setThreshold(threshold);
 		calcBoxes(threadWorkers);
-		return algorithm.fuse(inImgs, markerImg);
+		outFusedImg = algorithm.fuse(inImgs, markerImg);
 	}
 
 	public //NB: because of CMV
-	Img<LT> useAlgorithmWithoutUpdatingBoxes()
+	void useAlgorithmWithoutUpdatingBoxes()
 	{
 		if (algorithm == null)
 			throw new RuntimeException("Cannot work without an algorithm.");
@@ -127,7 +134,7 @@ extends JobIO<IT,LT>
 		log.info("calling weighted voting algorithm with threshold="+threshold);
 		algorithm.setWeights(inWeights);
 		algorithm.setThreshold(threshold);
-		return algorithm.fuse(inImgs, markerImg);
+		outFusedImg = algorithm.fuse(inImgs, markerImg);
 	}
 
 
@@ -195,6 +202,7 @@ extends JobIO<IT,LT>
 	}
 
 
+	@Deprecated //waits for Fiji w 1.9+ JVM (since = "processJob(JobSpecification) came to replace this one", forRemoval = true)
 	public
 	void processJob(final String... args)
 	{
@@ -202,10 +210,8 @@ extends JobIO<IT,LT>
 			throw new RuntimeException("Cannot work without an algorithm.");
 
 		super.loadJob(args);
-		final Img<LT> outImg = useAlgorithm();
-
-		log.info("Saving file: "+args[args.length-1]);
-		SimplifiedIO.saveImage(outImg, args[args.length-1]);
+		useAlgorithm();
+		//saveJob(args[args.length-1]);
 	}
 
 
@@ -237,17 +243,90 @@ extends JobIO<IT,LT>
 			throw new RuntimeException("Cannot work without an algorithm.");
 		//NB: expand now... and fail possibly soon before possibly lengthy loading of images
 		final String outFile = JobSpecification.expandFilenamePattern(job.outputPattern,time);
-		Img<LT> outImg;
 
 		if (workerThreads != null) {
 			super.loadJob(job.instantiateForTime(time), workerThreads);
-			outImg = useAlgorithm(workerThreads);
+			useAlgorithm(workerThreads);
 		} else {
 			super.loadJob(job,time);
-			outImg = useAlgorithm(null);
+			useAlgorithm(null);
+		}
+	}
+
+	private Img<LT> outFusedImg;
+
+	public Img<LT> getOutFusedImg()
+	{ return outFusedImg; }
+
+	public
+	void saveJob(final JobSpecification job, final int time)
+	{
+		final String outFile = JobSpecification.expandFilenamePattern(job.outputPattern,time);
+		saveJob( outFile );
+	}
+
+	public
+	void saveJob(final String outFile)
+	{
+		log.info("Saving file: "+outFile);
+		SimplifiedIO.saveImage(outFusedImg, outFile);
+	}
+
+	public
+	void scoreJob(final SegGtImageLoader<LT> SEGloader, final SegGtCumulativeScore score)
+	{
+		log.info("Doing SEG score now...");
+		score.startSection();
+
+		//shortcuts:
+		final RandomAccessibleInterval<LT> gtImg = SEGloader.lastLoadedImage;
+		final Map<Double,long[]> gtBoxes = SEGloader.getLastCalculatedBoxes();
+		//
+		final RandomAccessibleInterval<LT> resImg = SEGloader.lastLoadedIs2D ?
+				Views.hyperSlice(outFusedImg, 2, SEGloader.lastLoaded2DSlice) : outFusedImg;
+
+		//check res and gt images are of the same size/dimensionality
+		if (!Arrays.equals(gtImg.minAsLongArray(), resImg.minAsLongArray())
+			|| !Arrays.equals(gtImg.maxAsLongArray(), resImg.maxAsLongArray()))
+		{
+			log.warn("...skipping because of image sizes mismatch.");
+			return;
 		}
 
-		log.info("Saving file: "+outFile);
-		SimplifiedIO.saveImage(outImg, outFile);
+		final Map<Double,long[]> resBoxes = AbstractWeightedVotingRoisFusionAlgorithm.findBoxes(
+				resImg,log,"fusion result");
+
+		for (Map.Entry<Double,long[]> gtBox : gtBoxes.entrySet())
+		{
+			final double gtLabel = gtBox.getKey();
+			final Interval gtInterval
+					= AbstractWeightedVotingRoisFusionAlgorithm.createInterval(gtBox.getValue());
+
+			final double resLabel = extractor.findMatchingLabel(
+					Views.interval(resImg, gtInterval),
+					Views.interval(gtImg,  gtInterval),
+					(int)gtLabel);
+			log.trace("finished the searching, for GT "+gtLabel+" found fusion "+resLabel);
+
+			if (resLabel > 0)
+			{
+				final long[] resBox = resBoxes.get(resLabel);
+				AbstractWeightedVotingRoisFusionAlgorithm.unionBoxes(gtBox.getValue(),resBox);
+
+				final Interval i = AbstractWeightedVotingRoisFusionAlgorithm.createInterval(resBox);
+				double seg = Jaccard.Jaccard(Views.interval(resImg,i), resLabel,
+						Views.interval(gtImg,i), gtLabel);
+				score.addCase(seg);
+				log.trace("...with seg = "+seg);
+			}
+			else score.addCase(0.0); //nothing found for this SEG instance
+		}
+
+		log.info("...for this time point "+SEGloader.lastLoadedTimepoint
+				+" only: avg SEG = "+score.getSectionScore()+" obtained over "
+				+score.getNumberOfSectionCases()+" segments");
 	}
+
+	final MajorityOverlapBasedLabelExtractor<LT,LT,?> extractor
+			= new MajorityOverlapBasedLabelExtractor<>();
 }

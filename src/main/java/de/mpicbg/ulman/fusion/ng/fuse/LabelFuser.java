@@ -33,6 +33,7 @@ import net.imglib2.type.numeric.RealType;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 import net.imglib2.Interval;
 import net.imglib2.view.Views;
+import org.scijava.log.Logger;
 
 /**
  * Fuses selected labels from input images (of voxel type IT -- Input Type)
@@ -94,4 +95,7 @@ public interface LabelFuser<IT extends RealType<IT>, ET extends RealType<ET>>
 
 		fuseMatchingLabels(inImgsROI,inLabels,le,inWeights,Views.interval(outImg,fuseROI));
 	}
+
+	// ---------------- logging ----------------
+	void useNowThisLog(final Logger log);
 }

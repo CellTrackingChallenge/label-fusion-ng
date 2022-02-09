@@ -37,6 +37,9 @@ import net.imglib2.type.numeric.IntegerType;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import org.scijava.log.Logger;
+import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
+
 public class MajorityOverlapBasedLabelExtractor<IT extends RealType<IT>, LT extends IntegerType<LT>, ET extends RealType<ET>>
 implements LabelExtractor<IT,LT,ET>
 {
@@ -178,4 +181,10 @@ implements LabelExtractor<IT,LT,ET>
 
 		return size;
 	}
+
+	// ---------------- logging ----------------
+	Logger log = new SimpleRestrictedLogger();
+	@Override
+	public void useNowThisLog(final Logger log)
+	{ this.log = log; }
 }

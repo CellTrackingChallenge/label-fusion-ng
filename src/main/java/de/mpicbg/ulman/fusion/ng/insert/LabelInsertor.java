@@ -31,6 +31,7 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
 import java.util.HashSet;
+import org.scijava.log.Logger;
 
 /**
  * Inserts the labels (into image of voxel types LT -- Label Type) from (possibly a working)
@@ -91,4 +92,7 @@ public interface LabelInsertor<LT extends IntegerType<LT>, ET extends RealType<E
 	 * allows to read what is that special value.
 	 */
 	int getValueOfCollisionPixels();
+
+	// ---------------- logging ----------------
+	void useNowThisLog(final Logger log);
 }

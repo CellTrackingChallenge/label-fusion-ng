@@ -390,17 +390,7 @@ extends JobIO<IT,LT>
 				{
 					//found a new marker, determine its size and the AABB it spans
 					MajorityOverlapBasedLabelExtractor.findAABB(mCursor, minBound,maxBound);
-/*
-					//report detected markers just for debug
-					System.out.print("marker "+mCursor.get().getInteger()+": lower corner: (");
-					for (int d=0; d < minBound.length-1; ++d)
-						System.out.print(minBound[d]+",");
-					System.out.println(minBound[minBound.length-1]+")");
-					System.out.print("marker "+mCursor.get().getInteger()+": upper corner: (");
-					for (int d=0; d < maxBound.length-1; ++d)
-						System.out.print(maxBound[d]+",");
-					System.out.println(maxBound[maxBound.length-1]+")");
-*/
+
 					//does it pay off to fill caches?
 					if (I > 1)
 					{
@@ -443,7 +433,7 @@ extends JobIO<IT,LT>
 					Views.interval(inImgs.get(i), minBound,maxBound),
 					Views.interval(markerImg,     minBound,maxBound),
 					curMarker);
-			//System.out.println(i+". image: found label "+matchingLabel);
+			log.warn(i+". image: found label "+matchingLabel);
 
 			if (matchingLabel > 0)
 			{

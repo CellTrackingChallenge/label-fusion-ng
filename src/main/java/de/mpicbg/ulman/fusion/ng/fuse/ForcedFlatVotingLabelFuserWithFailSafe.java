@@ -61,7 +61,7 @@ implements LabelFuser<IT,ET>
 	{
 		//prepare aux flat weights
 		if (flatWeightsCache.size() != inWeights.size())
-			System.out.println("FLAT weights: adjusting flat weights arrays (from "
+			log.info("FLAT weights: adjusting flat weights arrays (from "
 					+flatWeightsCache.size()+" to "+inWeights.size()+")");
 		//
 		while (flatWeightsCache.size() < inWeights.size()) flatWeightsCache.add(1.0);
@@ -77,8 +77,8 @@ implements LabelFuser<IT,ET>
 
 		if (isEmpty)
 		{
-			System.out.print("FSed ");
-			FailSafeInsertor.clearAndInsertBestWeightMarker(inImgs,inLabels, le, inWeights,outImg);
+			int idx = FailSafeInsertor.clearAndInsertBestWeightMarker(inImgs,inLabels, le, inWeights,outImg);
+			log.info("the following marker FSed "+(idx == -1 ? "failed: " : "from "+idx+": "));
 		}
 	}
 

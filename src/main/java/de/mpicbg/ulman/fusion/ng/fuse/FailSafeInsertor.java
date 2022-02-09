@@ -78,25 +78,19 @@ public class FailSafeInsertor
 	}
 
 
+	/** returns the index of the chosen image whose marker was eventually inserted */
 	public static
 	<IT extends RealType<IT>, ET extends RealType<ET>>
-	void clearAndInsertBestWeightMarker(final Vector<RandomAccessibleInterval<IT>> inImgs,
-	                                    final Vector<Float> inLabels,
-	                                    final LabelExtractor<IT,?,ET> le,
-	                                    final Vector<Double> inWeights,
-	                                    final RandomAccessibleInterval<ET> outImg)
+	int clearAndInsertBestWeightMarker(final Vector<RandomAccessibleInterval<IT>> inImgs,
+	                                   final Vector<Float> inLabels,
+	                                   final LabelExtractor<IT,?,ET> le,
+	                                   final Vector<Double> inWeights,
+	                                   final RandomAccessibleInterval<ET> outImg)
 	{
 		int bestWeightIdx = getBestWeightIndex(inImgs, inWeights);
-		if (bestWeightIdx == -1)
-		{
-			System.out.print("failed: ");
-			return;
-		}
-		else
-		{
-			System.out.print("from "+bestWeightIdx+": ");
-		}
+		if (bestWeightIdx == -1) return -1;
 
 		clearAndInsertGivenMarker(inImgs.get(bestWeightIdx),inLabels.get(bestWeightIdx), le, inWeights.get(bestWeightIdx),outImg);
+		return bestWeightIdx;
 	}
 }

@@ -68,16 +68,17 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 	                final RandomAccessibleInterval<LT> markerImg)
 	{
 		setupBoxes(inImgs);
-		markerBoxes = findBoxes(markerImg);
+		markerBoxes = findBoxes(markerImg,log,"marker");
 	}
 
 	public
 	void setupBoxes(final Vector<RandomAccessibleInterval<IT>> inImgs)
 	{
 		inBoxes = new Vector<>(inImgs.size());
+		int cnt=0;
 		for (RandomAccessibleInterval<IT> inImg : inImgs)
 		{
-			inBoxes.add( findBoxes(inImg) );
+			inBoxes.add( findBoxes(inImg,log,""+(++cnt)+".") );
 		}
 	}
 
@@ -93,22 +94,23 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 		for (int i = 0; i < inImgs.size(); ++i) {
 			inBoxes.add(null);
 			final int idx = i;
-			tasks.add( () -> inBoxes.set( idx, findBoxes(inImgs.get(idx)) ) );
+			tasks.add( () -> inBoxes.set( idx, findBoxes(inImgs.get(idx),log,""+idx+".") ) );
 		}
-		tasks.add( () -> markerBoxes = findBoxes(markerImg) );
+		tasks.add( () -> markerBoxes = findBoxes(markerImg,log,"marker") );
 
 		workerThreads.invokeAll(tasks);
 	}
 
-	public <T extends RealType<T>>
-	Map<Double,long[]> findBoxes(final RandomAccessibleInterval<T> inImg)
+	static public <T extends RealType<T>>
+	Map<Double,long[]> findBoxes(final RandomAccessibleInterval<T> inImg,
+			final Logger log, final String imgNickName)
 	{
 		//aux variables for re-using
 		final int numDimensions = inImg.numDimensions();
 		final long[] pos = new long[numDimensions];
 
 		final Map<Double,long[]> boxes = new HashMap<>(3000);
-		log.info("pre-calculating ROIs (boxes) for one image");
+		log.info("pre-calculating ROIs (boxes) for "+imgNickName+" image");
 
 		final Cursor<T> mCursor = Views.flatIterable(inImg).localizingCursor();
 		while (mCursor.hasNext())
@@ -137,7 +139,7 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 			}
 		}
 
-		log.trace("done pre-calculating ROIs (boxes) for the image");
+		log.trace("done pre-calculating ROIs (boxes) for "+imgNickName+" image");
 		return boxes;
 	}
 
@@ -282,7 +284,6 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 							Views.interval(inImgs.get(i), mInterval),
 							Views.interval(markerImg,     mInterval),
 							curMarker);
-					//System.out.println(i+". image: found label "+matchingLabel);
 					log.trace("finished the searching, found "+matchingLabel);
 
 					if (matchingLabel > 0)

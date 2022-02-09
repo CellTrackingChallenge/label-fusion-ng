@@ -27,8 +27,6 @@
  */
 package de.mpicbg.ulman.fusion;
 
-import net.imglib2.img.Img;
-import sc.fiji.simplifiedio.SimplifiedIO;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
 
@@ -44,6 +42,7 @@ import org.scijava.log.Logger;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleDiskSavingLogger;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
 
+import java.nio.file.InvalidPathException;
 import java.util.Map;
 import java.util.Vector;
 import java.util.List;
@@ -63,6 +62,8 @@ import java.util.concurrent.Executors;
 
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
 import de.mpicbg.ulman.fusion.ng.backbones.JobIO;
+import de.mpicbg.ulman.fusion.util.SegGtImageLoader;
+import de.mpicbg.ulman.fusion.util.SegGtCumulativeScore;
 
 import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionFeeder;
 import de.mpicbg.ulman.fusion.ng.BIC;
@@ -140,6 +141,12 @@ public class Fusers extends CommonGUI implements Command
 
 	@Parameter
 	boolean doCMV = false;
+
+	@Parameter(description = "Leave empty if you're not interested in doing SEG evaluation of the fusion result.")
+	String SEGfolder = "leave empty when unsure";
+
+	@Parameter
+	boolean saveFusionResults = true;
 
 	@Parameter
 	CommandService commandService;
@@ -305,6 +312,14 @@ public class Fusers extends CommonGUI implements Command
 		if (doCMV) {
 			combinations = new LinkedList<>();
 			cmv_fillInAllCombinations(job,combinations);
+
+			//prepare output folders
+			try {
+				for (OneCombination<IT,LT> c : combinations) c.setupOutputFolder(job.outputPattern);
+			} catch (IOException e) {
+				log.error(e.getMessage());
+				throw new RuntimeException("CMV: likely an error with output folders...",e);
+			}
 		} else {
 			combinations = new ArrayList<>(1);
 			combinations.add( new OneCombination<>((1 << job.numberOfFusionInputs)-1,job.votingThreshold, job.numberOfFusionInputs) );
@@ -368,14 +383,40 @@ public class Fusers extends CommonGUI implements Command
 		}
 
 		// ------------ action per time point ------------
+		final SegGtImageLoader<LT> SEGevaluator;
+		try {
+			SEGevaluator = SEGfolder.length() > 0 && !SEGfolder.startsWith("leave empty") ?
+					new SegGtImageLoader<>(SEGfolder, log) : null;
+		}
+		catch (InvalidPathException e) {
+			log.error("SEG GT folder is problematic: "+e.getMessage());
+			if (useGui) uiService.showDialog("SEG GT folder is problematic: "+e.getMessage());
+			return;
+		}
+
 		if (!doCMV)
 		{
+			final SegGtCumulativeScore runningSEGscore = new SegGtCumulativeScore();
+
 			//NB: shortcut
 			final WeightedVotingFusionFeeder<IT,LT> feeder = combinations.get(0).feeder;
 			iterateTimePoints(fileIdxList,useGui,time -> {
 				job.reportJobForTime(time,log);
 				feeder.processJob(job,time, noOfThreads);
+				if (saveFusionResults) feeder.saveJob(job,time);
+				//
+				if (SEGevaluator != null && SEGevaluator.managedToLoadImageForTimepoint(time))
+				{
+					SEGevaluator.calcBoxes();
+					feeder.scoreJob(SEGevaluator, runningSEGscore);
+				}
 			});
+
+			if (SEGevaluator != null)
+				log.info("Done, final avg SEG = "+runningSEGscore.getOverallScore()+" obtained over "
+						+runningSEGscore.getNumberOfAllCases()+" segments");
+			else
+				log.info("Done fusion");
 		}
 		else
 		{
@@ -387,28 +428,34 @@ public class Fusers extends CommonGUI implements Command
 			//(which happens to include all original inputs -- the full job) and make it a
 			//'refLoadedImages' for all combinations (including the very last one)
 			final OneCombination<IT,LT> fullCombination = combinations.get( combinations.size()-1 );
-			for (OneCombination<IT,LT> c : combinations) c.refLoadedImages = fullCombination.feeder;
+			for (OneCombination<IT,LT> c : combinations) {
+				c.refLoadedImages = fullCombination.feeder;
+				//also share the one SEG evaluator among all combination cases
+				c.SEGevaluator = SEGevaluator;
+			}
 			//
 			//prevent the 'refLoadedImages' to replace its data with empty initialized content, see OneCombination.call()
 			fullCombination.iAmTheRefence = true;
 
-			//prepare output folders
-			try {
-				for (OneCombination<IT,LT> c : combinations) c.setupOutputFolder(job.outputPattern);
-			} catch (IOException e) {
-				log.error(e.getMessage());
-				throw new RuntimeException("CMV: likely an error with output folders...",e);
-			}
-
 			final ExecutorService cmvers = Executors.newFixedThreadPool(noOfThreads);
 			iterateTimePoints(fileIdxList,useGui,time -> {
 				try {
-					job.reportJobForTime(time,log);
-					for (OneCombination<IT,LT> c : combinations) c.currentTime = time;
+					for (OneCombination<IT,LT> c : combinations) {
+						c.currentTime = time;
+						job.reportJobForTimeForCombination(time, c, c.feeder.shareLogger());
+					}
 
 					//processJob() is loadJob(), calcBoxes() and fuse() (both are inside useAlgorithm())
 					fullCombination.feeder.loadJob( job.instantiateForTime(time), cmvers);
 					fullCombination.feeder.calcBoxes( cmvers );
+
+					//also pre-load the shared SEG image before the fusion and evaluation
+					if (SEGevaluator != null && SEGevaluator.managedToLoadImageForTimepoint(time))
+					{
+						SEGevaluator.calcBoxes();
+						//NB: the status of loading is also available from SEGevaluator.lastLoadedTimepoint == time
+						//NB: if loaded now something, scoreJob() is then called later by each combination
+					}
 
 					//here: all images loaded, boxes possibly computed, therefore...
 					//here: ready to start all fusers who start themselves with "stealing" data from the 'fullCombination'
@@ -421,13 +468,16 @@ public class Fusers extends CommonGUI implements Command
 					throw new RuntimeException("multithreading error",e);
 				}
 			});
-			log.info("Shutting down thread pool..."); //NB: to show/debug the code always got here
+			log.info("Done all fusions, shutting down thread pool..."); //NB: to show/debug the code always got here
 			cmvers.shutdownNow();
+
+			if (SEGevaluator != null)
+				for (OneCombination<IT,LT> c : combinations) c.reportSEG();
 		}
 	}
 
 
-	static <IT extends RealType<IT>, LT extends IntegerType<LT>>
+	<IT extends RealType<IT>, LT extends IntegerType<LT>>
 	void cmv_fillInAllCombinations(final JobSpecification fullJobLooksLikeThis, final List<OneCombination<IT,LT>> combinations)
 	{
 		//over all combinations of inputs
@@ -443,7 +493,6 @@ public class Fusers extends CommonGUI implements Command
 		}
 	}
 
-	static
 	String cmv_createFolderName(final OneCombination<?,?> combination, final int numberOfAllPossibleInputs)
 	{
 		final StringBuilder sb = new StringBuilder();
@@ -458,7 +507,7 @@ public class Fusers extends CommonGUI implements Command
 		for (OneCombination<?,?> c : combinations) log.info(c);
 	}
 
-	static public class OneCombination<IT extends RealType<IT>, LT extends IntegerType<LT>>
+	public class OneCombination<IT extends RealType<IT>, LT extends IntegerType<LT>>
 	implements Callable<OneCombination<IT,LT>>
 	{
 		final List<Integer> relevantInputIndices;
@@ -507,6 +556,8 @@ public class Fusers extends CommonGUI implements Command
 		WeightedVotingFusionFeeder<IT,LT> feeder;
 		WeightedVotingFusionFeeder<IT,LT> refLoadedImages;
 		boolean iAmTheRefence = false;
+		SegGtImageLoader<LT> SEGevaluator;
+		SegGtCumulativeScore runningSEGscore = new SegGtCumulativeScore();
 
 		private
 		void reInitMe()
@@ -555,12 +606,21 @@ public class Fusers extends CommonGUI implements Command
 		{
 			reInitMe();
 
-			final Img<LT> outImg = feeder.useAlgorithmWithoutUpdatingBoxes();
+			feeder.useAlgorithmWithoutUpdatingBoxes();
 
-			final String outFile = JobSpecification.expandFilenamePattern(outputFilenamePattern,currentTime);
-			feeder.shareLogger().info("Saving file: "+outFile);
-			SimplifiedIO.saveImage(outImg, outFile);
+			if (saveFusionResults)
+				feeder.saveJob( JobSpecification.expandFilenamePattern(outputFilenamePattern,currentTime) );
+
+			if (SEGevaluator != null && SEGevaluator.lastLoadedTimepoint == currentTime)
+				feeder.scoreJob(SEGevaluator, runningSEGscore);
+
 			return this;
+		}
+
+		public void reportSEG()
+		{
+			feeder.shareLogger().info("Final avg SEG = "+runningSEGscore.getOverallScore()+" obtained over "
+					+runningSEGscore.getNumberOfAllCases()+" segments");
 		}
 
 		// ----------- saving output images -----------
@@ -582,7 +642,6 @@ public class Fusers extends CommonGUI implements Command
 
 			outputFilenamePattern = logFolder + File.separator
 					+ (sepPos > -1 ? outputPattern.substring(sepPos+1) : outputPattern);
-			feeder.shareLogger().info("new output pattern: "+outputFilenamePattern);
 		}
 
 		private void makeSureFolderExists(final String folderName) throws IOException
@@ -593,7 +652,7 @@ public class Fusers extends CommonGUI implements Command
 				if (!Files.isDirectory(fPath))
 					throw new IOException(folderName+" seems to exist but it is not a directory!");
 			} else {
-				feeder.shareLogger().info("Creating output folder: "+folderName);
+				log.info("Creating output folder: "+folderName);
 				Files.createDirectory(fPath);
 			}
 		}
@@ -614,10 +673,10 @@ public class Fusers extends CommonGUI implements Command
 		myself.mergeModel="BICv2 with FlatVoting, SingleMaskFailSafe and CollisionResolver";
 		myself.mergeModelChanged();
 
-		if (args.length != 5 && args.length != 6)
+		if (args.length != 5 && args.length != 6 && args.length != 7)
 		{
 			System.out.println("In this regime, it is always using the \"BICv2 with FlatVoting, SingleMaskFailSafe and CollisionResolver\"");
-			System.out.println("Usage: pathToJobFile threshold pathToOutputImages timePointsRangeSpecification numberOfThreads [CMV]\n");
+			System.out.println("Usage: pathToJobFile threshold pathToOutputImages timePointsRangeSpecification numberOfThreads [CMV] [SEGfolder]\n");
 			System.out.println(myself.fileInfoA);
 			System.out.println(myself.fileInfoB);
 			System.out.println(myself.fileInfoC);
@@ -625,17 +684,30 @@ public class Fusers extends CommonGUI implements Command
 			System.out.println(myself.fileInfoD);
 			System.out.println("timePointsRangeSpecification can be, e.g., 1-9,23,25");
 			System.out.println("Set numberOfThreads to 1 to enforce serial (single-threaded) processing.");
-			System.out.println("The CMV is optional param which enables the CMV combinatorial search...");
+			System.out.println("The CMV is optional param which enables the CMV combinatorial search.");
+			System.out.println("The SEGfolder is optional param which:");
+			System.out.println("  - enables SEG scoring of individual and overall time points,");
+			System.out.println("  - disables saving of the output images (because one likely wants");
+			System.out.println("    to run again for the full timelapse using the best combination).");
 			return;
 		}
 
-		myself.doCMV = args.length == 6;
+		myself.doCMV =  args.length >= 6  &&  (args[5].startsWith("cmv") || args[5].startsWith("CMV"));
 		myself.log = myself.doCMV ? new SimpleDiskSavingLogger() : new SimpleRestrictedLogger();
 		myself.filePath = new File(args[0]);
 		myself.mergeThreshold = Float.parseFloat(args[1]);
 		myself.outputPath = new File(args[2]);
 		myself.fileIdxStr = args[3];
 		myself.noOfThreads = Integer.parseInt(args[4]);
+		if (args.length == 6 && !myself.doCMV) {
+			myself.SEGfolder = args[5];
+			myself.saveFusionResults = false;
+		}
+		else if (args.length == 7) {
+			myself.SEGfolder = args[6];
+			myself.saveFusionResults = false;
+		}
+
 		myself.worker(false); //false -> run without GUI
 	}
 }

@@ -29,6 +29,8 @@ package de.mpicbg.ulman.fusion;
 
 import de.mpicbg.ulman.fusion.util.loggers.SimpleConsoleLogger;
 import org.scijava.command.Command;
+import org.scijava.log.LogService;
+import org.scijava.log.Logger;
 import org.scijava.plugin.Plugin;
 import org.scijava.plugin.Parameter;
 import org.scijava.widget.FileWidget;
@@ -62,10 +64,13 @@ public class LabelSyncer2 implements Command
 	@Parameter(label="Output folder:", style = FileWidget.DIRECTORY_STYLE)
 	public File outputFolderPath;
 
+	@Parameter
+	LogService logService;
+
 	@Override
 	public void run()
 	{
-		final Worker<UnsignedShortType> w = new Worker<>(new UnsignedShortType());
+		final Worker<UnsignedShortType> w = new Worker<>(new UnsignedShortType(), logService.subLogger("LabelSyncer2"));
 		w.pathToFolderWithResultsFromOneUser = pathToFolderWithResultsFromOneUser.getAbsolutePath();
 		w.pathToFolderWithTRAmarkers = pathToFolderWithTRAmarkers.getAbsolutePath();
 		w.outputFolderPath = outputFolderPath.getAbsolutePath();
@@ -82,7 +87,7 @@ public class LabelSyncer2 implements Command
 			return;
 		}
 
-		final Worker<UnsignedShortType> w = new Worker<>(new UnsignedShortType());
+		final Worker<UnsignedShortType> w = new Worker<>(new UnsignedShortType(), new SimpleConsoleLogger("LabelSyncer2"));
 		w.pathToFolderWithResultsFromOneUser = args[0];
 		w.pathToFolderWithTRAmarkers = args[1];
 		w.outputFolderPath = args[2];
@@ -93,11 +98,13 @@ public class LabelSyncer2 implements Command
 	// ================= the Worker =================
 	static class Worker <T extends IntegerType<T>>
 	{
-		Worker(final T referenceVoxelType)
+		Worker(final T referenceVoxelType, final Logger _log)
 		{
 			this.referenceVoxelType = referenceVoxelType;
+			this.log = _log;
 		}
 		private final T referenceVoxelType;
+		private final Logger log;
 
 		String pathToFolderWithResultsFromOneUser;
 		String pathToFolderWithTRAmarkers;
@@ -145,7 +152,7 @@ public class LabelSyncer2 implements Command
 				if (image == null) return null;
 				return ImagePlusAdapter.wrapImgPlus(image).getImg();
 			} catch (Exception e) {
-				System.out.println("IO error: "+e.getMessage());
+				log.error("IO error: "+e.getMessage());
 			}
 			return null;
 		}
@@ -154,12 +161,12 @@ public class LabelSyncer2 implements Command
 		{
 			if (img == null)
 			{
-				System.out.println("skipping this one -- failure while reading it");
+				log.warn("skipping this one -- failure while reading it");
 				return true;
 			}
 			if (! (img.firstElement().getClass().equals(referenceVoxelType.getClass())) )
 			{
-				System.out.println("skipping this one -- not the expected pixel type");
+				log.warn("skipping this one -- not the expected pixel type");
 				return true;
 			}
 			return false;
@@ -183,35 +190,35 @@ public class LabelSyncer2 implements Command
 			try {
 				final Set<String> inFiles = listAllResultMaskFilesInFolder(pathToFolderWithResultsFromOneUser);
 				if (inFiles == null) {
-					System.out.println("Non-existent input folder: "+pathToFolderWithResultsFromOneUser);
+					log.error("Non-existent input folder: "+pathToFolderWithResultsFromOneUser);
 					return;
 				}
 
 				for (String inFile : inFiles) {
-					System.out.println("==========================");
+					log.info("==========================");
 
 					String aFilePath = pathToFolderWithResultsFromOneUser + File.separator + inFile;
-					System.out.println("Reading input: " + aFilePath);
+					log.info("Reading input: " + aFilePath);
 					//
 					Img<?> i = readImageSilently(aFilePath);
 					if (isImgFailedAndComplained(i)) continue;
 					imgs.setElementAt((Img<T>) i, 0);
 
 					aFilePath = matchTraMarkerFile(inFile, pathToFolderWithTRAmarkers);
-					System.out.println("Reading marker: " + aFilePath);
+					log.info("Reading marker: " + aFilePath);
 					//
 					Img<?> tra = readImageSilently(aFilePath);
 					if (isImgFailedAndComplained(tra)) continue;
 
-					System.out.println("Syncing labels....");
+					log.info("Syncing labels....");
 					final Img<T> res = labelSync.fuse(imgs, (Img<T>) tra);
 
 					aFilePath = outputFolderPath + File.separator + inFile;
-					System.out.println("Creating output: " + aFilePath);
+					log.info("Creating output: " + aFilePath);
 					SimplifiedIO.saveImage(res, aFilePath);
 				}
 			} catch (Exception e) {
-				System.out.println("error: "+e.getMessage());
+				log.error("error: "+e.getMessage());
 				e.printStackTrace();
 			}
 		}

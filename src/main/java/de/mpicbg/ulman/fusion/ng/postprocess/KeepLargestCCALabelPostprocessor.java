@@ -41,6 +41,9 @@ import net.imglib2.algorithm.labeling.ConnectedComponents;
 import java.util.HashMap;
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 
+import org.scijava.log.Logger;
+import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
+
 /**
  * @author Vladimír Ulman
  * @author Cem Emre Akbas
@@ -78,10 +81,10 @@ implements LabelPostprocessor<LT>
 	{
 		if (ccaInImg == null)
 		{
-			System.out.println("allocating CCA tmp images");
+			log.info("allocating CCA tmp images");
 			ccaInImg = img.factory().create(img);
 			ccaOutImg = img.factory().create(img);
-			System.out.println("allocating done");
+			log.info("allocating done");
 		}
 
 		final IntervalView<LT> imgView = Views.interval(img,ROI);
@@ -104,7 +107,7 @@ implements LabelPostprocessor<LT>
 		//is there anything to change?
 		if (noOfLabels > 1)
 		{
-			System.out.println("CCA for marker "+markerValue+": choosing one from "+noOfLabels+" components");
+			log.info("CCA for marker "+markerValue+": choosing one from "+noOfLabels+" components");
 
 			//calculate sizes of the detected labels
 			final HashMap<Integer,Integer> hist = new HashMap<>(10);
@@ -130,7 +133,7 @@ implements LabelPostprocessor<LT>
 				}
 				totalSize += size;
 			}
-			System.out.println("CCA for marker "+markerValue+": chosen component no. "+largestCC+" which constitutes "
+			log.info("CCA for marker "+markerValue+": chosen component no. "+largestCC+" which constitutes "
 									 +(float)largestSize/(float)totalSize+" % of the original size");
 
 			//remove anything from the current marker that does not overlap with the largest CCA component
@@ -145,4 +148,10 @@ implements LabelPostprocessor<LT>
 			}
 		}
 	}
+
+	// ---------------- logging ----------------
+	Logger log = new SimpleRestrictedLogger();
+	@Override
+	public void useNowThisLog(final Logger log)
+	{ this.log = log; }
 }
