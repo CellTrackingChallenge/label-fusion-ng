@@ -33,6 +33,7 @@ import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.Cursor;
 import java.util.HashMap;
+import org.scijava.log.Logger;
 
 /**
  * Detects labels in input images (of voxel type IT -- Input Type) that match given marker,
@@ -125,4 +126,7 @@ public interface LabelExtractor<IT extends RealType<IT>, LT extends IntegerType<
 	                   final float wantedLabel,
 	                   final RandomAccessibleInterval<ET> outputRAI,
 	                   final ET addThisLabel);
+
+	// ---------------- logging ----------------
+	void useNowThisLog(final Logger log);
 }
