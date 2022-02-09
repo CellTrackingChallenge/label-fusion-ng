@@ -78,7 +78,7 @@ implements LabelFuser<IT,ET>
 		if (isEmpty)
 		{
 			int idx = FailSafeInsertor.clearAndInsertBestWeightMarker(inImgs,inLabels, le, inWeights,outImg);
-			log.info("FSed "+(idx == -1 ? "failed: " : "from "+idx+": "));
+			log.info("the following marker FSed "+(idx == -1 ? "failed: " : "from "+idx+": "));
 		}
 	}
 
