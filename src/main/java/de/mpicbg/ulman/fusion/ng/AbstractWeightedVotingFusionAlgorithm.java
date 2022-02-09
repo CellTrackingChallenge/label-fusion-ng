@@ -106,6 +106,12 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 
 		if (labelCleaner == null)
 			throw new RuntimeException("this.labelCleaner must be set");
+
+		//pass forward the logger...
+		labelExtractor.useNowThisLog(log);
+		labelFuser.useNowThisLog(log);
+		labelInsertor.useNowThisLog(log);
+		labelCleaner.useNowThisLog(log);
 	}
 
 	/** Any class that extends this one must implement this method.
