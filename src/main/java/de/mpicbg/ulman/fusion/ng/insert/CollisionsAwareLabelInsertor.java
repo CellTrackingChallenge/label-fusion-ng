@@ -39,6 +39,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 
+import org.scijava.log.Logger;
+import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
+
 public class CollisionsAwareLabelInsertor<LT extends IntegerType<LT>, ET extends RealType<ET>>
 implements LabelInsertor<LT,ET>
 {
@@ -229,4 +232,10 @@ implements LabelInsertor<LT,ET>
 	public
 	int getValueOfCollisionPixels()
 	{ return INTERSECTION; }
+
+	// ---------------- logging ----------------
+	Logger log = new SimpleRestrictedLogger();
+	@Override
+	public void useNowThisLog(final Logger log)
+	{ this.log = log; }
 }

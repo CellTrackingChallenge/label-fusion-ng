@@ -32,6 +32,9 @@ import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
 
+import org.scijava.log.Logger;
+import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
+
 public class OverwriteLabelInsertor<LT extends IntegerType<LT>, ET extends RealType<ET>>
 implements LabelInsertor<LT,ET>
 {
@@ -50,4 +53,10 @@ implements LabelInsertor<LT,ET>
 	public
 	int getValueOfCollisionPixels()
 	{ return 0; /* this policy does not introduce intersections */ }
+
+	// ---------------- logging ----------------
+	Logger log = new SimpleRestrictedLogger();
+	@Override
+	public void useNowThisLog(final Logger log)
+	{ this.log = log; }
 }

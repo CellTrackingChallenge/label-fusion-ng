@@ -41,6 +41,9 @@ import net.imglib2.algorithm.labeling.ConnectedComponents;
 import java.util.HashMap;
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 
+import org.scijava.log.Logger;
+import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
+
 /**
  * @author Vladimír Ulman
  * @author Cem Emre Akbas
@@ -145,4 +148,10 @@ implements LabelPostprocessor<LT>
 			}
 		}
 	}
+
+	// ---------------- logging ----------------
+	Logger log = new SimpleRestrictedLogger();
+	@Override
+	public void useNowThisLog(final Logger log)
+	{ this.log = log; }
 }
