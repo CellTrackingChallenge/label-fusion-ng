@@ -247,6 +247,7 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 		//set to remember already discovered TRA markers
 		//(with initial capacity set for 100 markers)
 		Set<Integer> mDiscovered = new HashSet<>(100);
+		Map<Integer,Interval> mFusedROI = new HashMap<>(100);
 		log.trace("init B");
 
 		//init insertion (includes to create (re-usable) insertion status object)
@@ -268,7 +269,7 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 				log.trace("processing next marker: "+curMarker);
 				//
 				//found next marker, copy out the AABB it spans over
-				final long[] fuseBox = marker.getValue();
+				final long[] fuseBox = marker.getValue().clone();
 				log.trace("found its AABB: "+printBox(curMarker,fuseBox));
 
 				//sweep over all input images
@@ -306,6 +307,7 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 				{
 					//process within the union'ed interval (of candidates' boxes)
 					final Interval fuseInterval = createInterval(fuseBox);
+					mFusedROI.put(curMarker,fuseInterval);
 
 					//reset the temporary image beforehand
 					LoopBuilder.setImages(Views.interval(tmpImg,fuseInterval)).forEachPixel(SetZero::setZero);
@@ -406,8 +408,7 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 			if (curMarker == collisionValue) outFICursor.get().setZero();
 			else if ( curMarker > 0 && (!mDiscovered.contains(curMarker)) )
 			{
-				final Interval resultROI = createInterval(markerBoxes.get((double)curMarker));
-				labelCleaner.processLabel(outImg, curMarker, resultROI);
+				labelCleaner.processLabel(outImg, curMarker, mFusedROI.get(curMarker));
 
 				//and mark we have processed this marker
 				mDiscovered.add(curMarker);
