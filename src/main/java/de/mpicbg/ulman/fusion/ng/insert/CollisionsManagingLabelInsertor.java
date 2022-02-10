@@ -27,6 +27,7 @@
  */
 package de.mpicbg.ulman.fusion.ng.insert;
 
+import de.mpicbg.ulman.fusion.ng.AbstractWeightedVotingFusionAlgorithm;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
@@ -128,10 +129,15 @@ implements LabelInsertor<LT,ET>
 		pxInINTERSECTION = new Vector<>(500000);
 		pxTemporarilyHidden = new LinkedList<>();
 
+		final UnsignedIntType refMapImgPxType = new UnsignedIntType();
 		pxInINTERSECTION_map
-			= templateImg.factory().imgFactory(new UnsignedIntType()).create(templateImg);
+			= templateImg.factory().imgFactory(refMapImgPxType).create(templateImg);
 		LoopBuilder.setImages(pxInINTERSECTION_map).forEachPixel(UnsignedIntType::setZero);
 		pxInINTERSECTION_map_RA = pxInINTERSECTION_map.randomAccess();
+
+		log.warn("allocated collisions map-img:"
+				+ AbstractWeightedVotingFusionAlgorithm.reportImageSize(
+				pxInINTERSECTION_map,refMapImgPxType.getBitsPerPixel()/8 ));
 	}
 
 	/** returns the collision size histogram */
