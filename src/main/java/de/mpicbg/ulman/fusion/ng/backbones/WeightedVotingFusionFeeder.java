@@ -329,4 +329,11 @@ extends JobIO<IT,LT>
 
 	final MajorityOverlapBasedLabelExtractor<LT,LT,?> extractor
 			= new MajorityOverlapBasedLabelExtractor<>();
+
+	public
+	void releaseJobResult()
+	{
+		outFusedImg = null;
+		log.info("released out img");
+	}
 }

@@ -411,6 +411,7 @@ public class Fusers extends CommonGUI implements Command
 					feeder.scoreJob(SEGevaluator, runningSEGscore);
 				}
 			});
+			feeder.releaseJobResult();
 
 			if (SEGevaluator != null)
 				log.info("Done, final avg SEG = "+runningSEGscore.getOverallScore()+" obtained over "
@@ -614,6 +615,7 @@ public class Fusers extends CommonGUI implements Command
 			if (SEGevaluator != null && SEGevaluator.lastLoadedTimepoint == currentTime)
 				feeder.scoreJob(SEGevaluator, runningSEGscore);
 
+			feeder.releaseJobResult();
 			return this;
 		}
 
