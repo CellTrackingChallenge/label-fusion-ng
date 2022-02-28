@@ -28,6 +28,7 @@
 package de.mpicbg.ulman.fusion.ng.postprocess;
 
 import de.mpicbg.ulman.fusion.ng.AbstractWeightedVotingRoisFusionAlgorithm;
+import de.mpicbg.ulman.fusion.util.ReusableMemory;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.Cursor;
@@ -82,12 +83,14 @@ implements LabelPostprocessor<LT>
 	{
 		if (ccaInImg == null)
 		{
-			log.info("allocating two CCA tmp images: 2x: "
+			log.info("borrowing two CCA tmp images: 2x: "
 					+ AbstractWeightedVotingRoisFusionAlgorithm.reportImageSize(
 							img,img.firstElement().getBitsPerPixel()/8 ));
-			ccaInImg = img.factory().create(img);
-			ccaOutImg = img.factory().create(img);
-			log.info("allocating done");
+			final ReusableMemory<LT, ?> MEMORY
+					= ReusableMemory.getInstanceFor(img, img.firstElement());
+			ccaInImg = MEMORY.getCcaInImg( ReusableMemory.getThreadId() );
+			ccaOutImg = MEMORY.getCcaOutImg( ReusableMemory.getThreadId() );
+			log.info("borrowing done");
 		}
 
 		final IntervalView<LT> imgView = Views.interval(img,ROI);
@@ -150,6 +153,14 @@ implements LabelPostprocessor<LT>
 					imgCursor.get().setZero();
 			}
 		}
+	}
+
+	public
+	void releaseBorrowedMem()
+	{
+		// "return" (aka don't hold any longer) the shared resources
+		ccaInImg = null;
+		ccaOutImg = null;
 	}
 
 	// ---------------- logging ----------------

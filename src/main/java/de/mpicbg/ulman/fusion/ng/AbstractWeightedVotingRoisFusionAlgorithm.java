@@ -28,6 +28,7 @@
 package de.mpicbg.ulman.fusion.ng;
 
 import de.mpicbg.ulman.fusion.ng.insert.LabelInsertor;
+import de.mpicbg.ulman.fusion.ng.postprocess.KeepLargestCCALabelPostprocessor;
 import de.mpicbg.ulman.fusion.util.ReusableMemory;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
@@ -414,6 +415,10 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 				//and mark we have processed this marker
 				mDiscovered.add(curMarker);
 			}
+		}
+		if (labelCleaner instanceof KeepLargestCCALabelPostprocessor) {
+			//only after the all cleaning is done....
+			((KeepLargestCCALabelPostprocessor<LT>)labelCleaner).releaseBorrowedMem();
 		}
 		// --------- CCA analyses ---------
 
