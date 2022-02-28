@@ -35,7 +35,7 @@ import net.imglib2.type.numeric.integer.UnsignedIntType;
 import net.imglib2.Cursor;
 import net.imglib2.RandomAccess;
 import net.imglib2.img.Img;
-//import sc.fiji.simplifiedio.SimplifiedIO;
+import de.mpicbg.ulman.fusion.util.ReusableMemory;
 
 import java.util.*;
 
@@ -130,9 +130,9 @@ implements LabelInsertor<LT,ET>
 		pxInINTERSECTION = new Vector<>(500000);
 		pxTemporarilyHidden = new LinkedList<>();
 
-		final UnsignedIntType refMapImgPxType = new UnsignedIntType();
-		pxInINTERSECTION_map
-			= templateImg.factory().imgFactory(refMapImgPxType).create(templateImg);
+		pxInINTERSECTION_map = ReusableMemory
+				.getInstanceFor(templateImg, templateImg.firstElement())
+				.getCmMapImg( ReusableMemory.getThreadId() );
 		LoopBuilder.setImages(pxInINTERSECTION_map).forEachPixel(UnsignedIntType::setZero);
 		pxInINTERSECTION_map_RA = pxInINTERSECTION_map.randomAccess();
 
@@ -140,10 +140,10 @@ implements LabelInsertor<LT,ET>
 		for (long d : pxInINTERSECTION_map.dimensionsAsLongArray())
 			pxInINTERSECTION_map_pxCapacity *= d;
 
-		log.warn("CM: allocated collisions map-img: "
+		log.warn("CM: borrowed collisions map-img: "
 				+ AbstractWeightedVotingFusionAlgorithm.reportImageSize(
-				pxInINTERSECTION_map,refMapImgPxType.getBitsPerPixel()/8 ));
-		log.warn("CM: allocated collisions map-img: "
+				pxInINTERSECTION_map,pxInINTERSECTION_map.firstElement().getBitsPerPixel()/8 ));
+		log.warn("CM: borrowed collisions map-img: "
 				+pxInINTERSECTION_map_pxCapacity+" pixels");
 	}
 
