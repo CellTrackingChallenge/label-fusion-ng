@@ -27,6 +27,7 @@
  */
 package de.mpicbg.ulman.fusion;
 
+import de.mpicbg.ulman.fusion.util.ReusableMemory;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
 
@@ -308,6 +309,7 @@ public class Fusers extends CommonGUI implements Command
 
 		// ------------ preparing for action ------------
 		final List<OneCombination<IT,LT>> combinations; //NB: even for non-CMV
+		ReusableMemory.setLogger(log);
 
 		if (doCMV) {
 			combinations = new LinkedList<>();
