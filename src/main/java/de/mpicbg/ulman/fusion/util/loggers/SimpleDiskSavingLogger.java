@@ -7,7 +7,7 @@ import java.util.logging.Logger;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
 
-public class SimpleDiskSavingLogger extends SimpleConsoleLogger
+public class SimpleDiskSavingLogger extends TimeStampedConsoleLogger
 {
 	String prefix = "";
 	final Logger javaLogger;
@@ -54,23 +54,27 @@ public class SimpleDiskSavingLogger extends SimpleConsoleLogger
 	};
 
 	@Override
-	public void debug(Object msg) { /* empty */ }
-
-	@Override
-	public void trace(Object msg) { /* empty); */ }
+	public void debug(Object msg) {
+		javaLogger.info( createMessage("DBG", msg) );
+	}
 
 	@Override
 	public void error(Object msg) {
-		javaLogger.info(prefix + "[ERROR] " + msg);
+		javaLogger.info( createMessage("ERROR", msg) );
 	}
 
 	@Override
 	public void info(Object msg) {
-		javaLogger.info(prefix + "[INFO] " + msg);
+		javaLogger.info( createMessage("INFO", msg) );
+	}
+
+	@Override
+	public void trace(Object msg) {
+		javaLogger.info( createMessage("TRACE", msg) );
 	}
 
 	@Override
 	public void warn(Object msg) {
-		javaLogger.info(prefix + "[WARN] " + msg);
+		javaLogger.info( createMessage("WARN", msg) );
 	}
 }
