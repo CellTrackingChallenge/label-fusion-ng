@@ -8,7 +8,7 @@ public class SimpleRestrictedLogger extends SimpleConsoleLogger
 		super();
 	}
 
-	SimpleRestrictedLogger(final String prefix) {
+	public SimpleRestrictedLogger(final String prefix) {
 		super(prefix);
 	}
 

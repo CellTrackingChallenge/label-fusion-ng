@@ -93,26 +93,30 @@ public class SimpleConsoleLogger implements LogService
 
 	@Override
 	public void debug(Object msg) {
-		System.out.println(prefix + "[DBG] " + msg);
+		System.out.println( createMessage("DBG", msg) );
 	}
 
 	@Override
 	public void error(Object msg) {
-		System.out.println(prefix + "[ERROR] " + msg);
+		System.out.println( createMessage("ERROR", msg) );
 	}
 
 	@Override
 	public void info(Object msg) {
-		System.out.println(prefix + "[INFO] " + msg);
+		System.out.println( createMessage("INFO", msg) );
 	}
 
 	@Override
 	public void trace(Object msg) {
-		System.out.println(prefix + "[TRACE] " + msg);
+		System.out.println( createMessage("TRACE", msg) );
 	}
 
 	@Override
 	public void warn(Object msg) {
-		System.out.println(prefix + "[WARN] " + msg);
+		System.out.println( createMessage("WARN", msg) );
+	}
+
+	String createMessage(final String reportedLevel, final Object message) {
+		return prefix + "[" + reportedLevel + "] " + message;
 	}
 }
