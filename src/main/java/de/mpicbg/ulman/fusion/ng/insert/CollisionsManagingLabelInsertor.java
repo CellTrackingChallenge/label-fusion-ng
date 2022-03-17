@@ -27,6 +27,7 @@
  */
 package de.mpicbg.ulman.fusion.ng.insert;
 
+import de.mpicbg.ulman.fusion.ng.AbstractWeightedVotingFusionAlgorithm;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
@@ -99,7 +100,7 @@ implements LabelInsertor<LT,ET>
 			p.claimingLabels.add( claimer );
 			//TODO remove debug test
 			if (p.x != pos[0] || p.y != pos[1] || p.z != pos[2])
-				log.warn("WARNING: pxInINTERSECTION map refers to wrong PxCoord!");
+				log.warn("CM WARNING: pxInINTERSECTION map refers to wrong PxCoord!");
 			return;
 		}
 
@@ -110,7 +111,7 @@ implements LabelInsertor<LT,ET>
 		pxInINTERSECTION_map_RA.get().setInt( pxInINTERSECTION.size() );
 		//
 		if (pxInINTERSECTION.size() == pxInINTERSECTION_map.firstElement().getMaxValue())
-			log.warn("WARNING: pxInINTERSECTION map cannot hold more PxCoords!");
+			log.warn("CM WARNING: pxInINTERSECTION map cannot hold more PxCoords!");
 	}
 
 	List<PxCoord> pxInINTERSECTION;
@@ -118,6 +119,7 @@ implements LabelInsertor<LT,ET>
 
 	protected Img<UnsignedIntType> pxInINTERSECTION_map;
 	protected RandomAccess<UnsignedIntType> pxInINTERSECTION_map_RA;
+	protected long pxInINTERSECTION_map_pxCapacity = 0;
 
 	@Override
 	public
@@ -128,10 +130,21 @@ implements LabelInsertor<LT,ET>
 		pxInINTERSECTION = new Vector<>(500000);
 		pxTemporarilyHidden = new LinkedList<>();
 
+		final UnsignedIntType refMapImgPxType = new UnsignedIntType();
 		pxInINTERSECTION_map
-			= templateImg.factory().imgFactory(new UnsignedIntType()).create(templateImg);
+			= templateImg.factory().imgFactory(refMapImgPxType).create(templateImg);
 		LoopBuilder.setImages(pxInINTERSECTION_map).forEachPixel(UnsignedIntType::setZero);
 		pxInINTERSECTION_map_RA = pxInINTERSECTION_map.randomAccess();
+
+		pxInINTERSECTION_map_pxCapacity = 1;
+		for (long d : pxInINTERSECTION_map.dimensionsAsLongArray())
+			pxInINTERSECTION_map_pxCapacity *= d;
+
+		log.warn("CM: allocated collisions map-img: "
+				+ AbstractWeightedVotingFusionAlgorithm.reportImageSize(
+				pxInINTERSECTION_map,refMapImgPxType.getBitsPerPixel()/8 ));
+		log.warn("CM: allocated collisions map-img: "
+				+pxInINTERSECTION_map_pxCapacity+" pixels");
 	}
 
 	/** returns the collision size histogram */
@@ -197,6 +210,10 @@ implements LabelInsertor<LT,ET>
 		if (pxInINTERSECTION.size() > 0)
 			pxInINTERSECTION.sort( pxInINTERSECTION.get(0) );
 
+		log.info("CM: num output pixels in collision " + pxInINTERSECTION.size());
+		log.info("CM: map fullness "
+				+ 100L*pxInINTERSECTION.size()/pxInINTERSECTION_map_pxCapacity
+				+ " %");
 		//debug img:
 		//SimplifiedIO.saveImage(outImg,"/temp/X_before.tif");
 		//int cnt = 0;
@@ -218,7 +235,7 @@ implements LabelInsertor<LT,ET>
 		while (pxInINTERSECTION.size() > 0 && pxInINTERSECTION.size() != lastSize && --safetyCounter > 0)
 		{
 			//debug:
-			//log.trace(cnt+": Eroding collision zone of size "+pxInINTERSECTION.size());
+			//log.trace("CM: "+cnt+": Eroding collision zone of size "+pxInINTERSECTION.size());
 
 			lastSize = pxInINTERSECTION.size();
 			erodeCollisionRegion(oRA, posMax);
@@ -247,7 +264,7 @@ implements LabelInsertor<LT,ET>
 		}
 
 		if (pxInINTERSECTION.size() > 0)
-			log.warn("WARNING: Collisions resolving failed on "+pxInINTERSECTION.size()+" voxels");
+			log.warn("CM WARNING: Collisions resolving failed on "+pxInINTERSECTION.size()+" voxels");
 
 		return collHistogram;
 	}

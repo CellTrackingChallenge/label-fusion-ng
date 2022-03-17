@@ -27,6 +27,7 @@
  */
 package de.mpicbg.ulman.fusion.ng.postprocess;
 
+import de.mpicbg.ulman.fusion.ng.AbstractWeightedVotingRoisFusionAlgorithm;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.Cursor;
@@ -81,7 +82,9 @@ implements LabelPostprocessor<LT>
 	{
 		if (ccaInImg == null)
 		{
-			log.info("allocating CCA tmp images");
+			log.info("allocating two CCA tmp images: 2x: "
+					+ AbstractWeightedVotingRoisFusionAlgorithm.reportImageSize(
+							img,img.firstElement().getBitsPerPixel()/8 ));
 			ccaInImg = img.factory().create(img);
 			ccaOutImg = img.factory().create(img);
 			log.info("allocating done");

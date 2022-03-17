@@ -168,13 +168,14 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 	public String reportImageSize(final RandomAccessibleInterval<?> img)
 	{ return reportImageSize(img, referenceType.getBitsPerPixel()/8); }
 	//
+	static
 	public String reportImageSize(final RandomAccessibleInterval<?> img, final long pixelInBytes)
 	{
 		long pixels = 1;
 		for (long d : img.dimensionsAsLongArray()) pixels *= d;
 		pixels /= 1 << 20;
-		return "Size in Mpixels: " + pixels +
-		     "\nSize in MBytes:  " + pixels * pixelInBytes;
+		return "Size in Mpixels = " + pixels +
+		     " ; in MBytes = " + pixels * pixelInBytes;
 	}
 
 	@Override
