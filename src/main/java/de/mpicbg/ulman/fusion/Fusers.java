@@ -42,6 +42,7 @@ import org.scijava.plugin.Plugin;
 import org.scijava.log.Logger;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleDiskSavingLogger;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
+import de.mpicbg.ulman.fusion.util.loggers.NoHeaderConsoleLogger;
 
 import java.nio.file.InvalidPathException;
 import java.util.Map;
@@ -717,7 +718,16 @@ public class Fusers extends CommonGUI implements Command
 		}
 
 		myself.doCMV =  args.length >= 6  &&  (args[5].startsWith("cmv") || args[5].startsWith("CMV"));
-		myself.log = myself.doCMV ? new SimpleDiskSavingLogger() : new SimpleRestrictedLogger();
+		if (myself.doCMV) {
+			final SimpleDiskSavingLogger dLog = new SimpleDiskSavingLogger();
+			dLog.setLeakingTarget( new NoHeaderConsoleLogger() );
+			dLog.leakAlsoThese("borrow");
+			dLog.leakAlsoThese("Combination");
+			myself.log = dLog;
+		} else {
+			myself.log = new SimpleRestrictedLogger();
+		}
+
 		myself.filePath = new File(args[0]);
 		myself.mergeThreshold = Float.parseFloat(args[1]);
 		myself.outputPath = new File(args[2]);
