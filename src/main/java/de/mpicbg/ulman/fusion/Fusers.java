@@ -452,6 +452,7 @@ public class Fusers extends CommonGUI implements Command
 					}
 
 					//processJob() is loadJob(), calcBoxes() and fuse() (both are inside useAlgorithm())
+					long ltime = System.currentTimeMillis();
 					fullCombination.feeder.loadJob( job.instantiateForTime(time), cmvers);
 					fullCombination.feeder.calcBoxes( cmvers );
 
@@ -462,6 +463,8 @@ public class Fusers extends CommonGUI implements Command
 						//NB: the status of loading is also available from SEGevaluator.lastLoadedTimepoint == time
 						//NB: if loaded now something, scoreJob() is then called later by each combination
 					}
+					ltime -= System.currentTimeMillis();
+					log.info("IMAGES for TP="+time+" LOADING TIME: "+(-ltime/1000)+" seconds");
 
 					//here: all images loaded, boxes possibly computed, therefore...
 					//here: ready to start all fusers who start themselves with "stealing" data from the 'fullCombination'
@@ -610,6 +613,8 @@ public class Fusers extends CommonGUI implements Command
 		@Override
 		public OneCombination<IT,LT> call()
 		{
+			long time = System.currentTimeMillis();
+
 			reInitMe();
 
 			feeder.useAlgorithmWithoutUpdatingBoxes();
@@ -621,6 +626,9 @@ public class Fusers extends CommonGUI implements Command
 				feeder.scoreJob(SEGevaluator, runningSEGscore);
 
 			feeder.releaseJobResult();
+
+			time -= System.currentTimeMillis();
+			feeder.shareLogger().info("ELAPSED TIME: "+(-time/1000)+" seconds");
 			return this;
 		}
 
