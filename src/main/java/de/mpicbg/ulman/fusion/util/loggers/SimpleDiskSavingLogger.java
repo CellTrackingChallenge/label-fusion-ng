@@ -3,6 +3,8 @@ package de.mpicbg.ulman.fusion.util.loggers;
 import de.mpicbg.ulman.fusion.Fusers;
 import java.io.File;
 import java.io.IOException;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.logging.Logger;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
@@ -55,26 +57,57 @@ public class SimpleDiskSavingLogger extends TimeStampedConsoleLogger
 
 	@Override
 	public void debug(Object msg) {
-		javaLogger.info( createMessage("DBG", msg) );
+		final String finalMsg = createMessage("DBG", msg);
+		javaLogger.info(finalMsg);
+		if (shouldAlsoLeakThis(msg)) leakingTarget.debug(finalMsg);
 	}
 
 	@Override
 	public void error(Object msg) {
-		javaLogger.info( createMessage("ERROR", msg) );
+		final String finalMsg = createMessage("ERROR", msg);
+		javaLogger.info(finalMsg);
+		if (shouldAlsoLeakThis(msg)) leakingTarget.error(finalMsg);
 	}
 
 	@Override
 	public void info(Object msg) {
-		javaLogger.info( createMessage("INFO", msg) );
+		final String finalMsg = createMessage("INFO", msg);
+		javaLogger.info(finalMsg);
+		if (shouldAlsoLeakThis(msg)) leakingTarget.info(finalMsg);
 	}
 
 	@Override
 	public void trace(Object msg) {
-		javaLogger.info( createMessage("TRACE", msg) );
+		final String finalMsg = createMessage("TRACE", msg);
+		javaLogger.info(finalMsg);
+		if (shouldAlsoLeakThis(msg)) leakingTarget.trace(finalMsg);
 	}
 
 	@Override
 	public void warn(Object msg) {
-		javaLogger.info( createMessage("WARN", msg) );
+		final String finalMsg = createMessage("WARN", msg);
+		javaLogger.info(finalMsg);
+		if (shouldAlsoLeakThis(msg)) leakingTarget.warn(finalMsg);
+	}
+
+
+	private org.scijava.log.Logger leakingTarget = null;
+	final private Set<String> leakersPatterns = new HashSet<>(10);
+
+	public void setLeakingTarget(final org.scijava.log.Logger newLeaksTarget) {
+		leakingTarget = newLeaksTarget;
+	}
+
+	public void leakAlsoThese(final String leakPatternInsideMsg) {
+		leakersPatterns.add( leakPatternInsideMsg );
+	}
+
+	private boolean shouldAlsoLeakThis(final Object msg) {
+		if (leakingTarget == null) return false;
+
+		final String msgStr = msg.toString();
+		for (String pattern : leakersPatterns)
+			if (msgStr.contains(pattern)) return true;
+		return false;
 	}
 }
