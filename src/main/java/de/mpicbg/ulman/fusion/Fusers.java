@@ -452,6 +452,7 @@ public class Fusers extends CommonGUI implements Command
 					}
 
 					//processJob() is loadJob(), calcBoxes() and fuse() (both are inside useAlgorithm())
+					log.info("Loading input images for TP="+time);
 					long ltime = System.currentTimeMillis();
 					fullCombination.feeder.loadJob( job.instantiateForTime(time), cmvers);
 					fullCombination.feeder.calcBoxes( cmvers );
@@ -613,6 +614,7 @@ public class Fusers extends CommonGUI implements Command
 		@Override
 		public OneCombination<IT,LT> call()
 		{
+			log.info("Combination "+code+" just started fusion");
 			long time = System.currentTimeMillis();
 
 			reInitMe();
@@ -620,15 +622,22 @@ public class Fusers extends CommonGUI implements Command
 			feeder.useAlgorithmWithoutUpdatingBoxes();
 
 			if (saveFusionResults)
+			{
+				log.info("Combination "+code+" just started saving its result");
 				feeder.saveJob( JobSpecification.expandFilenamePattern(outputFilenamePattern,currentTime) );
+			}
 
 			if (SEGevaluator != null && SEGevaluator.lastLoadedTimepoint == currentTime)
+			{
+				log.info("Combination "+code+" just started evaluating its result");
 				feeder.scoreJob(SEGevaluator, runningSEGscore);
+			}
 
 			feeder.releaseJobResult();
 
 			time -= System.currentTimeMillis();
 			feeder.shareLogger().info("ELAPSED TIME: "+(-time/1000)+" seconds");
+			log.info("Combination "+code+" just finished, after "+(-time/1000)+" seconds");
 			return this;
 		}
 
