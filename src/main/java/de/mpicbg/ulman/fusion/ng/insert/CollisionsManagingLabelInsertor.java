@@ -127,12 +127,16 @@ implements LabelInsertor<LT,ET>
 	{
 		super.initialize(templateImg);
 
-		pxInINTERSECTION = new Vector<>(500000);
-		pxTemporarilyHidden = new LinkedList<>();
+		final ReusableMemory<LT, ?> MEMORY = ReusableMemory.getInstanceFor(templateImg, templateImg.firstElement());
 
-		pxInINTERSECTION_map = ReusableMemory
-				.getInstanceFor(templateImg, templateImg.firstElement())
-				.getCmMapImg( ReusableMemory.getThreadId() );
+		pxInINTERSECTION = MEMORY.getInteresectionPx( ReusableMemory.getThreadId() );
+		pxTemporarilyHidden = MEMORY.getTempHiddenPx( ReusableMemory.getThreadId() );
+		log.trace("CM: borrowed collision vector came with "+pxInINTERSECTION.size()+" pixels from previous run");
+		pxInINTERSECTION.clear();
+		pxTemporarilyHidden.clear();
+		log.warn("CM: borrowed collision vector now at capacity "+((Vector)pxInINTERSECTION).capacity());
+
+		pxInINTERSECTION_map = MEMORY.getCmMapImg( ReusableMemory.getThreadId() );
 		LoopBuilder.setImages(pxInINTERSECTION_map).forEachPixel(UnsignedIntType::setZero);
 		pxInINTERSECTION_map_RA = pxInINTERSECTION_map.randomAccess();
 
@@ -210,10 +214,12 @@ implements LabelInsertor<LT,ET>
 		if (pxInINTERSECTION.size() > 0)
 			pxInINTERSECTION.sort( pxInINTERSECTION.get(0) );
 
+		log.trace("CM: grabbing pixel coords: "+pxInINTERSECTION.size()+" + "+pxTemporarilyHidden.size());
 		log.info("CM: num output pixels in collision " + pxInINTERSECTION.size());
 		log.info("CM: map fullness "
 				+ 100L*pxInINTERSECTION.size()/pxInINTERSECTION_map_pxCapacity
 				+ " %");
+		log.info("CM: num temporarily hidden pixels  " + pxTemporarilyHidden.size());
 		//debug img:
 		//SimplifiedIO.saveImage(outImg,"/temp/X_before.tif");
 		//int cnt = 0;
@@ -265,6 +271,11 @@ implements LabelInsertor<LT,ET>
 
 		if (pxInINTERSECTION.size() > 0)
 			log.warn("CM WARNING: Collisions resolving failed on "+pxInINTERSECTION.size()+" voxels");
+
+		// "return" (aka don't hold any longer) the shared resources
+		pxTemporarilyHidden = null;
+		pxInINTERSECTION = null;
+		//pxInINTERSECTION_map = null;
 
 		return collHistogram;
 	}
