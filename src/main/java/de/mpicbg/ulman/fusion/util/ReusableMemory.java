@@ -166,7 +166,7 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 			subjectToData.put( borrowerID, new_i );
 			tmpImgs.add( createExtImage() );
 			outImgs.add( createLabelImage() );
-			cmMapImgs.add( createIntImage() );
+			//cmMapImgs.add( createIntImage() );
 			ccaInImgs.add( createLabelImage() );
 			ccaOutImgs.add( createLabelImage() );
 			interesectionPxs.add( createPx() );
@@ -220,9 +220,11 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 				sb.append("  tmpImg["+i+"]: "
 						+AbstractWeightedVotingRoisFusionAlgorithm.reportImageSize(
 								tmpImgs.get(i), ETpxSize) +"\n");
+				/*
 				sb.append("  cmMapImg["+i+"]: "
 						+AbstractWeightedVotingRoisFusionAlgorithm.reportImageSize(
 								cmMapImgs.get(i), intPxSize) +"\n");
+				*/
 				sb.append("  ccaInImg["+i+"]: "
 						+AbstractWeightedVotingRoisFusionAlgorithm.reportImageSize(
 								ccaInImgs.get(i), LTpxSize) +"\n");
