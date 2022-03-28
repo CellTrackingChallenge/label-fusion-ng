@@ -479,6 +479,7 @@ public class Fusers extends CommonGUI implements Command
 					log.info("ReMem status: " + ReusableMemory.getInstanceFor(
 							fullCombination.refLoadedImages.markerImg,
 							fullCombination.refLoadedImages.markerImg.firstElement() ));
+					fullCombination.feeder.releaseJobInputs();
 				} catch (InterruptedException e) {
 					log.error("multithreading error: "+e.getMessage());
 					e.printStackTrace();
@@ -641,6 +642,9 @@ public class Fusers extends CommonGUI implements Command
 			}
 
 			feeder.releaseJobResult();
+			if (!iAmTheRefence) feeder.releaseJobInputs();
+			//NB: the ref. one get released only after all others are done,
+			//    which is handled explicitly in the very outer loop (Fusers)
 
 			time -= System.currentTimeMillis();
 			feeder.shareLogger().info("ELAPSED TIME: "+(-time/1000)+" seconds");

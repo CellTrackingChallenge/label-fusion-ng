@@ -340,6 +340,14 @@ extends JobIO<IT,LT>
 			= new MajorityOverlapBasedLabelExtractor<>();
 
 	public
+	void releaseJobInputs()
+	{
+		//also looses all refs on input images (giving GC a chance to return the mem)
+		for (int i = 0; i < inImgs.size(); ++i) inImgs.set(i, null);
+		markerImg = null;
+	}
+
+	public
 	void releaseJobResult()
 	{
 		//this a counter-part to the note in useAlgorithm() and useAlgorithmWithoutUpdatingBoxes()
