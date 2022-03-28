@@ -284,15 +284,22 @@ extends JobIO<IT,LT>
 	public
 	void scoreJob(final SegGtImageLoader<LT> SEGloader, final SegGtCumulativeScore score)
 	{
-		log.info("Doing SEG score now...");
+		for (final SegGtImageLoader<LT>.LoadedData ld : SEGloader.getLastLoadedData())
+			scoreJob(ld, score);
+	}
+
+	public
+	void scoreJob(final SegGtImageLoader<LT>.LoadedData ld, final SegGtCumulativeScore score)
+	{
+		log.info("Doing SEG score now for "+ld.lastLoadedImageName+" ...");
 		score.startSection();
 
 		//shortcuts:
-		final RandomAccessibleInterval<LT> gtImg = SEGloader.lastLoadedImage;
-		final Map<Double,long[]> gtBoxes = SEGloader.getLastCalculatedBoxes();
+		final RandomAccessibleInterval<LT> gtImg = ld.lastLoadedImage;
+		final Map<Double,long[]> gtBoxes = ld.calculatedBoxes;
 		//
-		final RandomAccessibleInterval<LT> resImg = SEGloader.lastLoadedIs2D ?
-				Views.hyperSlice(outFusedImg, 2, SEGloader.lastLoaded2DSlice) : outFusedImg;
+		final RandomAccessibleInterval<LT> resImg = ld.lastLoadedIs2D ?
+				Views.hyperSlice(outFusedImg, 2, ld.lastLoaded2DSlice) : outFusedImg;
 
 		//check res and gt images are of the same size/dimensionality
 		if (!Arrays.equals(gtImg.minAsLongArray(), resImg.minAsLongArray())
@@ -331,7 +338,7 @@ extends JobIO<IT,LT>
 			else score.addCase(0.0); //nothing found for this SEG instance
 		}
 
-		log.info("...for this time point "+SEGloader.lastLoadedTimepoint
+		log.info("...for this time point "+ld.lastLoadedTimepoint
 				+" only: avg SEG = "+score.getSectionScore()+" obtained over "
 				+score.getNumberOfSectionCases()+" segments");
 	}

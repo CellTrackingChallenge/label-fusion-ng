@@ -418,8 +418,11 @@ public class Fusers extends CommonGUI implements Command
 				//
 				if (SEGevaluator != null && SEGevaluator.managedToLoadImageForTimepoint(time))
 				{
-					SEGevaluator.calcBoxes();
-					feeder.scoreJob(SEGevaluator, runningSEGscore);
+					for (final SegGtImageLoader<LT>.LoadedData ld : SEGevaluator.getLastLoadedData())
+					{
+						ld.calcBoxes();
+						feeder.scoreJob(ld, runningSEGscore);
+					}
 				}
 			});
 			feeder.releaseJobResult();
@@ -472,8 +475,8 @@ public class Fusers extends CommonGUI implements Command
 					//also pre-load the shared SEG image before the fusion and evaluation
 					if (SEGevaluator != null && SEGevaluator.managedToLoadImageForTimepoint(time))
 					{
-						SEGevaluator.calcBoxes();
-						//NB: the status of loading is also available from SEGevaluator.lastLoadedTimepoint == time
+						for (final SegGtImageLoader<LT>.LoadedData ld : SEGevaluator.getLastLoadedData())
+							ld.calcBoxes();
 						//NB: if loaded now something, scoreJob() is then called later by each combination
 					}
 					ltime -= System.currentTimeMillis();
@@ -712,7 +715,9 @@ public class Fusers extends CommonGUI implements Command
 				feeder.saveJob( JobSpecification.expandFilenamePattern(outputFilenamePattern,currentTime) );
 			}
 
-			if (SEGevaluator != null && SEGevaluator.lastLoadedTimepoint == currentTime)
+			if (SEGevaluator != null
+					&& SEGevaluator.getLastLoadedData().size() > 0
+					&& SEGevaluator.getLastLoadedData().get(0).lastLoadedTimepoint == currentTime)
 			{
 				log.info("Combination "+code+" just started evaluating its result");
 				feeder.scoreJob(SEGevaluator, runningSEGscore);
