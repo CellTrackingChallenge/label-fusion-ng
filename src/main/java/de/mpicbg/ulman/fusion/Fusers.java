@@ -305,6 +305,7 @@ public class Fusers extends CommonGUI implements Command
 		} catch (ParseException e) {
 			log.error("Error parsing time points: "+e.getMessage());
 			if (useGui) uiService.showDialog("Error parsing time points:\n"+e.getMessage());
+			e.printStackTrace();
 			return;
 		}
 
