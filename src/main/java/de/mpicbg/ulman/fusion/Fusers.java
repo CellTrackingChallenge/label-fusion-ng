@@ -444,8 +444,10 @@ public class Fusers extends CommonGUI implements Command
 			final ExecutorService cmvers = Executors.newFixedThreadPool(noOfThreads);
 			iterateTimePoints(fileIdxList,useGui,time -> {
 				try {
+					log.trace("main loop before GC");
 					System.gc();
 					//NB: hope for some clean up before new round of images loading...
+					log.trace("main loop after GC");
 
 					for (OneCombination<IT,LT> c : combinations) {
 						c.currentTime = time;
