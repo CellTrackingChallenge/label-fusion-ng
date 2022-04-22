@@ -1,5 +1,6 @@
 package de.mpicbg.ulman.fusion.util;
 
+import de.mpicbg.ulman.fusion.ng.AbstractWeightedVotingRoisFusionAlgorithm;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
@@ -178,7 +179,7 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 	{
 		synchronized (SYNCHRONIZER)
 		{
-			StringBuilder sb = new StringBuilder("Slots:");
+			StringBuilder sb = new StringBuilder("ReMem instance "+getAddr()+"\nSlots:");
 			for (int i = 0; i < dataToSubject.size(); ++i)
 				sb.append(" [").append(i).append(": ")
 						.append(dataToSubject.get(i))
@@ -188,6 +189,29 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 				sb.append(" [").append(who).append(" owns ")
 						.append(subjectToData.get(who))
 						.append(']');
+			sb.append("\nAllocated sizes per slot:\n");
+			//
+			final long LTpxSize = refLabelType.getBitsPerPixel()/8;
+			final long ETpxSize = refExtType.getBitsPerPixel()/8;
+			final long intPxSize = refIntType.getBitsPerPixel()/8;
+			for (int i = 0; i < dataToSubject.size(); ++i)
+			{
+				sb.append("  outImg["+i+"]: "
+						+AbstractWeightedVotingRoisFusionAlgorithm.reportImageSize(
+								outImgs.get(i), LTpxSize) +"\n");
+				sb.append("  tmpImg["+i+"]: "
+						+AbstractWeightedVotingRoisFusionAlgorithm.reportImageSize(
+								tmpImgs.get(i), ETpxSize) +"\n");
+				sb.append("  cmMapImg["+i+"]: "
+						+AbstractWeightedVotingRoisFusionAlgorithm.reportImageSize(
+								cmMapImgs.get(i), intPxSize) +"\n");
+				sb.append("  ccaInImg["+i+"]: "
+						+AbstractWeightedVotingRoisFusionAlgorithm.reportImageSize(
+								ccaInImgs.get(i), LTpxSize) +"\n");
+				sb.append("  ccaOutImg["+i+"]: "
+						+AbstractWeightedVotingRoisFusionAlgorithm.reportImageSize(
+								ccaOutImgs.get(i), LTpxSize) +"\n");
+			}
 			return sb.toString();
 		}
 	}
@@ -286,7 +310,7 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 		synchronized (SYNCHRONIZER)
 		{
 			THE_INSTANCE = new ReusableMemory<>(refImage,refLabelType,refExtType);
-			log.debug("resetting into a new instance of "+THE_INSTANCE.getAddr());
+			log.debug("resetting into a new ReMem instance of "+THE_INSTANCE.getAddr());
 			return (ReusableMemory<LLT, EET>)THE_INSTANCE;
 		}
 	}

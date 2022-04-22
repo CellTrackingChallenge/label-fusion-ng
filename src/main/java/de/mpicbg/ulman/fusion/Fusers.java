@@ -473,6 +473,9 @@ public class Fusers extends CommonGUI implements Command
 
 					cmvers.invokeAll(combinations); //calls useAlgorithmWithoutUpdatingBoxes() -> fuse()
 					log.info("All combinations for time "+time+" got processed just now.");
+					log.info("ReMem status: " + ReusableMemory.getInstanceFor(
+							fullCombination.refLoadedImages.markerImg,
+							fullCombination.refLoadedImages.markerImg.firstElement() ));
 				} catch (InterruptedException e) {
 					log.error("multithreading error: "+e.getMessage());
 					e.printStackTrace();
