@@ -169,16 +169,9 @@
 	<dependencies>
 		<!-- for reading/saving images -->
 		<dependency>
-			<groupId>sc.fiji</groupId>
-			<artifactId>simplified-io</artifactId>
-			<version>1.0.1</version>
-
-			<exclusions>
-				<exclusion>
-					<groupId>xalan</groupId>
-					<artifactId>xalan</artifactId>
-				</exclusion>
-			</exclusions>
+			<groupId>cz.it4i.fiji</groupId>
+			<artifactId>hpc-datastore-fiji</artifactId>
+			<version>0.2.3</version>
 		</dependency>
 
 		<!-- essentially only because of the Jaccard -->

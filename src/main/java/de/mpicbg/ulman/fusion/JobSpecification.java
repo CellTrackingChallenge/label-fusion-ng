@@ -113,6 +113,7 @@ public class JobSpecification
 		}
 		res.markerFile = expandFilenamePattern(markerPattern,timepoint);
 		res.threshold = votingThreshold;
+		res.forThisTimePoint = timepoint;
 		return res;
 	}
 
@@ -129,6 +130,7 @@ public class JobSpecification
 		}
 		res.markerFile = expandFilenamePattern(args[2*inputImagesCount],timepoint);
 		res.threshold = Double.parseDouble(args[2*inputImagesCount+1]);
+		res.forThisTimePoint = timepoint;
 		return res;
 	}
 
@@ -145,6 +147,7 @@ public class JobSpecification
 		}
 		res.markerFile = args[2*inputImagesCount];
 		res.threshold = Double.parseDouble(args[2*inputImagesCount+1]);
+		res.forThisTimePoint = 0; //TODO, should be somehow parsed out from the args???
 		return res;
 	}
 
@@ -154,6 +157,7 @@ public class JobSpecification
 		public double[] inputWeights;
 		public String markerFile;
 		public double threshold;
+		public int forThisTimePoint;
 
 		@Override
 		public String toString()
@@ -165,7 +169,8 @@ public class JobSpecification
 						.append(inputWeights[i]).append('\n');
 			}
 			sb.append("m: ").append(markerFile)
-						.append("\nt: ").append(threshold);
+						.append("\nt: ").append(threshold)
+						.append("\ntime: ").append(forThisTimePoint);
 			return sb.toString();
 		}
 	}

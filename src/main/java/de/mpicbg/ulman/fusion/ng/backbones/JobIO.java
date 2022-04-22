@@ -27,12 +27,13 @@
  */
 package de.mpicbg.ulman.fusion.ng.backbones;
 
+import cz.it4i.fiji.legacy.ReadFullImage;
 import net.imagej.ImgPlus;
 import net.imglib2.img.Img;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.IntegerType;
-import sc.fiji.simplifiedio.SimplifiedIO;
+//import sc.fiji.simplifiedio.SimplifiedIO;
 
 import org.scijava.app.StatusService;
 import org.scijava.ui.UIService;
@@ -194,13 +195,26 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 				if (input_idx < jsi.inputFiles.length) {
 					reportFileName = jsi.inputFiles[input_idx];
 					log.info("Reading pair started: " + reportFileName + " " + jsi.inputWeights[input_idx]);
-					img = SimplifiedIO.openImage(jsi.inputFiles[input_idx]);
-					log.trace("Reading pair done: " + reportFileName + " " + jsi.inputWeights[input_idx]);
+					//img = SimplifiedIO.openImage(jsi.inputFiles[input_idx]);
+					//log.trace("Reading pair done: " + reportFileName + " " + jsi.inputWeights[input_idx]);
+					final int channel = input_idx%3; //TODO: intentionally wrong for the test!!!
+					img = (Img)ReadFullImage.from("localhost:9080",
+							"cf89301e-1ac2-4ad8-85f4-c875396e9d7b",
+							jsi.forThisTimePoint, channel,
+							0,1,1,1,"0")
+							.getImgPlus();
+					log.trace("Fetching pair from DataStore at channel: " + channel + " " + jsi.inputWeights[input_idx]);
 				} else if (input_idx == jsi.inputFiles.length) {
 					reportFileName = jsi.markerFile;
 					log.info("Reading marker started: " + reportFileName);
-					img = SimplifiedIO.openImage(jsi.markerFile);
-					log.trace("Reading marker done: " + reportFileName);
+					//img = SimplifiedIO.openImage(jsi.markerFile);
+					//log.trace("Reading marker done: " + reportFileName);
+					img = (Img)ReadFullImage.from("localhost:9080",
+							"cf89301e-1ac2-4ad8-85f4-c875396e9d7b",
+							jsi.forThisTimePoint, input_idx,
+							0,1,1,1,"0")
+							.getImgPlus();
+					log.trace("Fetching marker from DataStore at channel: " + input_idx);
 				} else {
 					//sanity check from "over-parallellism"
 					throw new RuntimeException("Can't process input_idx "+input_idx+" when only "
@@ -256,7 +270,7 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 				}
 				log.trace("Reading of " + reportFileName + ", assignments passed");
 			}
-			catch (RuntimeException e) {
+			catch (RuntimeException | IOException e) {
 				isErrorMsg = e.getMessage();
 			}
 
