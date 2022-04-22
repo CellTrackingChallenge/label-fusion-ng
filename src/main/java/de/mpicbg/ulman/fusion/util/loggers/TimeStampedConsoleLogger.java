@@ -16,6 +16,7 @@ public class TimeStampedConsoleLogger extends SimpleConsoleLogger
 	private final Date d = new Date();
 
 	@Override
+	synchronized
 	String createMessage(final String reportedLevel, final Object message) {
 		d.setTime(System.currentTimeMillis());
 		return prefix + "[" + d + " " + reportedLevel + "] " + message;
