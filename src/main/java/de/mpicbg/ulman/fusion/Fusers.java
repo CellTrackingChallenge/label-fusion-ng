@@ -554,8 +554,9 @@ public class Fusers extends CommonGUI implements Command
 
 			this.threshold = threshold;
 			this.code = cmv_createFolderName(this,inputsWidth);
-			this.batchSubFolder = ((1<<inputsWidth)*(inputsWidth/2)) > MAXNUMBEROFSUBFOLDERS ?
-					"batch"+(combinationInDecimal / MAXNUMBEROFSUBFOLDERS) : null;
+			final int avgNoOfThresholdsPerCombination = inputsWidth/2;
+			this.batchSubFolder = ((1<<inputsWidth)*avgNoOfThresholdsPerCombination) > MAXNUMBEROFSUBFOLDERS ?
+					"batch"+(avgNoOfThresholdsPerCombination*combinationInDecimal / MAXNUMBEROFSUBFOLDERS) : null;
 			//NB: flag "subfoldering" if the expected number of combinations exceeds
 			//    the max number of subfolders
 		}
