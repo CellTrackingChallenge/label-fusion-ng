@@ -52,15 +52,17 @@ import java.util.LinkedList;
 import java.util.ArrayList;
 import java.util.TreeSet;
 import java.text.ParseException;
+import java.util.function.Consumer;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ExecutionException;
 import java.io.IOException;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
 import de.mpicbg.ulman.fusion.ng.backbones.JobIO;
@@ -311,6 +313,7 @@ public class Fusers extends CommonGUI implements Command
 
 		// ------------ preparing for action ------------
 		final List<OneCombination<IT,LT>> combinations; //NB: even for non-CMV
+		combinationsProcessingThreadPool = new ForkJoinPool(noOfThreads);
 		ReusableMemory.setLogger(log);
 
 		if (doCMV) {
@@ -492,6 +495,8 @@ public class Fusers extends CommonGUI implements Command
 			if (SEGevaluator != null)
 				for (OneCombination<IT,LT> c : combinations) c.reportSEG();
 		}
+
+		combinationsProcessingThreadPool.shutdown();
 	}
 
 
@@ -524,6 +529,24 @@ public class Fusers extends CommonGUI implements Command
 	{
 		for (OneCombination<?,?> c : combinations) log.info(c);
 	}
+
+	private ForkJoinPool combinationsProcessingThreadPool = null;
+	private <IT extends RealType<IT>, LT extends IntegerType<LT>>
+	void overAllCombinationsDo(final List<OneCombination<IT,LT>> combinations,
+	                           final Consumer<OneCombination<IT,LT>> doer)
+	{
+		try {
+			combinationsProcessingThreadPool.submit(
+					() -> combinations.parallelStream().forEach(doer)  ).get();
+		} catch (InterruptedException e) {
+			log.error("Interrupted in overAllCombinationsDo(): "+e.getMessage());
+			throw new RuntimeException("overAllCombinationsDo interrupted",e);
+		} catch (ExecutionException e) {
+			log.error("Doer failed in overAllCombinationsDo(): "+e.getMessage());
+			throw new RuntimeException("overAllCombinationsDo failed",e);
+		}
+	}
+
 
 	public class OneCombination<IT extends RealType<IT>, LT extends IntegerType<LT>>
 	implements Callable<OneCombination<IT,LT>>
