@@ -43,7 +43,7 @@ public class CollisionsManagingLabelInsertor<LT extends IntegerType<LT>, ET exte
 extends CollisionsAwareLabelInsertor<LT,ET>
 implements LabelInsertor<LT,ET>
 {
-	class PxCoord implements Comparator<PxCoord>
+	static public class PxCoord implements Comparator<PxCoord>
 	{
 		PxCoord(int... xyz)
 		{

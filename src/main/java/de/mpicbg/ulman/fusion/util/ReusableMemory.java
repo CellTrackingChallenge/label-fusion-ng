@@ -1,6 +1,7 @@
 package de.mpicbg.ulman.fusion.util;
 
 import de.mpicbg.ulman.fusion.ng.AbstractWeightedVotingRoisFusionAlgorithm;
+import de.mpicbg.ulman.fusion.ng.insert.CollisionsManagingLabelInsertor.PxCoord;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
@@ -9,10 +10,11 @@ import net.imglib2.type.numeric.integer.UnsignedIntType;
 import org.scijava.log.Logger;
 import de.mpicbg.ulman.fusion.util.loggers.NoOutputLogger;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Vector;
 import java.util.Map;
+import java.util.HashMap;
 
 /** A singleton memory broker to avoid re-allocating one-time used memory */
 public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
@@ -34,6 +36,10 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 
 	private Img<UnsignedIntType> createIntImage() {
 		return refImage.factory().imgFactory(refIntType).create(refImage);
+	}
+
+	private Vector<PxCoord> createPx() {
+		return new Vector<>(500000);
 	}
 
 
@@ -75,6 +81,9 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 	private final List<Img<LT>> ccaInImgs = new ArrayList<>(EXPECTED_BORROWERS_NUM);
 	private final List<Img<LT>> ccaOutImgs = new ArrayList<>(EXPECTED_BORROWERS_NUM);
 
+	private final List<Vector<PxCoord>> interesectionPxs = new ArrayList<>(EXPECTED_BORROWERS_NUM);
+	private final List<Vector<PxCoord>> tempHiddenPxs = new ArrayList<>(EXPECTED_BORROWERS_NUM);
+
 	/**
 	 * Borrows "tmpImg" to this caller, and blocks the other images from this object (the singleton)
 	 * for the same caller. The borrowed image(s) are of the same dimension, sizes and voxel
@@ -106,6 +115,13 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 	/** See {@link #getTmpImg(int)} */
 	public Img<LT> getCcaOutImg(final int borrowerID) {
 		return ccaOutImgs.get( register(borrowerID) );
+	}
+
+	public Vector<PxCoord> getInteresectionPx(final int borrowerID) {
+		return interesectionPxs.get( register(borrowerID) );
+	}
+	public Vector<PxCoord> getTempHiddenPx(final int borrowerID) {
+		return tempHiddenPxs.get( register(borrowerID) );
 	}
 
 	/**
@@ -153,6 +169,8 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 			cmMapImgs.add( createIntImage() );
 			ccaInImgs.add( createLabelImage() );
 			ccaOutImgs.add( createLabelImage() );
+			interesectionPxs.add( createPx() );
+			tempHiddenPxs.add( createPx() );
 			log.debug("ReusableMem.registering: new borrower "+borrowerID+" will get new slot "+subjectToData.get(borrowerID));
 			return new_i;
 		}
@@ -211,6 +229,8 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 				sb.append("  ccaOutImg["+i+"]: "
 						+AbstractWeightedVotingRoisFusionAlgorithm.reportImageSize(
 								ccaOutImgs.get(i), LTpxSize) +"\n");
+				sb.append("  intersectionPxs["+i+"] vector of capacity: "+interesectionPxs.get(i).capacity()+"\n");
+				sb.append("  temp_hidden_Pxs["+i+"] vector of capacity: "+tempHiddenPxs.get(i).capacity()+"\n---\n");
 			}
 			return sb.toString();
 		}
