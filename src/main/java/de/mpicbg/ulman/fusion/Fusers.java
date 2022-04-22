@@ -730,9 +730,9 @@ public class Fusers extends CommonGUI implements Command
 		myself.doCMV =  args.length >= 6  &&  (args[5].startsWith("cmv") || args[5].startsWith("CMV"));
 		if (myself.doCMV) {
 			final SimpleDiskSavingLogger dLog = new SimpleDiskSavingLogger();
-			dLog.setLeakingTarget( new NoHeaderConsoleLogger() );
-			dLog.leakAlsoThese("borrow");
-			dLog.leakAlsoThese("Combination");
+			//dLog.setLeakingTarget( new NoHeaderConsoleLogger() );
+			//dLog.leakAlsoThese("borrow");
+			//dLog.leakAlsoThese("Combination");
 			myself.log = dLog;
 		} else {
 			myself.log = new SimpleRestrictedLogger();

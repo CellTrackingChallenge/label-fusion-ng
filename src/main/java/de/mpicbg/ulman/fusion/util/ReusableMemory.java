@@ -146,7 +146,7 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 		{
 			//already registered?
 			if (subjectToData.containsKey(borrowerID)) {
-				log.debug("ReusableMem.registering: known borrower "+borrowerID+" will get its slot "+subjectToData.get(borrowerID));
+				//log.debug("ReusableMem.registering: known borrower "+borrowerID+" will get its slot "+subjectToData.get(borrowerID));
 				return subjectToData.get(borrowerID);
 			}
 
@@ -155,7 +155,7 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 				if (dataToSubject.get(i) == VACANT_SLOT) {
 					dataToSubject.set(i,borrowerID);
 					subjectToData.put(borrowerID,i);
-					log.debug("ReusableMem.registering: new borrower "+borrowerID+" will re-use slot "+subjectToData.get(borrowerID));
+					//log.debug("ReusableMem.registering: new borrower "+borrowerID+" will re-use slot "+subjectToData.get(borrowerID));
 					return i;
 				}
 			}
@@ -171,7 +171,7 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 			ccaOutImgs.add( createLabelImage() );
 			interesectionPxs.add( createPx() );
 			tempHiddenPxs.add( createPx() );
-			log.debug("ReusableMem.registering: new borrower "+borrowerID+" will get new slot "+subjectToData.get(borrowerID));
+			//log.debug("ReusableMem.registering: new borrower "+borrowerID+" will get new slot "+subjectToData.get(borrowerID));
 			return new_i;
 		}
 	}
@@ -182,11 +182,11 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 		{
 			//was registered?
 			if (!subjectToData.containsKey(borrowerID)) {
-				log.debug("ReusableMem.DEregistering: unknown borrower "+borrowerID);
+				//log.debug("ReusableMem.DEregistering: unknown borrower "+borrowerID);
 				return;
 			}
 
-			log.debug("ReusableMem.DEregistering: known borrower "+borrowerID+" from slot "+subjectToData.get(borrowerID));
+			//log.debug("ReusableMem.DEregistering: known borrower "+borrowerID+" from slot "+subjectToData.get(borrowerID));
 			dataToSubject.set( subjectToData.get(borrowerID), VACANT_SLOT );
 			subjectToData.remove(borrowerID);
 		}

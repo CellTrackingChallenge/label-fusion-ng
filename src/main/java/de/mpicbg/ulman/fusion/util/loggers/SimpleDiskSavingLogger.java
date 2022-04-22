@@ -29,7 +29,7 @@ public class SimpleDiskSavingLogger extends TimeStampedConsoleLogger
 
 		final String logFilePath = logFolder + File.separator + fileName;
 		try {
-			super.info("Starting new logger: " + logFilePath);
+			//super.info("Starting new logger: " + logFilePath);
 			final FileHandler fh = new FileHandler(logFilePath);
 			fh.setFormatter(EASYFORMATTER);
 			javaLogger.addHandler(fh);
