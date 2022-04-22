@@ -370,25 +370,25 @@ public class Fusers extends CommonGUI implements Command
 		else
 		if (mergeModel.startsWith("BICv2 with Flat"))
 		{
-			for (OneCombination<IT,LT> c : combinations) {
+			overAllCombinationsDo(combinations, c -> {
 				final Logger logger = getSubLoggerFrom(log,c);
 				c.feeder = new WeightedVotingFusionFeeder<IT,LT>(logger).setAlgorithm(new BICenhancedFlat<>(logger));
-			}
+			});
 		}
 		else
 		if (mergeModel.startsWith("BICv2 with Weight"))
 		{
-			for (OneCombination<IT,LT> c : combinations) {
+			overAllCombinationsDo(combinations, c -> {
 				final Logger logger = getSubLoggerFrom(log,c);
 				c.feeder = new WeightedVotingFusionFeeder<IT,LT>(logger).setAlgorithm(new BICenhancedWeighted<>(logger));
-			}
+			});
 		}
 		else
 		{
-			for (OneCombination<IT,LT> c : combinations) {
+			overAllCombinationsDo(combinations, c -> {
 				final Logger logger = getSubLoggerFrom(log,c);
 				c.feeder = new WeightedVotingFusionFeeder<IT,LT>(logger).setAlgorithm(new BIC<>(logger));
-			}
+			});
 		}
 
 		// ------------ action per time point ------------
@@ -438,11 +438,11 @@ public class Fusers extends CommonGUI implements Command
 			//(which happens to include all original inputs -- the full job) and make it a
 			//'refLoadedImages' for all combinations (including the very last one)
 			final OneCombination<IT,LT> fullCombination = combinations.get( combinations.size()-1 );
-			for (OneCombination<IT,LT> c : combinations) {
+			overAllCombinationsDo(combinations, c -> {
 				c.refLoadedImages = fullCombination.feeder;
 				//also share the one SEG evaluator among all combination cases
 				c.SEGevaluator = SEGevaluator;
-			}
+			});
 			//
 			//prevent the 'refLoadedImages' to replace its data with empty initialized content, see OneCombination.call()
 			fullCombination.iAmTheRefence = true;
@@ -455,10 +455,10 @@ public class Fusers extends CommonGUI implements Command
 					//NB: hope for some clean up before new round of images loading...
 					log.trace("main loop after GC");
 
-					for (OneCombination<IT,LT> c : combinations) {
+					overAllCombinationsDo(combinations, c -> {
 						c.currentTime = time;
 						job.reportJobForTimeForCombination(time, c, c.feeder.shareLogger());
-					}
+					});
 
 					//processJob() is loadJob(), calcBoxes() and fuse() (both are inside useAlgorithm())
 					log.info("Loading input images for TP="+time);
@@ -495,7 +495,7 @@ public class Fusers extends CommonGUI implements Command
 			cmvers.shutdownNow();
 
 			if (SEGevaluator != null)
-				for (OneCombination<IT,LT> c : combinations) c.reportSEG();
+				overAllCombinationsDo(combinations, OneCombination::reportSEG);
 		}
 
 		combinationsProcessingThreadPool.shutdown();
