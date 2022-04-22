@@ -321,12 +321,14 @@ public class Fusers extends CommonGUI implements Command
 			cmv_fillInAllCombinations(job,combinations);
 
 			//prepare output folders
-			try {
-				for (OneCombination<IT,LT> c : combinations) c.setupOutputFolder(job.outputPattern);
-			} catch (IOException e) {
-				log.error(e.getMessage());
-				throw new RuntimeException("CMV: likely an error with output folders...",e);
-			}
+			overAllCombinationsDo(combinations, c -> {
+					try {
+						c.setupOutputFolder(job.outputPattern);
+					} catch (IOException e) {
+						log.error(e.getMessage());
+						throw new RuntimeException("CMV: likely an error with output folders...",e);
+					}
+				} );
 		} else {
 			combinations = new ArrayList<>(1);
 			combinations.add( new OneCombination<>((1 << job.numberOfFusionInputs)-1,job.votingThreshold, job.numberOfFusionInputs) );
@@ -712,7 +714,12 @@ public class Fusers extends CommonGUI implements Command
 					throw new IOException(folderName+" seems to exist but it is not a directory!");
 			} else {
 				log.info("Creating output folder: "+folderName);
-				Files.createDirectory(fPath);
+				try { Files.createDirectory(fPath); }
+				catch (IOException e) {
+					if (!Files.isDirectory(fPath)) throw e;
+					//NB: there's possibly multiple callers racing to create the same folder,
+					//NB: so swallow the exception if the folder is actually already there
+				}
 			}
 		}
 	}
