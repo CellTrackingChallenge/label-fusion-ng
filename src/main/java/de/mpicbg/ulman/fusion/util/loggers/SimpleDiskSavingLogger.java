@@ -22,7 +22,7 @@ public class SimpleDiskSavingLogger extends TimeStampedConsoleLogger
 		this(logFolder, "log.txt");
 	}
 
-	SimpleDiskSavingLogger(final String logFolder, final String fileName) {
+	public SimpleDiskSavingLogger(final String logFolder, final String fileName) {
 		super();
 		javaLogger = Logger.getLogger("FuserLog_" + logFolder + "/" + fileName);
 		javaLogger.setUseParentHandlers(false);
