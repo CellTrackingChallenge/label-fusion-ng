@@ -428,8 +428,8 @@ public class Fusers extends CommonGUI implements Command
 			feeder.releaseJobResult();
 
 			if (SEGevaluator != null)
-				log.info("Done, final avg SEG = "+runningDetSegScore.getOverallScore()+" obtained over "
-						+runningDetSegScore.getNumberOfAllCases()+" segments");
+				log.info("Done, final avg SEG = "+runningDetSegScore.getOverallSegScore()+" obtained over "
+						+runningDetSegScore.getNumberOfAllSegCases()+" segments");
 			else
 				log.info("Done fusion");
 		}
@@ -736,8 +736,8 @@ public class Fusers extends CommonGUI implements Command
 
 		public void reportDetSeg()
 		{
-			feeder.shareLogger().info("Final avg SEG = "+ runningDetSegScore.getOverallScore()+" obtained over "
-					+ runningDetSegScore.getNumberOfAllCases()+" segments");
+			feeder.shareLogger().info("Final avg SEG = "+ runningDetSegScore.getOverallSegScore()+" obtained over "
+					+ runningDetSegScore.getNumberOfAllSegCases()+" segments");
 		}
 
 		// ----------- saving output images -----------

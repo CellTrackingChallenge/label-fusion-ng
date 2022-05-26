@@ -2,7 +2,7 @@ package de.mpicbg.ulman.fusion.util;
 
 public class DetSegCumulativeScores
 {
-	public void addCase(double oneJaccardValue) {
+	public void addSegMatch(double oneJaccardValue) {
 		segSum += oneJaccardValue;
 		++segCnt;
 
@@ -10,15 +10,19 @@ public class DetSegCumulativeScores
 		++sectionSegCnt;
 	}
 
+	public void addSegMiss() {
+		addSegMatch(0.0);
+	}
+
 	// --------------- global score ---------------
 	private double segSum = 0.0;
 	private long segCnt = 0;
 
-	public long getNumberOfAllCases() {
+	public long getNumberOfAllSegCases() {
 		return segCnt;
 	}
 
-	public double getOverallScore() {
+	public double getOverallSegScore() {
 		return segCnt > 0 ? segSum / (double) segCnt : 0.0;
 	}
 
@@ -31,11 +35,11 @@ public class DetSegCumulativeScores
 		sectionSegCnt = 0;
 	}
 
-	public long getNumberOfSectionCases() {
+	public long getNumberOfSectionSegCases() {
 		return sectionSegCnt;
 	}
 
-	public double getSectionScore() {
+	public double getSectionSegScore() {
 		return sectionSegCnt > 0 ? sectionSegSum / (double) sectionSegCnt : 0.0;
 	}
 }

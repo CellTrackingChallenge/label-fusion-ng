@@ -332,15 +332,15 @@ extends JobIO<IT,LT>
 				final Interval i = AbstractWeightedVotingRoisFusionAlgorithm.createInterval(resBox);
 				double seg = Jaccard.Jaccard(Views.interval(resImg,i), resLabel,
 						Views.interval(gtImg,i), gtLabel);
-				score.addCase(seg);
+				score.addSegMatch(seg);
 				log.trace("...with seg = "+seg);
 			}
-			else score.addCase(0.0); //nothing found for this SEG instance
+			else score.addSegMiss(); //nothing found for this SEG instance
 		}
 
 		log.info("...for this time point "+ld.lastLoadedTimepoint
-				+" only: avg SEG = "+score.getSectionScore()+" obtained over "
-				+score.getNumberOfSectionCases()+" segments");
+				+" only: avg SEG = "+score.getSectionSegScore()+" obtained over "
+				+score.getNumberOfSectionSegCases()+" segments");
 	}
 
 	final MajorityOverlapBasedLabelExtractor<LT,LT,?> extractor
