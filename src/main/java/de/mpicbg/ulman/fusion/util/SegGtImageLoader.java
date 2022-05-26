@@ -59,7 +59,7 @@ public class SegGtImageLoader<LT extends IntegerType<LT>>
 					ld.lastLoadedImageName = discoveredImgFiles.remove(0).toFile().getAbsolutePath();
 					ld.lastLoadedTimepoint = timepoint;
 					loadedImage = load2DImage(ld);
-					checkCastStoreOrThrow(loadedImage, ld);
+					checkCastAndStoreOrThrow(loadedImage, ld);
 					lastLoadedData.add(ld);
 				}
 			}
@@ -81,7 +81,7 @@ public class SegGtImageLoader<LT extends IntegerType<LT>>
 					ld.lastLoadedImageName = discoveredImgFiles.remove(0).toFile().getAbsolutePath();
 					ld.lastLoadedTimepoint = timepoint;
 					loadedImage = load3DImage(ld);
-					checkCastStoreOrThrow(loadedImage, ld);
+					checkCastAndStoreOrThrow(loadedImage, ld);
 					lastLoadedData.add(ld);
 				}
 			}
@@ -99,7 +99,7 @@ public class SegGtImageLoader<LT extends IntegerType<LT>>
 		}
 	}
 
-	void checkCastStoreOrThrow(final Img<?> loadedImage, final LoadedData ld)
+	void checkCastAndStoreOrThrow(final Img<?> loadedImage, final LoadedData ld)
 	throws IOException
 	{
 		if (loadedImage == null)
