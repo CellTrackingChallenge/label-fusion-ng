@@ -3,39 +3,39 @@ package de.mpicbg.ulman.fusion.util;
 public class DetSegCumulativeScores
 {
 	public void addCase(double oneJaccardValue) {
-		sum += oneJaccardValue;
-		++cnt;
+		segSum += oneJaccardValue;
+		++segCnt;
 
-		sectionSum += oneJaccardValue;
-		++sectionCnt;
+		sectionSegSum += oneJaccardValue;
+		++sectionSegCnt;
 	}
 
 	// --------------- global score ---------------
-	double sum = 0.0;
-	long cnt = 0;
+	private double segSum = 0.0;
+	private long segCnt = 0;
 
 	public long getNumberOfAllCases() {
-		return cnt;
+		return segCnt;
 	}
 
 	public double getOverallScore() {
-		return cnt > 0 ? sum / (double)cnt : 0.0;
+		return segCnt > 0 ? segSum / (double) segCnt : 0.0;
 	}
 
 	// --------------- section score ---------------
-	double sectionSum = 0.0;
-	long sectionCnt = 0;
+	private double sectionSegSum = 0.0;
+	private long sectionSegCnt = 0;
 
 	public void startSection() {
-		sectionSum = 0.0;
-		sectionCnt = 0;
+		sectionSegSum = 0.0;
+		sectionSegCnt = 0;
 	}
 
 	public long getNumberOfSectionCases() {
-		return sectionCnt;
+		return sectionSegCnt;
 	}
 
 	public double getSectionScore() {
-		return sectionCnt > 0 ? sectionSum / (double)sectionCnt : 0.0;
+		return sectionSegCnt > 0 ? sectionSegSum / (double) sectionSegCnt : 0.0;
 	}
 }
