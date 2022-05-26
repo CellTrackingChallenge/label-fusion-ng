@@ -42,7 +42,6 @@ import org.scijava.plugin.Plugin;
 import org.scijava.log.Logger;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleDiskSavingLogger;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
-import de.mpicbg.ulman.fusion.util.loggers.NoHeaderConsoleLogger;
 
 import java.nio.file.InvalidPathException;
 import java.util.Map;
@@ -145,6 +144,9 @@ public class Fusers extends CommonGUI implements Command
 
 	@Parameter
 	boolean doCMV = false;
+	//
+	@Parameter(description = "_which_ portion from _how_many_ portions shall this run take care of, the _how_many_ must be power of 2")
+	String doCMV_partition = "1_1";
 
 	@Parameter(description = "Leave empty if you're not interested in doing SEG evaluation of the fusion result.")
 	String SEGfolder = "leave empty when unsure";
@@ -446,6 +448,7 @@ public class Fusers extends CommonGUI implements Command
 			//
 			//prevent the 'refLoadedImages' to replace its data with empty initialized content, see OneCombination.call()
 			fullCombination.iAmTheRefence = true;
+			log.info("The reference full combination has a code: "+fullCombination.code);
 
 			final ExecutorService cmvers = Executors.newFixedThreadPool(noOfThreads);
 			iterateTimePoints(fileIdxList,useGui,time -> {
@@ -502,11 +505,59 @@ public class Fusers extends CommonGUI implements Command
 	}
 
 
+	static
+	void extractFromToCombinationSweepingRange(final String inputCMV_partition,
+	                                           final int numberOfFusionInputs,
+	                                           final int[] minMaxBound)
+	{
+		int partCur, partCnt; //fits as Cur/Cnt
+
+		//parsing it out (and test failing):
+		String[] partitions = inputCMV_partition.split("_");
+		if (partitions.length != 2)
+			throw new IllegalArgumentException("Partition code >>"+ inputCMV_partition +"<< is invalid, missing or many '_'.");
+		try {
+			partCur = Integer.parseInt(partitions[0]);
+			partCnt = Integer.parseInt(partitions[1]);
+		} catch (NumberFormatException e) {
+			throw new IllegalArgumentException("Partition code >>"+ inputCMV_partition +"<< is invalid, failed parsing number.");
+		}
+
+		//sanity test:
+		if (partCur < 1 || partCnt < 1)
+			throw new IllegalArgumentException("Partition code >>"+ inputCMV_partition +"<< is invalid, numbers must be positive.");
+		if (partCur > partCnt)
+			throw new IllegalArgumentException("Partition code >>"+ inputCMV_partition +"<< is invalid, the first must not be larger than the second.");
+		if (partCnt >= (1 << numberOfFusionInputs))
+			throw new IllegalArgumentException("Partition code >>"+ inputCMV_partition +"<< is invalid, the second must not be equal or larger than 2^noOfInputs (2^"+numberOfFusionInputs+").");
+
+		//make sure the partCnt is a power of 2:
+		int partCombCnt = 0; //the number of combinations that is represented with partCnt
+		while ((1 << partCombCnt) < partCnt
+				&& partCombCnt < numberOfFusionInputs) ++partCombCnt;
+		if ((1 << partCombCnt) != partCnt)
+			throw new IllegalArgumentException("Partition code >>"+ inputCMV_partition +"<< is invalid, total (2nd part) is not a power of two.");
+		if (partCombCnt == numberOfFusionInputs)
+			throw new IllegalArgumentException("Partition code >>"+ inputCMV_partition +"<< is invalid, total (2nd part) must be smaller than the number of fusion inputs.");
+
+		//System.out.print("(total is "+partCombCnt+" bits)  ");
+		minMaxBound[0] = ((partCur-1) << (numberOfFusionInputs - partCombCnt)) //the same fixed "upper half"
+		      + (partCur == 1 ? 1 : 0);                                        //the full range of the "bottom half" but avoid no-input combination
+		minMaxBound[1] = ((partCur-1) << (numberOfFusionInputs - partCombCnt)) //the same fixed "upper half"
+		      + (1 << (numberOfFusionInputs - partCombCnt)) -1;                //the full range of the "bottom half"
+	}
+
 	<IT extends RealType<IT>, LT extends IntegerType<LT>>
 	void cmv_fillInAllCombinations(final JobSpecification fullJobLooksLikeThis, final List<OneCombination<IT,LT>> combinations)
 	{
+		log.info("CMV: enumerating combinations given "+ doCMV_partition);
+		int[] fromTo = {0,0};
+		extractFromToCombinationSweepingRange(doCMV_partition, fullJobLooksLikeThis.numberOfFusionInputs, fromTo);
+		log.info("CMV: combinations sweeping range "+fromTo[0]+" to "+fromTo[1]
+			+ ", when full range is 1 to "+((1<<fullJobLooksLikeThis.numberOfFusionInputs)-1) );
+
 		//over all combinations of inputs
-		for (int i = 1; i < (1<<fullJobLooksLikeThis.numberOfFusionInputs); ++i)
+		for (int i = fromTo[0]; i <= fromTo[1]; ++i)
 		{
 			//NB: this threshold level is always present
 			OneCombination<IT,LT> c = new OneCombination<>(i,1, fullJobLooksLikeThis.numberOfFusionInputs);
@@ -751,6 +802,7 @@ public class Fusers extends CommonGUI implements Command
 			System.out.println("timePointsRangeSpecification can be, e.g., 1-9,23,25");
 			System.out.println("Set numberOfThreads to 1 to enforce serial (single-threaded) processing.");
 			System.out.println("The CMV is optional param which enables the CMV combinatorial search.");
+			System.out.println("The CMV can take form CMV2_8 which enables the CMV partitioning.");
 			System.out.println("The SEGfolder is optional param which:");
 			System.out.println("  - enables SEG scoring of individual and overall time points,");
 			System.out.println("  - disables saving of the output images (because one likely wants");
@@ -760,7 +812,11 @@ public class Fusers extends CommonGUI implements Command
 
 		myself.doCMV =  args.length >= 6  &&  (args[5].startsWith("cmv") || args[5].startsWith("CMV"));
 		if (myself.doCMV) {
-			final SimpleDiskSavingLogger dLog = new SimpleDiskSavingLogger();
+			//portions:
+			if (args[5].length() > 3)
+				myself.doCMV_partition = args[5].substring(3);
+
+			final SimpleDiskSavingLogger dLog = new SimpleDiskSavingLogger(".","log_"+myself.doCMV_partition+".txt");
 			//dLog.setLeakingTarget( new NoHeaderConsoleLogger() );
 			//dLog.leakAlsoThese("borrow");
 			//dLog.leakAlsoThese("Combination");
