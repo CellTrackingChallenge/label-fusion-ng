@@ -36,6 +36,11 @@ public class DetSegCumulativeScores
 	private long detFpCnt = 0;
 	private long detTpCnt = 0;
 
+	public String reportCurrentValues() {
+		return "segSum "+segSum+" segCnt "+segCnt
+				+" detFnCnt "+detFnCnt+" detFpCnt "+detFpCnt+" detTpCnt "+detTpCnt;
+	}
+
 	public long getNumberOfAllSegCases() {
 		return segCnt;
 	}

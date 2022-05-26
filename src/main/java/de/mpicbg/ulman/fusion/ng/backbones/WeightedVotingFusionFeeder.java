@@ -289,6 +289,7 @@ extends JobIO<IT,LT>
 			scoreJob_SEG(ld, score);
 		}
 		scoreJob_DET(score);
+		log.info(score.reportCurrentValues());
 	}
 
 	public

@@ -425,6 +425,7 @@ public class Fusers extends CommonGUI implements Command
 						feeder.scoreJob_SEG(ld, runningDetSegScore);
 					}
 					feeder.scoreJob_DET(runningDetSegScore);
+					log.info(runningDetSegScore.reportCurrentValues());
 				}
 			});
 			feeder.releaseJobResult();
