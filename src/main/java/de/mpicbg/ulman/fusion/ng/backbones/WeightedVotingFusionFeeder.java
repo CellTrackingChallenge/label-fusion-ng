@@ -29,6 +29,7 @@ package de.mpicbg.ulman.fusion.ng.backbones;
 
 import de.mpicbg.ulman.fusion.ng.AbstractWeightedVotingRoisFusionAlgorithm;
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
+import de.mpicbg.ulman.fusion.util.ReusableMemory;
 import de.mpicbg.ulman.fusion.util.SegGtCumulativeScore;
 import de.mpicbg.ulman.fusion.util.SegGtImageLoader;
 import net.celltrackingchallenge.measures.util.Jaccard;
@@ -118,6 +119,10 @@ extends JobIO<IT,LT>
 		if (algorithm == null)
 			throw new RuntimeException("Cannot work without an algorithm.");
 
+		//ReusableMemory has auto-initiation/reservation on the first use,
+		//so we need not do anything special now, but we must not forget
+		//to close the session -- see below
+
 		log.info("calling weighted voting algorithm with threshold="+threshold);
 		algorithm.setWeights(inWeights);
 		algorithm.setThreshold(threshold);
@@ -130,6 +135,10 @@ extends JobIO<IT,LT>
 	{
 		if (algorithm == null)
 			throw new RuntimeException("Cannot work without an algorithm.");
+
+		//ReusableMemory has auto-initiation/reservation on the first use,
+		//so we need not do anything special now, but we must not forget
+		//to close the session -- see below
 
 		log.info("calling weighted voting algorithm with threshold="+threshold);
 		algorithm.setWeights(inWeights);
@@ -331,8 +340,20 @@ extends JobIO<IT,LT>
 			= new MajorityOverlapBasedLabelExtractor<>();
 
 	public
+	void releaseJobInputs()
+	{
+		//also looses all refs on input images (giving GC a chance to return the mem)
+		for (int i = 0; i < inImgs.size(); ++i) inImgs.set(i, null);
+		markerImg = null;
+	}
+
+	public
 	void releaseJobResult()
 	{
+		//this a counter-part to the note in useAlgorithm() and useAlgorithmWithoutUpdatingBoxes()
+		ReusableMemory.getInstanceFor(outFusedImg, outFusedImg.firstElement())
+				.closeSession( ReusableMemory.getThreadId() );
+
 		outFusedImg = null;
 		log.info("released out img");
 	}

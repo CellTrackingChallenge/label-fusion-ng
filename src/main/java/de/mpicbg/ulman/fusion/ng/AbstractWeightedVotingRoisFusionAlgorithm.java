@@ -28,6 +28,8 @@
 package de.mpicbg.ulman.fusion.ng;
 
 import de.mpicbg.ulman.fusion.ng.insert.LabelInsertor;
+import de.mpicbg.ulman.fusion.ng.postprocess.KeepLargestCCALabelPostprocessor;
+import de.mpicbg.ulman.fusion.util.ReusableMemory;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
@@ -227,15 +229,15 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 		//create a temporary image (of the same iteration order as the markerImg)
 		log.info("tmpImg: "+reportImageSize(markerImg));
 		log.info("outImg: "+reportImageSize(markerImg,2));
-		log.info("allocating tmp+out (2) images...");
-		final Img<ET> tmpImg
-			= markerImg.factory().imgFactory(referenceType).create(markerImg);
-		log.trace("created tmpImg");
+		log.info("borrowing tmp+out (2) images...");
+		final ReusableMemory<LT, ET> MEMORY = ReusableMemory.getInstanceFor(markerImg, markerImg.firstElement(), referenceType);
+		final Img<ET> tmpImg = MEMORY.getTmpImg( ReusableMemory.getThreadId() );
+		log.trace("borrowed tmpImg");
 
 		//create the output image (of the same iteration order as the markerImg),
 		//and init it
-		final Img<LT> outImg = markerImg.factory().create(markerImg);
-		log.trace("created outImg");
+		final Img<LT> outImg = MEMORY.getOutImg( ReusableMemory.getThreadId() );
+		log.trace("borrowed outImg");
 		LoopBuilder.setImages(outImg).forEachPixel(SetZero::setZero);
 		log.trace("zeroed outImg");
 
@@ -413,6 +415,10 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 				//and mark we have processed this marker
 				mDiscovered.add(curMarker);
 			}
+		}
+		if (labelCleaner instanceof KeepLargestCCALabelPostprocessor) {
+			//only after the all cleaning is done....
+			((KeepLargestCCALabelPostprocessor<LT>)labelCleaner).releaseBorrowedMem();
 		}
 		// --------- CCA analyses ---------
 

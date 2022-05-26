@@ -27,6 +27,7 @@
  */
 package de.mpicbg.ulman.fusion;
 
+import de.mpicbg.ulman.fusion.util.ReusableMemory;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
 
@@ -41,6 +42,7 @@ import org.scijava.plugin.Plugin;
 import org.scijava.log.Logger;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleDiskSavingLogger;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
+import de.mpicbg.ulman.fusion.util.loggers.NoHeaderConsoleLogger;
 
 import java.nio.file.InvalidPathException;
 import java.util.Map;
@@ -303,11 +305,13 @@ public class Fusers extends CommonGUI implements Command
 		} catch (ParseException e) {
 			log.error("Error parsing time points: "+e.getMessage());
 			if (useGui) uiService.showDialog("Error parsing time points:\n"+e.getMessage());
+			e.printStackTrace();
 			return;
 		}
 
 		// ------------ preparing for action ------------
 		final List<OneCombination<IT,LT>> combinations; //NB: even for non-CMV
+		ReusableMemory.setLogger(log);
 
 		if (doCMV) {
 			combinations = new LinkedList<>();
@@ -441,12 +445,19 @@ public class Fusers extends CommonGUI implements Command
 			final ExecutorService cmvers = Executors.newFixedThreadPool(noOfThreads);
 			iterateTimePoints(fileIdxList,useGui,time -> {
 				try {
+					log.trace("main loop before GC");
+					System.gc();
+					//NB: hope for some clean up before new round of images loading...
+					log.trace("main loop after GC");
+
 					for (OneCombination<IT,LT> c : combinations) {
 						c.currentTime = time;
 						job.reportJobForTimeForCombination(time, c, c.feeder.shareLogger());
 					}
 
 					//processJob() is loadJob(), calcBoxes() and fuse() (both are inside useAlgorithm())
+					log.info("Loading input images for TP="+time);
+					long ltime = System.currentTimeMillis();
 					fullCombination.feeder.loadJob( job.instantiateForTime(time), cmvers);
 					fullCombination.feeder.calcBoxes( cmvers );
 
@@ -457,12 +468,18 @@ public class Fusers extends CommonGUI implements Command
 						//NB: the status of loading is also available from SEGevaluator.lastLoadedTimepoint == time
 						//NB: if loaded now something, scoreJob() is then called later by each combination
 					}
+					ltime -= System.currentTimeMillis();
+					log.info("IMAGES for TP="+time+" LOADING TIME: "+(-ltime/1000)+" seconds");
 
 					//here: all images loaded, boxes possibly computed, therefore...
 					//here: ready to start all fusers who start themselves with "stealing" data from the 'fullCombination'
 
 					cmvers.invokeAll(combinations); //calls useAlgorithmWithoutUpdatingBoxes() -> fuse()
 					log.info("All combinations for time "+time+" got processed just now.");
+					log.info("ReMem status: " + ReusableMemory.getInstanceFor(
+							fullCombination.refLoadedImages.markerImg,
+							fullCombination.refLoadedImages.markerImg.firstElement() ));
+					fullCombination.feeder.releaseJobInputs();
 				} catch (InterruptedException e) {
 					log.error("multithreading error: "+e.getMessage());
 					e.printStackTrace();
@@ -605,17 +622,33 @@ public class Fusers extends CommonGUI implements Command
 		@Override
 		public OneCombination<IT,LT> call()
 		{
+			log.info("Combination "+code+" just started fusion");
+			long time = System.currentTimeMillis();
+
 			reInitMe();
 
 			feeder.useAlgorithmWithoutUpdatingBoxes();
 
 			if (saveFusionResults)
+			{
+				log.info("Combination "+code+" just started saving its result");
 				feeder.saveJob( JobSpecification.expandFilenamePattern(outputFilenamePattern,currentTime) );
+			}
 
 			if (SEGevaluator != null && SEGevaluator.lastLoadedTimepoint == currentTime)
+			{
+				log.info("Combination "+code+" just started evaluating its result");
 				feeder.scoreJob(SEGevaluator, runningSEGscore);
+			}
 
 			feeder.releaseJobResult();
+			if (!iAmTheRefence) feeder.releaseJobInputs();
+			//NB: the ref. one get released only after all others are done,
+			//    which is handled explicitly in the very outer loop (Fusers)
+
+			time -= System.currentTimeMillis();
+			feeder.shareLogger().info("ELAPSED TIME: "+(-time/1000)+" seconds");
+			log.info("Combination "+code+" just finished, after "+(-time/1000)+" seconds");
 			return this;
 		}
 
@@ -695,7 +728,16 @@ public class Fusers extends CommonGUI implements Command
 		}
 
 		myself.doCMV =  args.length >= 6  &&  (args[5].startsWith("cmv") || args[5].startsWith("CMV"));
-		myself.log = myself.doCMV ? new SimpleDiskSavingLogger() : new SimpleRestrictedLogger();
+		if (myself.doCMV) {
+			final SimpleDiskSavingLogger dLog = new SimpleDiskSavingLogger();
+			dLog.setLeakingTarget( new NoHeaderConsoleLogger() );
+			dLog.leakAlsoThese("borrow");
+			dLog.leakAlsoThese("Combination");
+			myself.log = dLog;
+		} else {
+			myself.log = new SimpleRestrictedLogger();
+		}
+
 		myself.filePath = new File(args[0]);
 		myself.mergeThreshold = Float.parseFloat(args[1]);
 		myself.outputPath = new File(args[2]);

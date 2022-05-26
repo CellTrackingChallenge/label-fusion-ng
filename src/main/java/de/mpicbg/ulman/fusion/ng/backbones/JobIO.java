@@ -190,12 +190,17 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 			{
 				//load the image
 				Img<IT> img;
+				String reportFileName;
 				if (input_idx < jsi.inputFiles.length) {
-					log.info("Reading pair: " + jsi.inputFiles[input_idx] + " " + jsi.inputWeights[input_idx]);
+					reportFileName = jsi.inputFiles[input_idx];
+					log.info("Reading pair started: " + reportFileName + " " + jsi.inputWeights[input_idx]);
 					img = SimplifiedIO.openImage(jsi.inputFiles[input_idx]);
+					log.trace("Reading pair done: " + reportFileName + " " + jsi.inputWeights[input_idx]);
 				} else if (input_idx == jsi.inputFiles.length) {
-					log.info("Reading marker: " + jsi.markerFile);
+					reportFileName = jsi.markerFile;
+					log.info("Reading marker started: " + reportFileName);
 					img = SimplifiedIO.openImage(jsi.markerFile);
+					log.trace("Reading marker done: " + reportFileName);
 				} else {
 					//sanity check from "over-parallellism"
 					throw new RuntimeException("Can't process input_idx "+input_idx+" when only "
@@ -218,6 +223,7 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 						img.dimensions(firstImgDimensions);
 					}
 				}
+				log.trace("Reading of " + reportFileName + ", 1. test passed");
 
 				//check that all input images are of the same type
 				//NB: the check excludes the tracking markers image
@@ -233,6 +239,7 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 					if (img.dimension(d) != firstImgDimensions[d])
 						throw new RuntimeException(jsi.inputFiles[input_idx]+" image has different size in the "
 								+d+"th dimension than the first image.");
+				log.trace("Reading of " + reportFileName + ", 2. tests passed");
 
 				if (input_idx < jsi.inputFiles.length)
 				{
@@ -247,6 +254,7 @@ class JobIO<IT extends RealType<IT>, LT extends IntegerType<LT>>
 						throw new RuntimeException("Markers must be stored in an integer-type image, e.g., 8bits or 16bits gray image.");
 					markerImg = (Img<LT>)img;
 				}
+				log.trace("Reading of " + reportFileName + ", assignments passed");
 			}
 			catch (RuntimeException e) {
 				isErrorMsg = e.getMessage();
