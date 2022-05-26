@@ -46,7 +46,9 @@ import org.scijava.log.Logger;
 import sc.fiji.simplifiedio.SimplifiedIO;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -291,7 +293,7 @@ extends JobIO<IT,LT>
 	public
 	void scoreJob(final SegGtImageLoader<LT>.LoadedData ld, final DetSegCumulativeScores score)
 	{
-		log.info("Doing SEG score now for "+ld.lastLoadedImageName+" ...");
+		log.info("Doing also SEG score now for "+ld.lastLoadedImageName+" ...");
 		score.startSection();
 
 		//shortcuts:
@@ -312,6 +314,7 @@ extends JobIO<IT,LT>
 		final Map<Double,long[]> resBoxes = AbstractWeightedVotingRoisFusionAlgorithm.findBoxes(
 				resImg,log,"fusion result");
 
+		//iterate over SEG GT segments
 		for (Map.Entry<Double,long[]> gtBox : gtBoxes.entrySet())
 		{
 			final double gtLabel = gtBox.getKey();
@@ -322,7 +325,7 @@ extends JobIO<IT,LT>
 					Views.interval(resImg, gtInterval),
 					Views.interval(gtImg,  gtInterval),
 					(int)gtLabel);
-			log.trace("finished the searching, for GT "+gtLabel+" found fusion "+resLabel);
+			log.trace("...for SEG GT "+gtLabel+" found fusion "+resLabel);
 
 			if (resLabel > 0)
 			{
@@ -333,7 +336,7 @@ extends JobIO<IT,LT>
 				double seg = Jaccard.Jaccard(Views.interval(resImg,i), resLabel,
 						Views.interval(gtImg,i), gtLabel);
 				score.addSegMatch(seg);
-				log.trace("...with seg = "+seg);
+				log.trace("......with seg = "+seg);
 			}
 			else score.addSegMiss(); //nothing found for this SEG instance
 		}
@@ -341,6 +344,41 @@ extends JobIO<IT,LT>
 		log.info("...for this time point "+ld.lastLoadedTimepoint
 				+" only: avg SEG = "+score.getSectionSegScore()+" obtained over "
 				+score.getNumberOfSectionSegCases()+" segments");
+
+		log.info("Doing also DET score now for "+ld.lastLoadedImageName+" ...");
+
+		final Map<Double,long[]> markerBoxes = getMarkerBoxes();
+		if (markerBoxes == null)
+		{
+			log.warn("...skipping because of not having ROIs (boxes) for marker image.");
+			return;
+		}
+
+		//iterate over DET/TRA GT markers
+		for (Map.Entry<Double,long[]> gtBox : markerBoxes.entrySet())
+		{
+			final double gtLabel = gtBox.getKey();
+			final Interval gtInterval
+					= AbstractWeightedVotingRoisFusionAlgorithm.createInterval(gtBox.getValue());
+
+			final double resLabel = extractor.findMatchingLabel(
+					Views.interval(resImg,    gtInterval),
+					Views.interval(markerImg, gtInterval),
+					(int)gtLabel);
+			log.trace("...for DET GT "+gtLabel+" found fusion "+resLabel);
+
+			if (resLabel > 0)
+			{
+				score.addDetTruePositive();
+			}
+			else score.addDetFalseNegative();
+			//NB: the fusion cannot create false positive fused segments
+			//    as long as it is expanding existing TRA markers...
+		}
+
+		log.info("...for this time point "+ld.lastLoadedTimepoint
+				+" only:     DET = "+score.getSectionDetScore()+" obtained over "
+				+score.getNumberOfSectionDetCases()+" markers");
 	}
 
 	final MajorityOverlapBasedLabelExtractor<LT,LT,?> extractor
