@@ -355,6 +355,7 @@ extends JobIO<IT,LT>
 		}
 
 		//iterate over DET/TRA GT markers
+		int fusionLabelsMatchingSomeDetMarker = 0;
 		for (Map.Entry<Double,long[]> gtBox : markerBoxes.entrySet())
 		{
 			final double gtLabel = gtBox.getKey();
@@ -369,6 +370,7 @@ extends JobIO<IT,LT>
 
 			if (resLabel > 0)
 			{
+				++fusionLabelsMatchingSomeDetMarker;
 				score.addDetTruePositive();
 			}
 			else score.addDetFalseNegative();
@@ -379,6 +381,10 @@ extends JobIO<IT,LT>
 		log.info("...for this time point "+ld.lastLoadedTimepoint
 				+" only:     DET = "+score.getSectionDetScore()+" obtained over "
 				+score.getNumberOfSectionDetCases()+" markers");
+		log.info(" markers coverage: "
+				+(double)fusionLabelsMatchingSomeDetMarker/(double)markerBoxes.size()
+				+" because provided "+fusionLabelsMatchingSomeDetMarker
+				+" for existing "+markerBoxes.size());
 	}
 
 	final MajorityOverlapBasedLabelExtractor<LT,LT,?> extractor
