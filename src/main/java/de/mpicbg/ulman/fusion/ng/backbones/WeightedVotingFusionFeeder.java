@@ -46,9 +46,7 @@ import org.scijava.log.Logger;
 import sc.fiji.simplifiedio.SimplifiedIO;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -286,15 +284,17 @@ extends JobIO<IT,LT>
 	public
 	void scoreJob(final SegGtImageLoader<LT> SEGloader, final DetSegCumulativeScores score)
 	{
-		for (final SegGtImageLoader<LT>.LoadedData ld : SEGloader.getLastLoadedData())
-			scoreJob(ld, score);
+		score.startSection();
+		for (final SegGtImageLoader<LT>.LoadedData ld : SEGloader.getLastLoadedData()) {
+			scoreJob_SEG(ld, score);
+		}
+		scoreJob_DET(score);
 	}
 
 	public
-	void scoreJob(final SegGtImageLoader<LT>.LoadedData ld, final DetSegCumulativeScores score)
+	void scoreJob_SEG(final SegGtImageLoader<LT>.LoadedData ld, final DetSegCumulativeScores score)
 	{
 		log.info("Doing also SEG score now for "+ld.lastLoadedImageName+" ...");
-		score.startSection();
 
 		//shortcuts:
 		final RandomAccessibleInterval<LT> gtImg = ld.lastLoadedImage;
@@ -344,8 +344,12 @@ extends JobIO<IT,LT>
 		log.info("...for this time point "+ld.lastLoadedTimepoint
 				+" only: avg SEG = "+score.getSectionSegScore()+" obtained over "
 				+score.getNumberOfSectionSegCases()+" segments");
+	}
 
-		log.info("Doing also DET score now for "+ld.lastLoadedImageName+" ...");
+	public
+	void scoreJob_DET(final DetSegCumulativeScores score)
+	{
+		log.info("Doing also DET score now ...");
 
 		final Map<Double,long[]> markerBoxes = getMarkerBoxes();
 		if (markerBoxes == null)
@@ -363,8 +367,8 @@ extends JobIO<IT,LT>
 					= AbstractWeightedVotingRoisFusionAlgorithm.createInterval(gtBox.getValue());
 
 			final double resLabel = extractor.findMatchingLabel(
-					Views.interval(resImg,    gtInterval),
-					Views.interval(markerImg, gtInterval),
+					Views.interval(outFusedImg, gtInterval),
+					Views.interval(markerImg,   gtInterval),
 					(int)gtLabel);
 			log.trace("...for DET GT "+gtLabel+" found fusion "+resLabel);
 
@@ -378,10 +382,10 @@ extends JobIO<IT,LT>
 			//    as long as it is expanding existing TRA markers...
 		}
 
-		log.info("...for this time point "+ld.lastLoadedTimepoint
-				+" only:     DET = "+score.getSectionDetScore()+" obtained over "
+		log.info("...for this time point only: DET = "
+				+score.getSectionDetScore()+" obtained over "
 				+score.getNumberOfSectionDetCases()+" markers");
-		log.info(" markers coverage: "
+		log.info("...and markers coverage: "
 				+(double)fusionLabelsMatchingSomeDetMarker/(double)markerBoxes.size()
 				+" because provided "+fusionLabelsMatchingSomeDetMarker
 				+" for existing "+markerBoxes.size());

@@ -418,11 +418,13 @@ public class Fusers extends CommonGUI implements Command
 				//
 				if (SEGevaluator != null && SEGevaluator.managedToLoadImageForTimepoint(time))
 				{
+					runningDetSegScore.startSection();
 					for (final SegGtImageLoader<LT>.LoadedData ld : SEGevaluator.getLastLoadedData())
 					{
 						ld.calcBoxes();
-						feeder.scoreJob(ld, runningDetSegScore);
+						feeder.scoreJob_SEG(ld, runningDetSegScore);
 					}
+					feeder.scoreJob_DET(runningDetSegScore);
 				}
 			});
 			feeder.releaseJobResult();
