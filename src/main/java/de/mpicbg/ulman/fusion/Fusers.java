@@ -52,15 +52,17 @@ import java.util.LinkedList;
 import java.util.ArrayList;
 import java.util.TreeSet;
 import java.text.ParseException;
+import java.util.function.Consumer;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ExecutionException;
 import java.io.IOException;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
 import de.mpicbg.ulman.fusion.ng.backbones.JobIO;
@@ -311,6 +313,7 @@ public class Fusers extends CommonGUI implements Command
 
 		// ------------ preparing for action ------------
 		final List<OneCombination<IT,LT>> combinations; //NB: even for non-CMV
+		combinationsProcessingThreadPool = new ForkJoinPool(noOfThreads);
 		ReusableMemory.setLogger(log);
 
 		if (doCMV) {
@@ -318,12 +321,14 @@ public class Fusers extends CommonGUI implements Command
 			cmv_fillInAllCombinations(job,combinations);
 
 			//prepare output folders
-			try {
-				for (OneCombination<IT,LT> c : combinations) c.setupOutputFolder(job.outputPattern);
-			} catch (IOException e) {
-				log.error(e.getMessage());
-				throw new RuntimeException("CMV: likely an error with output folders...",e);
-			}
+			overAllCombinationsDo(combinations, c -> {
+					try {
+						c.setupOutputFolder(job.outputPattern);
+					} catch (IOException e) {
+						log.error(e.getMessage());
+						throw new RuntimeException("CMV: likely an error with output folders...",e);
+					}
+				} );
 		} else {
 			combinations = new ArrayList<>(1);
 			combinations.add( new OneCombination<>((1 << job.numberOfFusionInputs)-1,job.votingThreshold, job.numberOfFusionInputs) );
@@ -365,25 +370,25 @@ public class Fusers extends CommonGUI implements Command
 		else
 		if (mergeModel.startsWith("BICv2 with Flat"))
 		{
-			for (OneCombination<IT,LT> c : combinations) {
+			overAllCombinationsDo(combinations, c -> {
 				final Logger logger = getSubLoggerFrom(log,c);
 				c.feeder = new WeightedVotingFusionFeeder<IT,LT>(logger).setAlgorithm(new BICenhancedFlat<>(logger));
-			}
+			});
 		}
 		else
 		if (mergeModel.startsWith("BICv2 with Weight"))
 		{
-			for (OneCombination<IT,LT> c : combinations) {
+			overAllCombinationsDo(combinations, c -> {
 				final Logger logger = getSubLoggerFrom(log,c);
 				c.feeder = new WeightedVotingFusionFeeder<IT,LT>(logger).setAlgorithm(new BICenhancedWeighted<>(logger));
-			}
+			});
 		}
 		else
 		{
-			for (OneCombination<IT,LT> c : combinations) {
+			overAllCombinationsDo(combinations, c -> {
 				final Logger logger = getSubLoggerFrom(log,c);
 				c.feeder = new WeightedVotingFusionFeeder<IT,LT>(logger).setAlgorithm(new BIC<>(logger));
-			}
+			});
 		}
 
 		// ------------ action per time point ------------
@@ -433,11 +438,11 @@ public class Fusers extends CommonGUI implements Command
 			//(which happens to include all original inputs -- the full job) and make it a
 			//'refLoadedImages' for all combinations (including the very last one)
 			final OneCombination<IT,LT> fullCombination = combinations.get( combinations.size()-1 );
-			for (OneCombination<IT,LT> c : combinations) {
+			overAllCombinationsDo(combinations, c -> {
 				c.refLoadedImages = fullCombination.feeder;
 				//also share the one SEG evaluator among all combination cases
 				c.SEGevaluator = SEGevaluator;
-			}
+			});
 			//
 			//prevent the 'refLoadedImages' to replace its data with empty initialized content, see OneCombination.call()
 			fullCombination.iAmTheRefence = true;
@@ -450,10 +455,10 @@ public class Fusers extends CommonGUI implements Command
 					//NB: hope for some clean up before new round of images loading...
 					log.trace("main loop after GC");
 
-					for (OneCombination<IT,LT> c : combinations) {
+					overAllCombinationsDo(combinations, c -> {
 						c.currentTime = time;
 						job.reportJobForTimeForCombination(time, c, c.feeder.shareLogger());
-					}
+					});
 
 					//processJob() is loadJob(), calcBoxes() and fuse() (both are inside useAlgorithm())
 					log.info("Loading input images for TP="+time);
@@ -490,8 +495,10 @@ public class Fusers extends CommonGUI implements Command
 			cmvers.shutdownNow();
 
 			if (SEGevaluator != null)
-				for (OneCombination<IT,LT> c : combinations) c.reportSEG();
+				overAllCombinationsDo(combinations, OneCombination::reportSEG);
 		}
+
+		combinationsProcessingThreadPool.shutdown();
 	}
 
 
@@ -524,6 +531,24 @@ public class Fusers extends CommonGUI implements Command
 	{
 		for (OneCombination<?,?> c : combinations) log.info(c);
 	}
+
+	private ForkJoinPool combinationsProcessingThreadPool = null;
+	private <IT extends RealType<IT>, LT extends IntegerType<LT>>
+	void overAllCombinationsDo(final List<OneCombination<IT,LT>> combinations,
+	                           final Consumer<OneCombination<IT,LT>> doer)
+	{
+		try {
+			combinationsProcessingThreadPool.submit(
+					() -> combinations.parallelStream().forEach(doer)  ).get();
+		} catch (InterruptedException e) {
+			log.error("Interrupted in overAllCombinationsDo(): "+e.getMessage());
+			throw new RuntimeException("overAllCombinationsDo interrupted",e);
+		} catch (ExecutionException e) {
+			log.error("Doer failed in overAllCombinationsDo(): "+e.getMessage());
+			throw new RuntimeException("overAllCombinationsDo failed",e);
+		}
+	}
+
 
 	public class OneCombination<IT extends RealType<IT>, LT extends IntegerType<LT>>
 	implements Callable<OneCombination<IT,LT>>
@@ -689,7 +714,12 @@ public class Fusers extends CommonGUI implements Command
 					throw new IOException(folderName+" seems to exist but it is not a directory!");
 			} else {
 				log.info("Creating output folder: "+folderName);
-				Files.createDirectory(fPath);
+				try { Files.createDirectory(fPath); }
+				catch (IOException e) {
+					if (!Files.isDirectory(fPath)) throw e;
+					//NB: there's possibly multiple callers racing to create the same folder,
+					//NB: so swallow the exception if the folder is actually already there
+				}
 			}
 		}
 	}
