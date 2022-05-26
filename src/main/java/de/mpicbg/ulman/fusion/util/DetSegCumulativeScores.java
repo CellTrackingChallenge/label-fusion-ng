@@ -1,6 +1,6 @@
 package de.mpicbg.ulman.fusion.util;
 
-public class SegGtCumulativeScore
+public class DetSegCumulativeScores
 {
 	public void addCase(double oneJaccardValue) {
 		sum += oneJaccardValue;

@@ -30,7 +30,7 @@ package de.mpicbg.ulman.fusion.ng.backbones;
 import de.mpicbg.ulman.fusion.ng.AbstractWeightedVotingRoisFusionAlgorithm;
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 import de.mpicbg.ulman.fusion.util.ReusableMemory;
-import de.mpicbg.ulman.fusion.util.SegGtCumulativeScore;
+import de.mpicbg.ulman.fusion.util.DetSegCumulativeScores;
 import de.mpicbg.ulman.fusion.util.SegGtImageLoader;
 import net.celltrackingchallenge.measures.util.Jaccard;
 
@@ -282,14 +282,14 @@ extends JobIO<IT,LT>
 	}
 
 	public
-	void scoreJob(final SegGtImageLoader<LT> SEGloader, final SegGtCumulativeScore score)
+	void scoreJob(final SegGtImageLoader<LT> SEGloader, final DetSegCumulativeScores score)
 	{
 		for (final SegGtImageLoader<LT>.LoadedData ld : SEGloader.getLastLoadedData())
 			scoreJob(ld, score);
 	}
 
 	public
-	void scoreJob(final SegGtImageLoader<LT>.LoadedData ld, final SegGtCumulativeScore score)
+	void scoreJob(final SegGtImageLoader<LT>.LoadedData ld, final DetSegCumulativeScores score)
 	{
 		log.info("Doing SEG score now for "+ld.lastLoadedImageName+" ...");
 		score.startSection();
