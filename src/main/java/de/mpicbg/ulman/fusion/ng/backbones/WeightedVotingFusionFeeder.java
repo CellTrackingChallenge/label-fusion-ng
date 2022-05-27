@@ -29,7 +29,8 @@ package de.mpicbg.ulman.fusion.ng.backbones;
 
 import de.mpicbg.ulman.fusion.ng.AbstractWeightedVotingRoisFusionAlgorithm;
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
-import de.mpicbg.ulman.fusion.util.SegGtCumulativeScore;
+import de.mpicbg.ulman.fusion.util.ReusableMemory;
+import de.mpicbg.ulman.fusion.util.DetSegCumulativeScores;
 import de.mpicbg.ulman.fusion.util.SegGtImageLoader;
 import net.celltrackingchallenge.measures.util.Jaccard;
 
@@ -118,6 +119,10 @@ extends JobIO<IT,LT>
 		if (algorithm == null)
 			throw new RuntimeException("Cannot work without an algorithm.");
 
+		//ReusableMemory has auto-initiation/reservation on the first use,
+		//so we need not do anything special now, but we must not forget
+		//to close the session -- see below
+
 		log.info("calling weighted voting algorithm with threshold="+threshold);
 		algorithm.setWeights(inWeights);
 		algorithm.setThreshold(threshold);
@@ -130,6 +135,10 @@ extends JobIO<IT,LT>
 	{
 		if (algorithm == null)
 			throw new RuntimeException("Cannot work without an algorithm.");
+
+		//ReusableMemory has auto-initiation/reservation on the first use,
+		//so we need not do anything special now, but we must not forget
+		//to close the session -- see below
 
 		log.info("calling weighted voting algorithm with threshold="+threshold);
 		algorithm.setWeights(inWeights);
@@ -273,17 +282,27 @@ extends JobIO<IT,LT>
 	}
 
 	public
-	void scoreJob(final SegGtImageLoader<LT> SEGloader, final SegGtCumulativeScore score)
+	void scoreJob(final SegGtImageLoader<LT> SEGloader, final DetSegCumulativeScores score)
 	{
-		log.info("Doing SEG score now...");
 		score.startSection();
+		for (final SegGtImageLoader<LT>.LoadedData ld : SEGloader.getLastLoadedData()) {
+			scoreJob_SEG(ld, score);
+		}
+		scoreJob_DET(score);
+		log.info(score.reportCurrentValues());
+	}
+
+	public
+	void scoreJob_SEG(final SegGtImageLoader<LT>.LoadedData ld, final DetSegCumulativeScores score)
+	{
+		log.info("Doing also SEG score now for "+ld.lastLoadedImageName+" ...");
 
 		//shortcuts:
-		final RandomAccessibleInterval<LT> gtImg = SEGloader.lastLoadedImage;
-		final Map<Double,long[]> gtBoxes = SEGloader.getLastCalculatedBoxes();
+		final RandomAccessibleInterval<LT> gtImg = ld.lastLoadedImage;
+		final Map<Double,long[]> gtBoxes = ld.calculatedBoxes;
 		//
-		final RandomAccessibleInterval<LT> resImg = SEGloader.lastLoadedIs2D ?
-				Views.hyperSlice(outFusedImg, 2, SEGloader.lastLoaded2DSlice) : outFusedImg;
+		final RandomAccessibleInterval<LT> resImg = ld.lastLoadedIs2D ?
+				Views.hyperSlice(outFusedImg, 2, ld.lastLoaded2DSlice) : outFusedImg;
 
 		//check res and gt images are of the same size/dimensionality
 		if (!Arrays.equals(gtImg.minAsLongArray(), resImg.minAsLongArray())
@@ -296,6 +315,7 @@ extends JobIO<IT,LT>
 		final Map<Double,long[]> resBoxes = AbstractWeightedVotingRoisFusionAlgorithm.findBoxes(
 				resImg,log,"fusion result");
 
+		//iterate over SEG GT segments
 		for (Map.Entry<Double,long[]> gtBox : gtBoxes.entrySet())
 		{
 			final double gtLabel = gtBox.getKey();
@@ -306,7 +326,7 @@ extends JobIO<IT,LT>
 					Views.interval(resImg, gtInterval),
 					Views.interval(gtImg,  gtInterval),
 					(int)gtLabel);
-			log.trace("finished the searching, for GT "+gtLabel+" found fusion "+resLabel);
+			log.trace("...for SEG GT "+gtLabel+" found fusion "+resLabel);
 
 			if (resLabel > 0)
 			{
@@ -316,23 +336,80 @@ extends JobIO<IT,LT>
 				final Interval i = AbstractWeightedVotingRoisFusionAlgorithm.createInterval(resBox);
 				double seg = Jaccard.Jaccard(Views.interval(resImg,i), resLabel,
 						Views.interval(gtImg,i), gtLabel);
-				score.addCase(seg);
-				log.trace("...with seg = "+seg);
+				score.addSegMatch(seg);
+				log.trace("......with seg = "+seg);
 			}
-			else score.addCase(0.0); //nothing found for this SEG instance
+			else score.addSegMiss(); //nothing found for this SEG instance
 		}
 
-		log.info("...for this time point "+SEGloader.lastLoadedTimepoint
-				+" only: avg SEG = "+score.getSectionScore()+" obtained over "
-				+score.getNumberOfSectionCases()+" segments");
+		log.info("...for this time point "+ld.lastLoadedTimepoint
+				+" only: avg SEG = "+score.getSectionSegScore()+" obtained over "
+				+score.getNumberOfSectionSegCases()+" segments");
+	}
+
+	public
+	void scoreJob_DET(final DetSegCumulativeScores score)
+	{
+		log.info("Doing also DET score now ...");
+
+		final Map<Double,long[]> markerBoxes = getMarkerBoxes();
+		if (markerBoxes == null)
+		{
+			log.warn("...skipping because of not having ROIs (boxes) for marker image.");
+			return;
+		}
+
+		//iterate over DET/TRA GT markers
+		int fusionLabelsMatchingSomeDetMarker = 0;
+		for (Map.Entry<Double,long[]> gtBox : markerBoxes.entrySet())
+		{
+			final double gtLabel = gtBox.getKey();
+			final Interval gtInterval
+					= AbstractWeightedVotingRoisFusionAlgorithm.createInterval(gtBox.getValue());
+
+			final double resLabel = extractor.findMatchingLabel(
+					Views.interval(outFusedImg, gtInterval),
+					Views.interval(markerImg,   gtInterval),
+					(int)gtLabel);
+			log.trace("...for DET GT "+gtLabel+" found fusion "+resLabel);
+
+			if (resLabel > 0)
+			{
+				++fusionLabelsMatchingSomeDetMarker;
+				score.addDetTruePositive();
+			}
+			else score.addDetFalseNegative();
+			//NB: the fusion cannot create false positive fused segments
+			//    as long as it is expanding existing TRA markers...
+		}
+
+		log.info("...for this time point only: DET = "
+				+score.getSectionDetScore()+" obtained over "
+				+score.getNumberOfSectionDetCases()+" markers");
+		log.info("...and markers coverage: "
+				+(double)fusionLabelsMatchingSomeDetMarker/(double)markerBoxes.size()
+				+" because provided "+fusionLabelsMatchingSomeDetMarker
+				+" for existing "+markerBoxes.size());
 	}
 
 	final MajorityOverlapBasedLabelExtractor<LT,LT,?> extractor
 			= new MajorityOverlapBasedLabelExtractor<>();
 
 	public
+	void releaseJobInputs()
+	{
+		//also looses all refs on input images (giving GC a chance to return the mem)
+		for (int i = 0; i < inImgs.size(); ++i) inImgs.set(i, null);
+		markerImg = null;
+	}
+
+	public
 	void releaseJobResult()
 	{
+		//this a counter-part to the note in useAlgorithm() and useAlgorithmWithoutUpdatingBoxes()
+		ReusableMemory.getInstanceFor(outFusedImg, outFusedImg.firstElement())
+				.closeSession( ReusableMemory.getThreadId() );
+
 		outFusedImg = null;
 		log.info("released out img");
 	}

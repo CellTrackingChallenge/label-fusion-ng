@@ -10,11 +10,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.PathMatcher;
-import java.util.Collections;
-import java.util.Optional;
-
-import org.scijava.log.Logger;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
+import java.util.Collections;
+import java.util.stream.Collectors;
+import org.scijava.log.Logger;
 import de.mpicbg.ulman.fusion.ng.AbstractWeightedVotingRoisFusionAlgorithm;
 
 public class SegGtImageLoader<LT extends IntegerType<LT>>
@@ -38,19 +39,29 @@ public class SegGtImageLoader<LT extends IntegerType<LT>>
 	{
 		try {
 			Img<?> loadedImage = null;
+			lastLoadedData.clear();
 
 			//2D format:
 			final PathMatcher p2m = segFolder.getFileSystem()
 					.getPathMatcher("regex:.*seg_0*" + timepoint + "_[0-9]+\\..*");
 
-			Optional<Path> imageFile = Files.list(segFolder)
+			List<Path> discoveredImgFiles = Files.list(segFolder)
 					.filter(Files::isRegularFile)
 					.filter(p -> p2m.matches(p.getFileName()))
-					.findFirst();
-			if (imageFile.isPresent())
+					.collect(Collectors.toList());
+
+			if (discoveredImgFiles.size() > 0)
 			{
-				lastLoadedImageName = imageFile.get().toFile().getAbsolutePath();
-				loadedImage = load2DImage(lastLoadedImageName, timepoint);
+				//2D format:
+				while (discoveredImgFiles.size() > 0)
+				{
+					final LoadedData ld = new LoadedData();
+					ld.lastLoadedImageName = discoveredImgFiles.remove(0).toFile().getAbsolutePath();
+					ld.lastLoadedTimepoint = timepoint;
+					loadedImage = load2DImage(ld);
+					checkCastAndStoreOrThrow(loadedImage, ld);
+					lastLoadedData.add(ld);
+				}
 			}
 			else
 			{
@@ -58,27 +69,21 @@ public class SegGtImageLoader<LT extends IntegerType<LT>>
 				final PathMatcher p3m = segFolder.getFileSystem()
 						.getPathMatcher("regex:.*seg0*" + timepoint + "\\..*");
 
-				imageFile = Files.list(segFolder)
+				discoveredImgFiles = Files.list(segFolder)
 						.filter(Files::isRegularFile)
 						.filter(p -> p3m.matches(p.getFileName()))
-						.findFirst();
-				if (imageFile.isPresent())
-				{
-					lastLoadedImageName = imageFile.get().toFile().getAbsolutePath();
-					loadedImage = load3DImage(lastLoadedImageName, timepoint);
-				}
-			}
+						.limit(1)
+						.collect(Collectors.toList());
 
-			if (loadedImage != null)
-			{
-				//check voxel type, cast and store "typed"
-				if ( !(loadedImage.firstElement() instanceof IntegerType<?>) )
-					throw new IOException("Loaded "+lastLoadedImageName+" of unexpected, non-integer voxel type "
-							+lastLoadedImage.firstElement().getClass().getName());
-				lastLoadedImage = (Img<LT>)loadedImage;
-				log.info("Loaded SEG GT for TP "+lastLoadedTimepoint
-						+": " + lastLoadedImageName);
-				return true;
+				while (discoveredImgFiles.size() > 0)
+				{
+					final LoadedData ld = new LoadedData();
+					ld.lastLoadedImageName = discoveredImgFiles.remove(0).toFile().getAbsolutePath();
+					ld.lastLoadedTimepoint = timepoint;
+					loadedImage = load3DImage(ld);
+					checkCastAndStoreOrThrow(loadedImage, ld);
+					lastLoadedData.add(ld);
+				}
 			}
 		}
 		catch (IOException | SimplifiedIOException e) {
@@ -86,33 +91,71 @@ public class SegGtImageLoader<LT extends IntegerType<LT>>
 					+timepoint+": "+e.getMessage(),e);
 		}
 
-		log.info("No SEG GT loaded for TP "+lastLoadedTimepoint);
-		return false;
+		if (!lastLoadedData.isEmpty()) {
+			return true;
+		} else {
+			log.info("No SEG GT loaded for TP "+timepoint);
+			return false;
+		}
 	}
 
-	Img<?> load2DImage(final String filePath, final int timepoint)
+	void checkCastAndStoreOrThrow(final Img<?> loadedImage, final LoadedData ld)
+	throws IOException
 	{
-		lastLoaded2DSlice = extractLastNumber(filePath);
-		lastLoadedIs2D = true;
-		lastLoadedTimepoint = timepoint;
-		lastLoadedImageName = filePath;
+		if (loadedImage == null)
+			throw new IOException("Failed loading "+ld.lastLoadedImageName);
+
+		//check voxel type
+		if ( !(loadedImage.firstElement() instanceof IntegerType<?>) )
+			throw new IOException("Loaded "+ld.lastLoadedImageName+" of unexpected, non-integer voxel type "
+					+loadedImage.firstElement().getClass().getName());
+
+		//cast and store "typed"
+		ld.lastLoadedImage = (Img<LT>)loadedImage;
+		log.info("Loaded SEG GT for TP "+ld.lastLoadedTimepoint
+				+": " + ld.lastLoadedImageName);
+	}
+
+	Img<?> load2DImage(final LoadedData ld)
+	{
+		final String filePath = ld.lastLoadedImageName;
+		ld.lastLoaded2DSlice = extractLastNumber(filePath);
+		ld.lastLoadedIs2D = true;
 		return SimplifiedIO.openImage(filePath).getImg();
 	}
 
-	Img<?> load3DImage(final String filePath, final int timepoint)
+	Img<?> load3DImage(final LoadedData ld)
 	{
-		lastLoadedIs2D = false;
-		lastLoadedTimepoint = timepoint;
-		lastLoadedImageName = filePath;
+		final String filePath = ld.lastLoadedImageName;
+		ld.lastLoadedIs2D = false;
 		return SimplifiedIO.openImage(filePath).getImg();
 	}
 
-	public int     lastLoadedTimepoint = -1;
-	public boolean lastLoadedIs2D = false;
-	public int     lastLoaded2DSlice = -1;
+	public class LoadedData
+	{
+		public int     lastLoadedTimepoint = -1;
+		public boolean lastLoadedIs2D = false;
+		public int     lastLoaded2DSlice = -1;
 
-	public String  lastLoadedImageName;
-	public Img<LT> lastLoadedImage = null;
+		public String  lastLoadedImageName;
+		public Img<LT> lastLoadedImage = null;
+
+		public Map<Double,long[]> calculatedBoxes = null;
+		//
+		public void calcBoxes()
+		{
+			calculatedBoxes = AbstractWeightedVotingRoisFusionAlgorithm.findBoxes(
+					lastLoadedImage,log,"SEG GT");
+		}
+	}
+
+	public List<LoadedData> getLastLoadedData()
+	{
+		return Collections.unmodifiableList(lastLoadedData);
+	}
+
+	private final List<LoadedData> lastLoadedData = new ArrayList<>(5);
+
 
 	public static int extractLastNumber(final String tiffFilename)
 	{
@@ -129,19 +172,5 @@ public class SegGtImageLoader<LT extends IntegerType<LT>>
 			throw new InvalidPathException(tiffFilename,"Path does not include any number");
 
 		return Integer.parseInt(tiffFilename.substring(startPos+1,dotPos), 10);
-	}
-
-
-	Map<Double,long[]> lastCalculatedBoxes;
-
-	public void calcBoxes()
-	{
-		lastCalculatedBoxes = AbstractWeightedVotingRoisFusionAlgorithm.findBoxes(
-				lastLoadedImage,log,"SEG GT");
-	}
-
-	public Map<Double,long[]> getLastCalculatedBoxes()
-	{
-		return Collections.unmodifiableMap(lastCalculatedBoxes);
 	}
 }
