@@ -66,7 +66,7 @@ import java.nio.file.Paths;
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
 import de.mpicbg.ulman.fusion.ng.backbones.JobIO;
 import de.mpicbg.ulman.fusion.util.SegGtImageLoader;
-import de.mpicbg.ulman.fusion.util.SegGtCumulativeScore;
+import de.mpicbg.ulman.fusion.util.DetSegCumulativeScores;
 
 import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionFeeder;
 import de.mpicbg.ulman.fusion.ng.BIC;
@@ -407,7 +407,7 @@ public class Fusers extends CommonGUI implements Command
 
 		if (!doCMV)
 		{
-			final SegGtCumulativeScore runningSEGscore = new SegGtCumulativeScore();
+			final DetSegCumulativeScores runningDetSegScore = new DetSegCumulativeScores();
 
 			//NB: shortcut
 			final WeightedVotingFusionFeeder<IT,LT> feeder = combinations.get(0).feeder;
@@ -418,17 +418,25 @@ public class Fusers extends CommonGUI implements Command
 				//
 				if (SEGevaluator != null && SEGevaluator.managedToLoadImageForTimepoint(time))
 				{
-					SEGevaluator.calcBoxes();
-					feeder.scoreJob(SEGevaluator, runningSEGscore);
+					runningDetSegScore.startSection();
+					for (final SegGtImageLoader<LT>.LoadedData ld : SEGevaluator.getLastLoadedData())
+					{
+						ld.calcBoxes();
+						feeder.scoreJob_SEG(ld, runningDetSegScore);
+					}
+					feeder.scoreJob_DET(runningDetSegScore);
+					log.info(runningDetSegScore.reportCurrentValues());
 				}
 			});
 			feeder.releaseJobResult();
 
-			if (SEGevaluator != null)
-				log.info("Done, final avg SEG = "+runningSEGscore.getOverallScore()+" obtained over "
-						+runningSEGscore.getNumberOfAllCases()+" segments");
-			else
-				log.info("Done fusion");
+			if (SEGevaluator != null) {
+				log.info("Done, final avg SEG = "+runningDetSegScore.getOverallSegScore()+" obtained over "
+						+runningDetSegScore.getNumberOfAllSegCases()+" segments,");
+				log.info(" final complete DET = "+runningDetSegScore.getOverallDetScore()+" obtained over "
+						+runningDetSegScore.getNumberOfAllDetCases()+" markers");
+			}
+			else log.info("Done fusion");
 		}
 		else
 		{
@@ -472,8 +480,8 @@ public class Fusers extends CommonGUI implements Command
 					//also pre-load the shared SEG image before the fusion and evaluation
 					if (SEGevaluator != null && SEGevaluator.managedToLoadImageForTimepoint(time))
 					{
-						SEGevaluator.calcBoxes();
-						//NB: the status of loading is also available from SEGevaluator.lastLoadedTimepoint == time
+						for (final SegGtImageLoader<LT>.LoadedData ld : SEGevaluator.getLastLoadedData())
+							ld.calcBoxes();
 						//NB: if loaded now something, scoreJob() is then called later by each combination
 					}
 					ltime -= System.currentTimeMillis();
@@ -498,7 +506,7 @@ public class Fusers extends CommonGUI implements Command
 			cmvers.shutdownNow();
 
 			if (SEGevaluator != null)
-				overAllCombinationsDo(combinations, OneCombination::reportSEG);
+				overAllCombinationsDo(combinations, OneCombination::reportDetSeg);
 		}
 
 		combinationsProcessingThreadPool.shutdown();
@@ -652,7 +660,7 @@ public class Fusers extends CommonGUI implements Command
 		WeightedVotingFusionFeeder<IT,LT> refLoadedImages;
 		boolean iAmTheRefence = false;
 		SegGtImageLoader<LT> SEGevaluator;
-		SegGtCumulativeScore runningSEGscore = new SegGtCumulativeScore();
+		final DetSegCumulativeScores runningDetSegScore = new DetSegCumulativeScores();
 
 		private
 		void reInitMe()
@@ -712,10 +720,12 @@ public class Fusers extends CommonGUI implements Command
 				feeder.saveJob( JobSpecification.expandFilenamePattern(outputFilenamePattern,currentTime) );
 			}
 
-			if (SEGevaluator != null && SEGevaluator.lastLoadedTimepoint == currentTime)
+			if (SEGevaluator != null
+					&& SEGevaluator.getLastLoadedData().size() > 0
+					&& SEGevaluator.getLastLoadedData().get(0).lastLoadedTimepoint == currentTime)
 			{
 				log.info("Combination "+code+" just started evaluating its result");
-				feeder.scoreJob(SEGevaluator, runningSEGscore);
+				feeder.scoreJob(SEGevaluator, runningDetSegScore);
 			}
 
 			feeder.releaseJobResult();
@@ -729,10 +739,12 @@ public class Fusers extends CommonGUI implements Command
 			return this;
 		}
 
-		public void reportSEG()
+		public void reportDetSeg()
 		{
-			feeder.shareLogger().info("Final avg SEG = "+runningSEGscore.getOverallScore()+" obtained over "
-					+runningSEGscore.getNumberOfAllCases()+" segments");
+			feeder.shareLogger().info("Final avg SEG = "+ runningDetSegScore.getOverallSegScore()+" obtained over "
+					+ runningDetSegScore.getNumberOfAllSegCases()+" segments,");
+			feeder.shareLogger().info("    Final DET = "+ runningDetSegScore.getOverallDetScore()+" obtained over "
+					+ runningDetSegScore.getNumberOfAllDetCases()+" markers");
 		}
 
 		// ----------- saving output images -----------
