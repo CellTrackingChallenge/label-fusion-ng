@@ -44,6 +44,7 @@ import de.mpicbg.ulman.fusion.util.loggers.SimpleDiskSavingLogger;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
 
 import java.nio.file.InvalidPathException;
+import java.util.Date;
 import java.util.Map;
 import java.util.Vector;
 import java.util.List;
@@ -679,7 +680,7 @@ public class Fusers extends CommonGUI implements Command
 			if (feeder.inImgs == null)
 			{
 				final int size = relevantInputIndices.size();
-				feeder.shareLogger().info("Allocating containers for the shadowed input images of size "+size);
+				feeder.shareLogger().info("Allocating containers for "+size+" shadowed input images");
 
 				feeder.inImgs = new Vector<>(size);
 				for (int i = 0; i < size; ++i) feeder.inImgs.add(null);
@@ -787,15 +788,24 @@ public class Fusers extends CommonGUI implements Command
 		}
 	}
 
+	private int createdSubLogsCounter = 0;
 	private Logger getSubLoggerFrom(final Logger log, final OneCombination<?,?> c)
 	{
-		if (log instanceof SimpleDiskSavingLogger)
-			return ((SimpleDiskSavingLogger)log).subLogger(c);
-		//
+		if (log instanceof SimpleDiskSavingLogger) {
+			++createdSubLogsCounter;
+			if (createdSubLogsCounter % 1000 == 0)
+				System.out.println("Created already "+createdSubLogsCounter+" log files...");
+			//
+			return logFilesTimeStamper != null
+					? ((SimpleDiskSavingLogger)log).subLogger(c,logFilesTimeStamper)
+					: ((SimpleDiskSavingLogger)log).subLogger(c);
+		}
+
 		return log.subLogger(c.code+" ");
 	}
 
 
+	private String logFilesTimeStamper = null;
 	public static void main(String[] args)
 	{
 		final Fusers myself = new Fusers();
@@ -828,7 +838,9 @@ public class Fusers extends CommonGUI implements Command
 			if (args[5].length() > 3)
 				myself.doCMV_partition = args[5].substring(3);
 
-			final SimpleDiskSavingLogger dLog = new SimpleDiskSavingLogger(".","log_"+myself.doCMV_partition+".txt");
+			myself.logFilesTimeStamper = "__" + new Date().toString().replace(" ","-");
+			final SimpleDiskSavingLogger dLog = new SimpleDiskSavingLogger(".",
+					"log_"+myself.doCMV_partition+myself.logFilesTimeStamper+".txt");
 			//dLog.setLeakingTarget( new NoHeaderConsoleLogger() );
 			//dLog.leakAlsoThese("borrow");
 			//dLog.leakAlsoThese("Combination");

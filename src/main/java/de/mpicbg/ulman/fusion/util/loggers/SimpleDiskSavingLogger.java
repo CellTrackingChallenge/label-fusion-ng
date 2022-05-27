@@ -40,9 +40,16 @@ public class SimpleDiskSavingLogger extends TimeStampedConsoleLogger
 		}
 	}
 
+	private final static String NOMARKER = "";
+	//
 	public org.scijava.log.Logger subLogger(final Fusers.OneCombination<?, ?> c) {
+		return this.subLogger(c, NOMARKER);
+	}
+	//
+	public org.scijava.log.Logger subLogger(final Fusers.OneCombination<?, ?> c,
+	                                        final String logFileMarker) {
 		SimpleDiskSavingLogger l =
-				new SimpleDiskSavingLogger(c.logFolder, "log_" + c.code + ".txt");
+				new SimpleDiskSavingLogger(c.logFolder, "log_" + c.code + logFileMarker + ".txt");
 		l.prefix = c.code + " ";
 		return l;
 	}
