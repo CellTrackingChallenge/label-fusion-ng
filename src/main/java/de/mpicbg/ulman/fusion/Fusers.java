@@ -41,7 +41,7 @@ import org.scijava.plugin.Plugin;
 
 import org.scijava.log.Logger;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleDiskSavingLogger;
-import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
+import de.mpicbg.ulman.fusion.util.loggers.SimpleConsoleLogger;
 
 import java.nio.file.InvalidPathException;
 import java.util.Date;
@@ -846,7 +846,7 @@ public class Fusers extends CommonGUI implements Command
 			//dLog.leakAlsoThese("Combination");
 			myself.log = dLog;
 		} else {
-			myself.log = new SimpleRestrictedLogger();
+			myself.log = new SimpleConsoleLogger();
 		}
 
 		myself.filePath = new File(args[0]);
