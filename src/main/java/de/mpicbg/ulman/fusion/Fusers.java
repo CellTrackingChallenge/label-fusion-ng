@@ -506,8 +506,20 @@ public class Fusers extends CommonGUI implements Command
 			log.info("Done all fusions, shutting down thread pool..."); //NB: to show/debug the code always got here
 			cmvers.shutdownNow();
 
-			if (SEGevaluator != null)
+			if (SEGevaluator != null) {
 				overAllCombinationsDo(combinations, OneCombination::reportDetSeg);
+
+				double bestSeg = 0;
+				OneCombination<IT,LT> bestComb = null;
+				for (OneCombination<IT,LT> c : combinations) {
+					double currSeg = c.runningDetSegScore.getOverallSegScore();
+					if (currSeg > bestSeg) {
+						bestSeg = currSeg;
+						bestComb = c;
+					}
+				}
+				log.info("Best SEG achieved "+bestSeg+" for combination "+bestComb);
+			}
 		}
 
 		combinationsProcessingThreadPool.shutdown();
