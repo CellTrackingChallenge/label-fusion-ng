@@ -339,7 +339,11 @@ extends JobIO<IT,LT>
 				score.addSegMatch(seg);
 				log.trace("......with seg = "+seg);
 			}
-			else score.addSegMiss(); //nothing found for this SEG instance
+			else
+			{
+				score.addSegMiss(); //nothing found for this SEG instance
+				log.trace("......with seg = 0.0");
+			}
 		}
 
 		log.info("...for this time point "+ld.lastLoadedTimepoint
