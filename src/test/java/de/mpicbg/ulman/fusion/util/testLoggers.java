@@ -15,7 +15,7 @@ public class testLoggers {
 		final Logger[] loggers = {
 				new NoOutputLogger(),
 				new SimpleConsoleLogger(),
-				new SimpleRestrictedLogger(),
+				new RestrictedConsoleLogger(),
 				new TimeStampedConsoleLogger(),
 				new SimpleDiskSavingLogger()
 		};
@@ -29,7 +29,7 @@ public class testLoggers {
 		final Logger[] loggers = {
 				new NoOutputLogger("PrEfIx"),
 				new SimpleConsoleLogger("PrEfIx"),
-				new SimpleRestrictedLogger("PrEfIx"),
+				new RestrictedConsoleLogger("PrEfIx"),
 				new TimeStampedConsoleLogger("PrEfIx"),
 		};
 

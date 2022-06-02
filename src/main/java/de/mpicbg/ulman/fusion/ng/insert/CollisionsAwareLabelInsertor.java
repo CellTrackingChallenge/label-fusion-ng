@@ -40,7 +40,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 
 import org.scijava.log.Logger;
-import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
+import de.mpicbg.ulman.fusion.util.loggers.RestrictedConsoleLogger;
 
 public class CollisionsAwareLabelInsertor<LT extends IntegerType<LT>, ET extends RealType<ET>>
 implements LabelInsertor<LT,ET>
@@ -234,7 +234,7 @@ implements LabelInsertor<LT,ET>
 	{ return INTERSECTION; }
 
 	// ---------------- logging ----------------
-	Logger log = new SimpleRestrictedLogger();
+	Logger log = new RestrictedConsoleLogger();
 	@Override
 	public void useNowThisLog(final Logger log)
 	{ this.log = log; }

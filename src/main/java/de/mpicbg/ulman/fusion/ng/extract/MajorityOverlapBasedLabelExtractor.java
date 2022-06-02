@@ -38,7 +38,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 
 import org.scijava.log.Logger;
-import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
+import de.mpicbg.ulman.fusion.util.loggers.RestrictedConsoleLogger;
 
 public class MajorityOverlapBasedLabelExtractor<IT extends RealType<IT>, LT extends IntegerType<LT>, ET extends RealType<ET>>
 implements LabelExtractor<IT,LT,ET>
@@ -183,7 +183,7 @@ implements LabelExtractor<IT,LT,ET>
 	}
 
 	// ---------------- logging ----------------
-	Logger log = new SimpleRestrictedLogger();
+	Logger log = new RestrictedConsoleLogger();
 	@Override
 	public void useNowThisLog(final Logger log)
 	{ this.log = log; }
