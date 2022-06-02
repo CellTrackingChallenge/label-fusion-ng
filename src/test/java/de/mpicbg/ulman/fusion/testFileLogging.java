@@ -1,6 +1,7 @@
 package de.mpicbg.ulman.fusion;
 
 import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionFeeder;
+import de.mpicbg.ulman.fusion.util.loggers.SimpleConsoleLogger;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleDiskSavingLogger;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import org.scijava.log.Logger;
@@ -18,10 +19,13 @@ public class testFileLogging {
 		WeightedVotingFusionFeeder<UnsignedShortType,UnsignedShortType> feeder
 				= new WeightedVotingFusionFeeder<>(mainLog);
 
+		final Fusers f = new Fusers();
+		f.log = new SimpleConsoleLogger();
+
 		Fusers.OneCombination<UnsignedShortType,UnsignedShortType> c1
-				= new Fusers().new OneCombination<>(2,1,3);
+				= f.new OneCombination<>(2,1,3);
 		Fusers.OneCombination<UnsignedShortType,UnsignedShortType> c2
-				= new Fusers().new OneCombination<>(5,2,14);
+				= f.new OneCombination<>(5,2,14);
 		try {
 			c1.feeder = feeder;
 			c2.feeder = feeder;
