@@ -28,6 +28,7 @@
 package de.mpicbg.ulman.fusion;
 
 import de.mpicbg.ulman.fusion.util.ReusableMemory;
+import de.mpicbg.ulman.fusion.util.loggers.FilebasedLogger;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
 
@@ -803,14 +804,14 @@ public class Fusers extends CommonGUI implements Command
 	private int createdSubLogsCounter = 0;
 	private Logger getSubLoggerFrom(final Logger log, final OneCombination<?,?> c)
 	{
-		if (log instanceof SimpleDiskSavingLogger) {
+		if (log instanceof FilebasedLogger) {
 			++createdSubLogsCounter;
 			if (createdSubLogsCounter % 1000 == 0)
 				System.out.println("Created already "+createdSubLogsCounter+" log files...");
 			//
 			return logFilesTimeStamper != null
-					? ((SimpleDiskSavingLogger)log).subLogger(c,logFilesTimeStamper)
-					: ((SimpleDiskSavingLogger)log).subLogger(c);
+					? ((FilebasedLogger)log).subLogger(c,logFilesTimeStamper)
+					: ((FilebasedLogger)log).subLogger(c);
 		}
 
 		return log.subLogger(c.code+" ");
@@ -851,7 +852,7 @@ public class Fusers extends CommonGUI implements Command
 				myself.doCMV_partition = args[5].substring(3);
 
 			myself.logFilesTimeStamper = "__" + new Date().toString().replace(" ","-");
-			final SimpleDiskSavingLogger dLog = new SimpleDiskSavingLogger(".",
+			final FilebasedLogger dLog = new SimpleDiskSavingLogger(".",
 					"log_"+myself.doCMV_partition+myself.logFilesTimeStamper+".txt");
 			//dLog.setLeakingTarget( new NoHeaderConsoleLogger() );
 			//dLog.leakAlsoThese("borrow");
