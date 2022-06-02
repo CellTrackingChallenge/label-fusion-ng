@@ -5,6 +5,7 @@ import de.mpicbg.ulman.fusion.util.loggers.FilebasedLogger;
 import de.mpicbg.ulman.fusion.util.loggers.RestrictedDiskSavingLogger;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleConsoleLogger;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleDiskSavingLogger;
+import de.mpicbg.ulman.fusion.util.loggers.ThreadpoolDiskSavingLogger;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import org.scijava.log.Logger;
 
@@ -14,6 +15,8 @@ public class testFileLogging {
 	public static void main(String[] args) {
 		testThisLogger( new SimpleDiskSavingLogger(".", "simple_LLL.log") );
 		testThisLogger( new RestrictedDiskSavingLogger(".", "restricted_LLL.log") );
+		testThisLogger( new ThreadpoolDiskSavingLogger(".", "threadLogger") );
+		testThisLogger( new ThreadpoolDiskSavingLogger(".", "threadLogger_verbose").enableVerboseLogging() );
 	}
 
 	public static void testThisLogger(final FilebasedLogger mainLog) {
