@@ -852,7 +852,7 @@ public class Fusers extends CommonGUI implements Command
 				myself.doCMV_partition = args[5].substring(3);
 
 			myself.logFilesTimeStamper = "__" + new Date().toString().replace(" ","-");
-			final SimpleDiskSavingLogger dLog = new SimpleDiskSavingLogger(".",
+			final FilebasedLogger dLog = new SimpleDiskSavingLogger(".",
 					"log_"+myself.doCMV_partition+myself.logFilesTimeStamper+".txt");
 			//dLog.setLeakingTarget( new NoHeaderConsoleLogger() );
 			//dLog.leakAlsoThese("borrow");
