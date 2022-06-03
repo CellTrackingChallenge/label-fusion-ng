@@ -28,7 +28,6 @@
 package de.mpicbg.ulman.fusion;
 
 import de.mpicbg.ulman.fusion.util.ReusableMemory;
-import de.mpicbg.ulman.fusion.util.loggers.FilebasedLogger;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
 
@@ -41,8 +40,9 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
 import org.scijava.log.Logger;
-import de.mpicbg.ulman.fusion.util.loggers.SimpleDiskSavingLogger;
+import de.mpicbg.ulman.fusion.util.loggers.FilebasedLogger;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleConsoleLogger;
+import de.mpicbg.ulman.fusion.util.loggers.ThreadpoolDiskSavingLogger;
 
 import java.nio.file.InvalidPathException;
 import java.util.Date;
@@ -846,21 +846,6 @@ public class Fusers extends CommonGUI implements Command
 		}
 
 		myself.doCMV =  args.length >= 6  &&  (args[5].startsWith("cmv") || args[5].startsWith("CMV"));
-		if (myself.doCMV) {
-			//portions:
-			if (args[5].length() > 3)
-				myself.doCMV_partition = args[5].substring(3);
-
-			myself.logFilesTimeStamper = "__" + new Date().toString().replace(" ","-");
-			final FilebasedLogger dLog = new SimpleDiskSavingLogger(".",
-					"log_"+myself.doCMV_partition+myself.logFilesTimeStamper+".txt");
-			//dLog.setLeakingTarget( new NoHeaderConsoleLogger() );
-			//dLog.leakAlsoThese("borrow");
-			//dLog.leakAlsoThese("Combination");
-			myself.log = dLog;
-		} else {
-			myself.log = new SimpleConsoleLogger();
-		}
 
 		myself.filePath = new File(args[0]);
 		myself.mergeThreshold = Float.parseFloat(args[1]);
@@ -876,6 +861,23 @@ public class Fusers extends CommonGUI implements Command
 			myself.saveFusionResults = false;
 		}
 
-		myself.worker(false); //false -> run without GUI
+		if (myself.doCMV) {
+			//portions:
+			if (args[5].length() > 3)
+				myself.doCMV_partition = args[5].substring(3);
+
+			try ( final ThreadpoolDiskSavingLogger dLog = new ThreadpoolDiskSavingLogger(".",
+					"log_"+myself.doCMV_partition) )
+			{
+				//dLog.setLeakingTarget( new NoHeaderConsoleLogger() );
+				//dLog.leakAlsoThese("borrow");
+				//dLog.leakAlsoThese("Combination");
+				myself.log = dLog;
+				myself.worker(false); //false -> run without GUI
+			}
+		} else {
+			myself.log = new SimpleConsoleLogger();
+			myself.worker(false); //false -> run without GUI
+		}
 	}
 }
