@@ -2,19 +2,19 @@ package de.mpicbg.ulman.fusion.util.loggers;
 
 import org.scijava.log.Logger;
 
-public class SimpleRestrictedLogger extends SimpleConsoleLogger
+public class RestrictedConsoleLogger extends SimpleConsoleLogger
 {
-	public SimpleRestrictedLogger() {
+	public RestrictedConsoleLogger() {
 		super();
 	}
 
-	public SimpleRestrictedLogger(final String prefix) {
+	public RestrictedConsoleLogger(final String prefix) {
 		super(prefix);
 	}
 
 	@Override //NB: fork into itself again (to preserve the verbosity level)
 	public Logger subLogger(String name, int level) {
-		return new SimpleRestrictedLogger(name);
+		return new RestrictedConsoleLogger(name);
 	}
 
 	@Override

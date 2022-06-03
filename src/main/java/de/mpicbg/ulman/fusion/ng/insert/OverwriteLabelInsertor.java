@@ -33,7 +33,7 @@ import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
 
 import org.scijava.log.Logger;
-import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
+import de.mpicbg.ulman.fusion.util.loggers.RestrictedConsoleLogger;
 
 public class OverwriteLabelInsertor<LT extends IntegerType<LT>, ET extends RealType<ET>>
 implements LabelInsertor<LT,ET>
@@ -55,7 +55,7 @@ implements LabelInsertor<LT,ET>
 	{ return 0; /* this policy does not introduce intersections */ }
 
 	// ---------------- logging ----------------
-	Logger log = new SimpleRestrictedLogger();
+	Logger log = new RestrictedConsoleLogger();
 	@Override
 	public void useNowThisLog(final Logger log)
 	{ this.log = log; }

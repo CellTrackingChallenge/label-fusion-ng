@@ -32,7 +32,7 @@ import net.imglib2.img.Img;
 import net.imglib2.type.numeric.IntegerType;
 
 import org.scijava.log.Logger;
-import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
+import de.mpicbg.ulman.fusion.util.loggers.RestrictedConsoleLogger;
 
 public class VoidLabelPostprocessor<LT extends IntegerType<LT>>
 implements LabelPostprocessor<LT>
@@ -46,7 +46,7 @@ implements LabelPostprocessor<LT>
 	{}
 
 	// ---------------- logging ----------------
-	Logger log = new SimpleRestrictedLogger();
+	Logger log = new RestrictedConsoleLogger();
 	@Override
 	public void useNowThisLog(final Logger log)
 	{ this.log = log; }
