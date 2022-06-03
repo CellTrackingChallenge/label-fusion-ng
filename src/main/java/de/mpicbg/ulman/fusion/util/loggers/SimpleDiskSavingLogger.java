@@ -54,38 +54,39 @@ public class SimpleDiskSavingLogger extends AbstractFilebasedLogger
 		}
 	};
 
+	protected void submitThisMsg(final Object origInputMessage, final String finalizedMessage) {
+		javaLogger.info(finalizedMessage);
+		if (shouldAlsoLeakThis(origInputMessage)) leakingTarget.debug(finalizedMessage);
+	}
+
+
 	@Override
 	public void debug(Object msg) {
 		final String finalMsg = createMessage("DBG", msg);
-		javaLogger.info(finalMsg);
-		if (shouldAlsoLeakThis(msg)) leakingTarget.debug(finalMsg);
+		submitThisMsg(msg, finalMsg);
 	}
 
 	@Override
 	public void error(Object msg) {
 		final String finalMsg = createMessage("ERROR", msg);
-		javaLogger.info(finalMsg);
-		if (shouldAlsoLeakThis(msg)) leakingTarget.error(finalMsg);
+		submitThisMsg(msg, finalMsg);
 	}
 
 	@Override
 	public void info(Object msg) {
 		final String finalMsg = createMessage("INFO", msg);
-		javaLogger.info(finalMsg);
-		if (shouldAlsoLeakThis(msg)) leakingTarget.info(finalMsg);
+		submitThisMsg(msg, finalMsg);
 	}
 
 	@Override
 	public void trace(Object msg) {
 		final String finalMsg = createMessage("TRACE", msg);
-		javaLogger.info(finalMsg);
-		if (shouldAlsoLeakThis(msg)) leakingTarget.trace(finalMsg);
+		submitThisMsg(msg, finalMsg);
 	}
 
 	@Override
 	public void warn(Object msg) {
 		final String finalMsg = createMessage("WARN", msg);
-		javaLogger.info(finalMsg);
-		if (shouldAlsoLeakThis(msg)) leakingTarget.warn(finalMsg);
+		submitThisMsg(msg, finalMsg);
 	}
 }
