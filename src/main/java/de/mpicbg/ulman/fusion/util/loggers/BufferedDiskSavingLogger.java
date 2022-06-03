@@ -33,9 +33,9 @@ public class BufferedDiskSavingLogger extends SimpleDiskSavingLogger implements 
 
 	@Override
 	protected void submitThisMsg(final Object origInputMessage, final String finalizedMessage) {
-		if (buffer.length() > bufferFlushThres) flush();
 		buffer.append(finalizedMessage);
-		buffer.append('\n');
+		if (buffer.length() > bufferFlushThres) flush();
+		else buffer.append('\n');
 		if (shouldAlsoLeakThis(origInputMessage)) leakingTarget.debug(finalizedMessage);
 	}
 
