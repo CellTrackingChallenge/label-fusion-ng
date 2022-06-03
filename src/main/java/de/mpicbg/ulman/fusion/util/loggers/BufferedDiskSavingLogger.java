@@ -39,7 +39,7 @@ public class BufferedDiskSavingLogger extends SimpleDiskSavingLogger implements 
 		if (shouldAlsoLeakThis(origInputMessage)) leakingTarget.debug(finalizedMessage);
 	}
 
-	private final StringBuffer buffer = new StringBuffer(1024 * 1024); //1 MB
+	private final StringBuffer buffer = new StringBuffer(200 * 1024); //200 kB
 	private final int bufferFlushThres = (int)(0.95 * buffer.capacity());
 
 	public void flush() {

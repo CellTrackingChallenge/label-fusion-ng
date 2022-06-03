@@ -24,7 +24,7 @@ public class ThreadpoolDiskSavingLogger extends AbstractFilebasedLogger implemen
 		this.logFolder = logFolder;
 		this.fileNamePrefix = fileNamePrefix;
 		this.loggers = new HashMap<>(32);
-		this.masterLogger = new SimpleDiskSavingLogger(logFolder, fileNamePrefix+"_"+timeStamp+".txt");
+		this.masterLogger = new SimpleDiskSavingLogger(logFolder, fileNamePrefix+"_main_"+timeStamp+".txt");
 	}
 
 	private ThreadpoolDiskSavingLogger(final ThreadpoolDiskSavingLogger masterInstance, final String prefix) {
