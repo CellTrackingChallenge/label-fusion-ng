@@ -326,7 +326,7 @@ extends JobIO<IT,LT>
 					Views.interval(resImg, gtInterval),
 					Views.interval(gtImg,  gtInterval),
 					(int)gtLabel);
-			log.trace("...for SEG GT "+gtLabel+" found fusion "+resLabel);
+			log.info("...for SEG GT "+gtLabel+" found fusion "+resLabel);
 
 			if (resLabel > 0)
 			{
@@ -337,12 +337,12 @@ extends JobIO<IT,LT>
 				double seg = Jaccard.Jaccard(Views.interval(resImg,i), resLabel,
 						Views.interval(gtImg,i), gtLabel);
 				score.addSegMatch(seg);
-				log.trace("......with seg = "+seg);
+				log.info("......with seg = "+seg);
 			}
 			else
 			{
 				score.addSegMiss(); //nothing found for this SEG instance
-				log.trace("......with seg = 0.0");
+				log.info("......with seg = 0.0");
 			}
 		}
 
@@ -375,7 +375,7 @@ extends JobIO<IT,LT>
 					Views.interval(outFusedImg, gtInterval),
 					Views.interval(markerImg,   gtInterval),
 					(int)gtLabel);
-			log.trace("...for DET GT "+gtLabel+" found fusion "+resLabel);
+			log.info("...for DET GT "+gtLabel+" found fusion "+resLabel);
 
 			if (resLabel > 0)
 			{

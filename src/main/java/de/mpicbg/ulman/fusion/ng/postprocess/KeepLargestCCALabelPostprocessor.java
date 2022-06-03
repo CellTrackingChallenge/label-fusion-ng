@@ -44,7 +44,7 @@ import java.util.HashMap;
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 
 import org.scijava.log.Logger;
-import de.mpicbg.ulman.fusion.util.loggers.SimpleRestrictedLogger;
+import de.mpicbg.ulman.fusion.util.loggers.RestrictedConsoleLogger;
 
 /**
  * @author Vladimír Ulman
@@ -164,7 +164,7 @@ implements LabelPostprocessor<LT>
 	}
 
 	// ---------------- logging ----------------
-	Logger log = new SimpleRestrictedLogger();
+	Logger log = new RestrictedConsoleLogger();
 	@Override
 	public void useNowThisLog(final Logger log)
 	{ this.log = log; }

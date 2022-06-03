@@ -40,8 +40,9 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
 import org.scijava.log.Logger;
-import de.mpicbg.ulman.fusion.util.loggers.SimpleDiskSavingLogger;
+import de.mpicbg.ulman.fusion.util.loggers.FilebasedLogger;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleConsoleLogger;
+import de.mpicbg.ulman.fusion.util.loggers.ThreadpoolDiskSavingLogger;
 
 import java.nio.file.InvalidPathException;
 import java.util.Date;
@@ -154,6 +155,10 @@ public class Fusers extends CommonGUI implements Command
 
 	@Parameter
 	boolean saveFusionResults = true;
+
+	//don't set to false unless you are sure you don't need the output folders,
+	//which is to say no output images are created and logs are not stored there too
+	boolean doCreateCmvOutputFolders = true;
 
 	@Parameter
 	CommandService commandService;
@@ -783,6 +788,8 @@ public class Fusers extends CommonGUI implements Command
 
 		private void makeSureFolderExists(final String folderName) throws IOException
 		{
+			if (!doCreateCmvOutputFolders) return;
+
 			final Path fPath = Paths.get(folderName);
 			if (Files.exists(fPath))
 			{
@@ -803,14 +810,14 @@ public class Fusers extends CommonGUI implements Command
 	private int createdSubLogsCounter = 0;
 	private Logger getSubLoggerFrom(final Logger log, final OneCombination<?,?> c)
 	{
-		if (log instanceof SimpleDiskSavingLogger) {
+		if (log instanceof FilebasedLogger) {
 			++createdSubLogsCounter;
 			if (createdSubLogsCounter % 1000 == 0)
 				System.out.println("Created already "+createdSubLogsCounter+" log files...");
 			//
 			return logFilesTimeStamper != null
-					? ((SimpleDiskSavingLogger)log).subLogger(c,logFilesTimeStamper)
-					: ((SimpleDiskSavingLogger)log).subLogger(c);
+					? ((FilebasedLogger)log).subLogger(c,logFilesTimeStamper)
+					: ((FilebasedLogger)log).subLogger(c);
 		}
 
 		return log.subLogger(c.code+" ");
@@ -845,21 +852,6 @@ public class Fusers extends CommonGUI implements Command
 		}
 
 		myself.doCMV =  args.length >= 6  &&  (args[5].startsWith("cmv") || args[5].startsWith("CMV"));
-		if (myself.doCMV) {
-			//portions:
-			if (args[5].length() > 3)
-				myself.doCMV_partition = args[5].substring(3);
-
-			myself.logFilesTimeStamper = "__" + new Date().toString().replace(" ","-");
-			final SimpleDiskSavingLogger dLog = new SimpleDiskSavingLogger(".",
-					"log_"+myself.doCMV_partition+myself.logFilesTimeStamper+".txt");
-			//dLog.setLeakingTarget( new NoHeaderConsoleLogger() );
-			//dLog.leakAlsoThese("borrow");
-			//dLog.leakAlsoThese("Combination");
-			myself.log = dLog;
-		} else {
-			myself.log = new SimpleConsoleLogger();
-		}
 
 		myself.filePath = new File(args[0]);
 		myself.mergeThreshold = Float.parseFloat(args[1]);
@@ -875,6 +867,27 @@ public class Fusers extends CommonGUI implements Command
 			myself.saveFusionResults = false;
 		}
 
-		myself.worker(false); //false -> run without GUI
+		if (myself.doCMV) {
+			//portions:
+			if (args[5].length() > 3)
+				myself.doCMV_partition = args[5].substring(3);
+
+			try ( final ThreadpoolDiskSavingLogger dLog = new ThreadpoolDiskSavingLogger(".",
+					"log_"+myself.doCMV_partition) )
+			{
+				//this works only with conjunction with ThreadpoolDiskSavingLogger
+				myself.doCreateCmvOutputFolders = myself.saveFusionResults;
+				dLog.info("Going to touch any output folder? "+myself.doCreateCmvOutputFolders);
+
+				//dLog.setLeakingTarget( new NoHeaderConsoleLogger() );
+				//dLog.leakAlsoThese("borrow");
+				//dLog.leakAlsoThese("Combination");
+				myself.log = dLog;
+				myself.worker(false); //false -> run without GUI
+			}
+		} else {
+			myself.log = new SimpleConsoleLogger();
+			myself.worker(false); //false -> run without GUI
+		}
 	}
 }

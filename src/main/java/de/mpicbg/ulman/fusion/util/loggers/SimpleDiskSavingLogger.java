@@ -1,17 +1,13 @@
 package de.mpicbg.ulman.fusion.util.loggers;
 
-import de.mpicbg.ulman.fusion.Fusers;
 import java.io.File;
 import java.io.IOException;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.logging.Logger;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
 
-public class SimpleDiskSavingLogger extends TimeStampedConsoleLogger
+public class SimpleDiskSavingLogger extends AbstractFilebasedLogger
 {
-	String prefix = "";
 	final Logger javaLogger;
 
 	public SimpleDiskSavingLogger() {
@@ -23,7 +19,11 @@ public class SimpleDiskSavingLogger extends TimeStampedConsoleLogger
 	}
 
 	public SimpleDiskSavingLogger(final String logFolder, final String fileName) {
-		super();
+		this(logFolder, fileName, "");
+	}
+
+	public SimpleDiskSavingLogger(final String logFolder, final String fileName, final String prefix) {
+		super(prefix);
 		javaLogger = Logger.getLogger("FuserLog_" + logFolder + "/" + fileName);
 		javaLogger.setUseParentHandlers(false);
 
@@ -40,19 +40,11 @@ public class SimpleDiskSavingLogger extends TimeStampedConsoleLogger
 		}
 	}
 
-	private final static String NOMARKER = "";
-	//
-	public org.scijava.log.Logger subLogger(final Fusers.OneCombination<?, ?> c) {
-		return this.subLogger(c, NOMARKER);
+	@Override
+	public FilebasedLogger create(final String logFolder, final String fileName, final String prefix) {
+		return new SimpleDiskSavingLogger(logFolder, fileName, prefix);
 	}
-	//
-	public org.scijava.log.Logger subLogger(final Fusers.OneCombination<?, ?> c,
-	                                        final String logFileMarker) {
-		SimpleDiskSavingLogger l =
-				new SimpleDiskSavingLogger(c.logFolder, "log_" + c.code + logFileMarker + ".txt");
-		l.prefix = c.code + " ";
-		return l;
-	}
+
 
 	static public
 	Formatter EASYFORMATTER = new Formatter() {
@@ -62,59 +54,39 @@ public class SimpleDiskSavingLogger extends TimeStampedConsoleLogger
 		}
 	};
 
+	protected void submitThisMsg(final Object origInputMessage, final String finalizedMessage) {
+		javaLogger.info(finalizedMessage);
+		if (shouldAlsoLeakThis(origInputMessage)) leakingTarget.debug(finalizedMessage);
+	}
+
+
 	@Override
 	public void debug(Object msg) {
 		final String finalMsg = createMessage("DBG", msg);
-		javaLogger.info(finalMsg);
-		if (shouldAlsoLeakThis(msg)) leakingTarget.debug(finalMsg);
+		submitThisMsg(msg, finalMsg);
 	}
 
 	@Override
 	public void error(Object msg) {
 		final String finalMsg = createMessage("ERROR", msg);
-		javaLogger.info(finalMsg);
-		if (shouldAlsoLeakThis(msg)) leakingTarget.error(finalMsg);
+		submitThisMsg(msg, finalMsg);
 	}
 
 	@Override
 	public void info(Object msg) {
 		final String finalMsg = createMessage("INFO", msg);
-		javaLogger.info(finalMsg);
-		if (shouldAlsoLeakThis(msg)) leakingTarget.info(finalMsg);
+		submitThisMsg(msg, finalMsg);
 	}
 
 	@Override
 	public void trace(Object msg) {
 		final String finalMsg = createMessage("TRACE", msg);
-		javaLogger.info(finalMsg);
-		if (shouldAlsoLeakThis(msg)) leakingTarget.trace(finalMsg);
+		submitThisMsg(msg, finalMsg);
 	}
 
 	@Override
 	public void warn(Object msg) {
 		final String finalMsg = createMessage("WARN", msg);
-		javaLogger.info(finalMsg);
-		if (shouldAlsoLeakThis(msg)) leakingTarget.warn(finalMsg);
-	}
-
-
-	private org.scijava.log.Logger leakingTarget = null;
-	final private Set<String> leakersPatterns = new HashSet<>(10);
-
-	public void setLeakingTarget(final org.scijava.log.Logger newLeaksTarget) {
-		leakingTarget = newLeaksTarget;
-	}
-
-	public void leakAlsoThese(final String leakPatternInsideMsg) {
-		leakersPatterns.add( leakPatternInsideMsg );
-	}
-
-	private boolean shouldAlsoLeakThis(final Object msg) {
-		if (leakingTarget == null) return false;
-
-		final String msgStr = msg.toString();
-		for (String pattern : leakersPatterns)
-			if (msgStr.contains(pattern)) return true;
-		return false;
+		submitThisMsg(msg, finalMsg);
 	}
 }
