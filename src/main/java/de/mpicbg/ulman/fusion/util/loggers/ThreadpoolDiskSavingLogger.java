@@ -4,7 +4,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.HashMap;
 
-public class ThreadpoolDiskSavingLogger extends AbstractFilebasedLogger
+public class ThreadpoolDiskSavingLogger extends AbstractFilebasedLogger implements AutoCloseable
 {
 	public ThreadpoolDiskSavingLogger() {
 		this(".");
@@ -47,19 +47,26 @@ public class ThreadpoolDiskSavingLogger extends AbstractFilebasedLogger
 	private final String timeStamp;
 	private final String logFolder;
 	private final String fileNamePrefix;
-	private final Map<Integer, SimpleDiskSavingLogger> loggers;
+	private final Map<Integer, BufferedDiskSavingLogger> loggers;
 	private final SimpleDiskSavingLogger masterLogger;
 
 	private SimpleDiskSavingLogger getLogger() {
 		if (masterLogger != null) return masterLogger;
 
 		final int logIdx = (int)Thread.currentThread().getId();
-		SimpleDiskSavingLogger l = loggers.get(logIdx);
+		BufferedDiskSavingLogger l = loggers.get(logIdx);
 		if (l == null) {
-			l = new SimpleDiskSavingLogger(logFolder, fileNamePrefix+"_thread"+logIdx+"_"+timeStamp+".txt");
+			l = new BufferedDiskSavingLogger(logFolder, fileNamePrefix+"_thread"+logIdx+"_"+timeStamp+".txt");
 			loggers.put(logIdx, l);
 		}
 		return l;
+	}
+
+	@Override
+	public void close() {
+		//only the master instance closes the individual loggers
+		if (masterLogger == null) return;
+		for (BufferedDiskSavingLogger l : loggers.values()) l.close();
 	}
 
 
