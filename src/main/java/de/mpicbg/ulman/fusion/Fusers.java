@@ -156,6 +156,10 @@ public class Fusers extends CommonGUI implements Command
 	@Parameter
 	boolean saveFusionResults = true;
 
+	//don't set to false unless you are sure you don't need the output folders,
+	//which is to say no output images are created and logs are not stored there too
+	boolean doCreateCmvOutputFolders = true;
+
 	@Parameter
 	CommandService commandService;
 
@@ -784,6 +788,8 @@ public class Fusers extends CommonGUI implements Command
 
 		private void makeSureFolderExists(final String folderName) throws IOException
 		{
+			if (!doCreateCmvOutputFolders) return;
+
 			final Path fPath = Paths.get(folderName);
 			if (Files.exists(fPath))
 			{
@@ -869,6 +875,10 @@ public class Fusers extends CommonGUI implements Command
 			try ( final ThreadpoolDiskSavingLogger dLog = new ThreadpoolDiskSavingLogger(".",
 					"log_"+myself.doCMV_partition) )
 			{
+				//this works only with conjunction with ThreadpoolDiskSavingLogger
+				myself.doCreateCmvOutputFolders = myself.saveFusionResults;
+				dLog.info("Going to touch any output folder? "+myself.doCreateCmvOutputFolders);
+
 				//dLog.setLeakingTarget( new NoHeaderConsoleLogger() );
 				//dLog.leakAlsoThese("borrow");
 				//dLog.leakAlsoThese("Combination");
