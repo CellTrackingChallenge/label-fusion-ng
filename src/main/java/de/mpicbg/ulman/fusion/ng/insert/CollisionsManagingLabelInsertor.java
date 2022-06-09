@@ -77,7 +77,21 @@ implements LabelInsertor<LT,ET>
 		int color = -1;
 
 		/** list of markers/labels that wanted to be on this pixel */
-		Set<Integer> claimingLabels = new HashSet<>(5);
+		final private int[] claimingLabels = new int[10];
+		//
+		private int nextAvail = 0;
+		//
+		void addClaimingLabel(final int label) {
+			if (containsClaimingLabel(label)) return;
+			claimingLabels[nextAvail++] = label;
+			if (nextAvail > 8) //TODO: finish/clear up this test
+				throw new RuntimeException("Claiming labels buffer close to overfill...");
+		}
+		boolean containsClaimingLabel(final int label) {
+			for (int i = 0; i < nextAvail; ++i)
+				if (claimingLabels[i] == label) return true;
+			return false;
+		}
 	}
 
 	@Override
@@ -93,7 +107,7 @@ implements LabelInsertor<LT,ET>
 		{
 			//found coinciding pixel, add another claimer
 			p = pxInINTERSECTION.get( pxCoordIdx );
-			p.claimingLabels.add( claimer );
+			p.addClaimingLabel( claimer );
 			//TODO remove debug test
 			if (p.x != pos[0] || p.y != pos[1] || p.z != pos[2])
 				log.warn("CM WARNING: pxInINTERSECTION map refers to wrong PxCoord!");
@@ -102,7 +116,7 @@ implements LabelInsertor<LT,ET>
 
 		//not found, add a brand new pixel with its claimer
 		p = new PxCoord(pos);
-		p.claimingLabels.add( claimer );
+		p.addClaimingLabel( claimer );
 		pxInINTERSECTION.add( p );
 		coordsCatalogue.put(index, pxInINTERSECTION.size()-1);
 	}
@@ -280,7 +294,7 @@ implements LabelInsertor<LT,ET>
 				pos[2] = Math.min( Math.max(px.z + posDelta[2],0) , posMax[2] );
 				oRA.setPosition(pos);
 				final int surroundingLabel = oRA.get().getInteger();
-				if ( px.claimingLabels.contains(surroundingLabel) )
+				if ( px.containsClaimingLabel(surroundingLabel) )
 				{
 					px.color = surroundingLabel;
 					break;
