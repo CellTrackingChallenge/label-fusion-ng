@@ -86,9 +86,6 @@ implements LabelInsertor<LT,ET>
 		//find coinciding pixel
 		PxCoord p;
 
-		//check the map first
-		//pxInINTERSECTION_map_RA.setPosition(pos);
-		//int pxCoordIdx = pxInINTERSECTION_map_RA.get().getInt();
 		final long index = pos[2]*xyPlane + pos[1]*xLine + pos[0];
 		final int pxCoordIdx = coordsCatalogue.getOrDefault(index,-1);
 
@@ -107,21 +104,11 @@ implements LabelInsertor<LT,ET>
 		p = new PxCoord(pos);
 		p.claimingLabels.add( claimer );
 		pxInINTERSECTION.add( p );
-		/*
-		pxInINTERSECTION_map_RA.get().setInt( pxInINTERSECTION.size() );
-		//
-		if (pxInINTERSECTION.size() == pxInINTERSECTION_map.firstElement().getMaxValue())
-			log.warn("CM WARNING: pxInINTERSECTION map cannot hold more PxCoords!");
-		*/
 		coordsCatalogue.put(index, pxInINTERSECTION.size()-1);
 	}
 
 	List<PxCoord> pxInINTERSECTION;
 	List<PxCoord> pxTemporarilyHidden;
-
-	//protected Img<UnsignedIntType> pxInINTERSECTION_map;
-	//protected RandomAccess<UnsignedIntType> pxInINTERSECTION_map_RA;
-	//protected long pxInINTERSECTION_map_pxCapacity = 0;
 
 	//maps image position (serialized into an offset/index) into index in pxInINTERSECTION
 	final Map<Long,Integer> coordsCatalogue = new HashMap<>(5000);
@@ -141,22 +128,6 @@ implements LabelInsertor<LT,ET>
 		pxInINTERSECTION.clear();
 		pxTemporarilyHidden.clear();
 		log.warn("CM: borrowed collision vector now at capacity "+((Vector<?>)pxInINTERSECTION).capacity());
-
-		/*
-		pxInINTERSECTION_map = MEMORY.getCmMapImg( ReusableMemory.getThreadId() );
-		LoopBuilder.setImages(pxInINTERSECTION_map).forEachPixel(UnsignedIntType::setZero);
-		pxInINTERSECTION_map_RA = pxInINTERSECTION_map.randomAccess();
-
-		pxInINTERSECTION_map_pxCapacity = 1;
-		for (long d : pxInINTERSECTION_map.dimensionsAsLongArray())
-			pxInINTERSECTION_map_pxCapacity *= d;
-
-		log.warn("CM: borrowed collisions map-img: "
-				+ AbstractWeightedVotingFusionAlgorithm.reportImageSize(
-				pxInINTERSECTION_map,pxInINTERSECTION_map.firstElement().getBitsPerPixel()/8 ));
-		log.warn("CM: borrowed collisions map-img: "
-				+pxInINTERSECTION_map_pxCapacity+" pixels");
-		 */
 
 		coordsCatalogue.clear();
 		xLine = templateImg.dimension(0);
@@ -230,11 +201,6 @@ implements LabelInsertor<LT,ET>
 		log.trace("CM: grabbing pixel coords: "+pxInINTERSECTION.size()+" + "+pxTemporarilyHidden.size());
 		log.info("CM: num output pixels in collision " + pxInINTERSECTION.size());
 		log.info("CM: num collision places " + coordsCatalogue.size());
-		/*
-		log.info("CM: map fullness "
-				+ 100L*pxInINTERSECTION.size()/pxInINTERSECTION_map_pxCapacity
-				+ " %");
-		*/
 		log.info("CM: num temporarily hidden pixels  " + pxTemporarilyHidden.size());
 		//debug img:
 		//SimplifiedIO.saveImage(outImg,"/temp/X_before.tif");
@@ -291,7 +257,6 @@ implements LabelInsertor<LT,ET>
 		// "return" (aka don't hold any longer) the shared resources
 		pxTemporarilyHidden = null;
 		pxInINTERSECTION = null;
-		//pxInINTERSECTION_map = null;
 
 		return collHistogram;
 	}
