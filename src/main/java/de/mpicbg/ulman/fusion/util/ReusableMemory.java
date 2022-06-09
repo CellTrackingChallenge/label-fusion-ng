@@ -34,12 +34,12 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 		return refImage.factory().imgFactory(refExtType).create(refImage);
 	}
 
-	private Img<UnsignedIntType> createIntImage() {
-		return refImage.factory().imgFactory(refIntType).create(refImage);
-	}
-
 	private Vector<PxCoord> createPx() {
 		return new Vector<>(500000);
+	}
+
+	private Map<Long,Integer> createCatalogue() {
+		return new HashMap<>(5000);
 	}
 
 
@@ -77,12 +77,12 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 	//the shared data -- same-dimensional images
 	private final List<Img<ET>> tmpImgs = new ArrayList<>(EXPECTED_BORROWERS_NUM);
 	private final List<Img<LT>> outImgs = new ArrayList<>(EXPECTED_BORROWERS_NUM);
-	private final List<Img<UnsignedIntType>> cmMapImgs = new ArrayList<>(EXPECTED_BORROWERS_NUM);
 	private final List<Img<LT>> ccaInImgs = new ArrayList<>(EXPECTED_BORROWERS_NUM);
 	private final List<Img<LT>> ccaOutImgs = new ArrayList<>(EXPECTED_BORROWERS_NUM);
 
 	private final List<Vector<PxCoord>> interesectionPxs = new ArrayList<>(EXPECTED_BORROWERS_NUM);
 	private final List<Vector<PxCoord>> tempHiddenPxs = new ArrayList<>(EXPECTED_BORROWERS_NUM);
+	private final List<Map<Long,Integer>> intersectionCatalogues = new ArrayList<>(EXPECTED_BORROWERS_NUM);
 
 	/**
 	 * Borrows "tmpImg" to this caller, and blocks the other images from this object (the singleton)
@@ -103,11 +103,6 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 	}
 
 	/** See {@link #getTmpImg(int)} */
-	public Img<UnsignedIntType> getCmMapImg(final int borrowerID) {
-		return cmMapImgs.get( register(borrowerID) );
-	}
-
-	/** See {@link #getTmpImg(int)} */
 	public Img<LT> getCcaInImg(final int borrowerID) {
 		return ccaInImgs.get( register(borrowerID) );
 	}
@@ -122,6 +117,9 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 	}
 	public Vector<PxCoord> getTempHiddenPx(final int borrowerID) {
 		return tempHiddenPxs.get( register(borrowerID) );
+	}
+	public Map<Long,Integer> getCatalogue(final int borrowerID) {
+		return intersectionCatalogues.get( register(borrowerID) );
 	}
 
 	/**
@@ -166,11 +164,11 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 			subjectToData.put( borrowerID, new_i );
 			tmpImgs.add( createExtImage() );
 			outImgs.add( createLabelImage() );
-			//cmMapImgs.add( createIntImage() );
 			ccaInImgs.add( createLabelImage() );
 			ccaOutImgs.add( createLabelImage() );
 			interesectionPxs.add( createPx() );
 			tempHiddenPxs.add( createPx() );
+			intersectionCatalogues.add( createCatalogue() );
 			//log.debug("ReusableMem.registering: new borrower "+borrowerID+" will get new slot "+subjectToData.get(borrowerID));
 			return new_i;
 		}
@@ -220,11 +218,6 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 				sb.append("  tmpImg["+i+"]: "
 						+AbstractWeightedVotingRoisFusionAlgorithm.reportImageSize(
 								tmpImgs.get(i), ETpxSize) +"\n");
-				/*
-				sb.append("  cmMapImg["+i+"]: "
-						+AbstractWeightedVotingRoisFusionAlgorithm.reportImageSize(
-								cmMapImgs.get(i), intPxSize) +"\n");
-				*/
 				sb.append("  ccaInImg["+i+"]: "
 						+AbstractWeightedVotingRoisFusionAlgorithm.reportImageSize(
 								ccaInImgs.get(i), LTpxSize) +"\n");
@@ -232,7 +225,8 @@ public class ReusableMemory<LT extends IntegerType<LT>, ET extends RealType<ET>>
 						+AbstractWeightedVotingRoisFusionAlgorithm.reportImageSize(
 								ccaOutImgs.get(i), LTpxSize) +"\n");
 				sb.append("  intersectionPxs["+i+"] vector of capacity: "+interesectionPxs.get(i).capacity()+"\n");
-				sb.append("  temp_hidden_Pxs["+i+"] vector of capacity: "+tempHiddenPxs.get(i).capacity()+"\n---\n");
+				sb.append("  temp_hidden_Pxs["+i+"] vector of capacity: "+tempHiddenPxs.get(i).capacity()+"\n");
+				sb.append("  intersectionCatalogue["+i+"] map of items: "+intersectionCatalogues.get(i).size()+"\n---\n");
 			}
 			return sb.toString();
 		}
