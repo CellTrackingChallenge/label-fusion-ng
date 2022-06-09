@@ -111,7 +111,7 @@ implements LabelInsertor<LT,ET>
 	List<PxCoord> pxTemporarilyHidden;
 
 	//maps image position (serialized into an offset/index) into index in pxInINTERSECTION
-	final Map<Long,Integer> coordsCatalogue = new HashMap<>(5000);
+	Map<Long,Integer> coordsCatalogue;
 	long xLine=0,xyPlane=0;
 
 	@Override
@@ -129,6 +129,7 @@ implements LabelInsertor<LT,ET>
 		pxTemporarilyHidden.clear();
 		log.warn("CM: borrowed collision vector now at capacity "+((Vector<?>)pxInINTERSECTION).capacity());
 
+		coordsCatalogue = MEMORY.getCatalogue( ReusableMemory.getThreadId() );
 		coordsCatalogue.clear();
 		xLine = templateImg.dimension(0);
 		xyPlane = xLine * templateImg.dimension(1);
