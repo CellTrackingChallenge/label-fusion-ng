@@ -31,6 +31,7 @@ import de.mpicbg.ulman.fusion.JobSpecification;
 import de.mpicbg.ulman.fusion.ng.backbones.FusionAlgorithm;
 import de.mpicbg.ulman.fusion.ng.backbones.JobIO;
 import de.mpicbg.ulman.fusion.ng.postprocess.KeepLargestCCALabelPostprocessor;
+import de.mpicbg.ulman.fusion.util.ReusableMemory;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleConsoleLogger;
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
 import net.imglib2.RandomAccessibleInterval;
@@ -81,6 +82,9 @@ implements FusionAlgorithm<IT,ByteType>
 
 		Img<ByteType> outImg = new PlanarImgFactory<>(new ByteType()).create(inImgs.get(validIndices.get(0)));
 		LoopBuilder.setImages(outImg).forEachPixel(ByteType::setZero);
+
+		//crank up the shared mem facility (because of CCA down below that cannot instantiate it for itself)
+		ReusableMemory.getInstanceFor(outImg, new ByteType(), new ByteType());
 
 		int processedImgs = 0;
 		final int allImgs = validIndices.size();
