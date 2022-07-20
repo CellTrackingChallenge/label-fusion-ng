@@ -79,6 +79,7 @@ implements FusionAlgorithm<IT,ByteType>
 			log.warn("Given empty list of input images, not producing anything then.");
 			return null;
 		}
+		log.info("Going to fuse from "+validIndices.size()+" inputs: "+validIndices);
 
 		Img<ByteType> outImg = new PlanarImgFactory<>(new ByteType()).create(inImgs.get(validIndices.get(0)));
 		LoopBuilder.setImages(outImg).forEachPixel(ByteType::setZero);
@@ -112,10 +113,14 @@ implements FusionAlgorithm<IT,ByteType>
 				extractTwoLabelsInParallel(imgsInAction,inImgs,outImg);
 			}
 			else
+			{
+				log.info(".. extracting from "+validIndices.get(processedImgs));
 				LoopBuilder.setImages(inImgs.get(validIndices.get(processedImgs++)),outImg)
 						.forEachPixel( (i,o) -> { if (i.getRealFloat() > 0) o.add(ONE); } );
+			}
 		}
 
+		log.info(".. thresholding");
 		LoopBuilder.setImages(outImg).forEachPixel( o -> { if (o.getInteger() >= countThreshold) o.setOne(); else o.setZero(); } );
 
 		KeepLargestCCALabelPostprocessor<ByteType> cca = new KeepLargestCCALabelPostprocessor<>();
@@ -128,6 +133,7 @@ implements FusionAlgorithm<IT,ByteType>
 	                                final Vector<RandomAccessibleInterval<IT>> inImgs,
 	                                final Img<ByteType> outImg)
 	{
+		log.info(".. extracting from "+indices[0]+" and "+indices[1]);
 		LoopBuilder.setImages(
 				inImgs.get(indices[0]),
 				inImgs.get(indices[1]),
@@ -142,6 +148,7 @@ implements FusionAlgorithm<IT,ByteType>
 	                                  final Vector<RandomAccessibleInterval<IT>> inImgs,
 	                                  final Img<ByteType> outImg)
 	{
+		log.info(".. extracting from "+indices[0]+", "+indices[1]+" and "+indices[2]);
 		LoopBuilder.setImages(
 				inImgs.get(indices[0]),
 				inImgs.get(indices[1]),
@@ -158,6 +165,7 @@ implements FusionAlgorithm<IT,ByteType>
 	                                 final Vector<RandomAccessibleInterval<IT>> inImgs,
 	                                 final Img<ByteType> outImg)
 	{
+		log.info(".. extracting from "+indices[0]+", "+indices[1]+", "+indices[2]+" and "+indices[3]);
 		LoopBuilder.setImages(
 				inImgs.get(indices[0]),
 				inImgs.get(indices[1]),
@@ -232,10 +240,13 @@ implements FusionAlgorithm<IT,ByteType>
 		try {
 			for (int time : fileIdxList) {
 				job.reportJobForTime(time, log);
-
 				jobIO.loadJob(job, time, 6);
-				SimplifiedIO.saveImage( fuser.fuse(jobIO.inImgs, null),
-						JobSpecification.expandFilenamePattern(job.outputPattern, time) );
+
+				final Img<ByteType> outImg = fuser.fuse(jobIO.inImgs, null);
+
+				final String outFileName = JobSpecification.expandFilenamePattern(job.outputPattern, time);
+				log.info("Going to save "+outFileName);
+				SimplifiedIO.saveImage(outImg, outFileName);
 			}
 		}
 		catch (Exception e) {
