@@ -31,7 +31,7 @@ import de.mpicbg.ulman.fusion.JobSpecification;
 import de.mpicbg.ulman.fusion.ng.backbones.FusionAlgorithm;
 import de.mpicbg.ulman.fusion.ng.backbones.JobIO;
 import de.mpicbg.ulman.fusion.util.ReusableMemory;
-import de.mpicbg.ulman.fusion.util.loggers.SimpleConsoleLogger;
+import de.mpicbg.ulman.fusion.util.loggers.TimeStampedConsoleLogger;
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.morphology.Dilation;
@@ -249,7 +249,7 @@ implements FusionAlgorithm<IT,UnsignedShortType>
 		final File outputPath = new File(args[3]);
 		final String fileIdxStr = args[4];
 
-		final Logger log = new SimpleConsoleLogger();
+		final Logger log = new TimeStampedConsoleLogger();
 
 		// ------------ parsing inputs ------------
 		final JobSpecification job;
