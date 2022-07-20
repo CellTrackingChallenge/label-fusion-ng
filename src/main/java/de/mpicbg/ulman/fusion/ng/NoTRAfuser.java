@@ -27,18 +27,28 @@
  */
 package de.mpicbg.ulman.fusion.ng;
 
+import de.mpicbg.ulman.fusion.JobSpecification;
 import de.mpicbg.ulman.fusion.ng.backbones.FusionAlgorithm;
+import de.mpicbg.ulman.fusion.ng.backbones.JobIO;
 import de.mpicbg.ulman.fusion.ng.postprocess.KeepLargestCCALabelPostprocessor;
+import de.mpicbg.ulman.fusion.util.loggers.SimpleConsoleLogger;
+import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
 import net.imglib2.img.planar.PlanarImgFactory;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.ByteType;
+import net.imglib2.type.numeric.integer.UnsignedShortType;
 import org.scijava.log.Logger;
+import sc.fiji.simplifiedio.SimplifiedIO;
 
+import java.io.File;
+import java.io.IOException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.Vector;
 
 public
@@ -168,5 +178,65 @@ implements FusionAlgorithm<IT,ByteType>
 	int getThreshold()
 	{
 		return countThreshold;
+	}
+
+	// =================== CLI ===================
+	public static void main(String[] args)
+	{
+		if (args.length != 4)
+		{
+			System.out.println("Usage: pathToJobFile threshold pathToOutputImages timePointsRangeSpecification\n");
+			System.out.println("timePointsRangeSpecification can be, e.g., 1-9,23,25");
+			return;
+		}
+
+		final File filePath = new File(args[0]);
+		final int mergeThreshold = Integer.parseInt(args[1]);
+		final File outputPath = new File(args[2]);
+		final String fileIdxStr = args[3];
+
+		final Logger log = new SimpleConsoleLogger();
+
+		// ------------ parsing inputs ------------
+		final JobSpecification job;
+		final TreeSet<Integer> fileIdxList = new TreeSet<>();
+		try {
+			//initiate the building of the job specification...
+			JobSpecification.Builder jobSpecsBuilder = JobIO.parseJobFile(filePath.getAbsolutePath(), true);
+			jobSpecsBuilder.setVotingThreshold(mergeThreshold);
+			jobSpecsBuilder.setOutput(outputPath.getAbsolutePath());
+			//
+			//generic job specification is done
+			job = jobSpecsBuilder.build();
+
+			//parse out the list of timepoints
+			NumberSequenceHandler.parseSequenceOfNumbers(fileIdxStr,fileIdxList);
+		}
+		catch (IOException e) {
+			log.error("Error parsing job file: "+e.getMessage());
+			return;
+		} catch (ParseException e) {
+			log.error("Error parsing time points: "+e.getMessage());
+			e.printStackTrace();
+			return;
+		}
+
+		final NoTRAfuser<UnsignedShortType> fuser = new NoTRAfuser<>(log);
+		fuser.setThreshold(mergeThreshold);
+		final JobIO<UnsignedShortType,?> jobIO = new JobIO<>(log);
+
+		try {
+			for (int time : fileIdxList) {
+				job.reportJobForTime(time, log);
+
+				jobIO.loadJob(job, time, 6);
+				SimplifiedIO.saveImage( fuser.fuse(jobIO.inImgs, null),
+						JobSpecification.expandFilenamePattern(job.outputPattern, time) );
+			}
+		}
+		catch (Exception e) {
+			log.error("Sorry, got an error: " + e.getMessage());
+			e.printStackTrace();
+		}
 	}
 }
