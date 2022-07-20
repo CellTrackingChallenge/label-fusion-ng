@@ -42,7 +42,6 @@ import net.imglib2.loops.LoopBuilder;
 import net.imglib2.parallel.DefaultTaskExecutor;
 import net.imglib2.parallel.TaskExecutor;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import org.scijava.log.Logger;
 import sc.fiji.simplifiedio.SimplifiedIO;
@@ -58,7 +57,7 @@ import java.util.concurrent.ForkJoinPool;
 
 public
 class NoTRAfuser<IT extends RealType<IT>>
-implements FusionAlgorithm<IT,ByteType>
+implements FusionAlgorithm<IT,UnsignedShortType>
 {
 	public
 	NoTRAfuser(final Logger _log)
@@ -68,7 +67,7 @@ implements FusionAlgorithm<IT,ByteType>
 
 	private final Logger log;
 	private int countThreshold = 1;
-	private final static ByteType ONE = new ByteType((byte)1);
+	private final static UnsignedShortType ONE = new UnsignedShortType((byte)1);
 
 	private int dilationRadius = 0;
 
@@ -76,7 +75,7 @@ implements FusionAlgorithm<IT,ByteType>
 	private TaskExecutor threadsPool = new DefaultTaskExecutor( new ForkJoinPool(threadsCount) );
 
 	@Override
-	public Img<ByteType> fuse(Vector<RandomAccessibleInterval<IT>> inImgs, Img<ByteType> markerImg)
+	public Img<UnsignedShortType> fuse(Vector<RandomAccessibleInterval<IT>> inImgs, Img<UnsignedShortType> markerImg)
 	{
 		//since we don't need the marker image, don't touch it at all... it may be null anyway...
 
@@ -90,13 +89,13 @@ implements FusionAlgorithm<IT,ByteType>
 		}
 		log.info("Going to fuse from "+validIndices.size()+" inputs: "+validIndices);
 
-		Img<ByteType> outImg = new PlanarImgFactory<>(new ByteType()).create(inImgs.get(validIndices.get(0)));
+		Img<UnsignedShortType> outImg = new PlanarImgFactory<>(new UnsignedShortType()).create(inImgs.get(validIndices.get(0)));
 		LoopBuilder.setImages(outImg)
 				.multiThreaded(threadsPool)
-				.forEachPixel(ByteType::setZero);
+				.forEachPixel(UnsignedShortType::setZero);
 
 		//crank up the shared mem facility (because of CCA down below that cannot instantiate it for itself)
-		ReusableMemory.getInstanceFor(outImg, new ByteType(), new ByteType());
+		ReusableMemory.getInstanceFor(outImg, new UnsignedShortType(), new UnsignedShortType());
 
 		int processedImgs = 0;
 		final int allImgs = validIndices.size();
@@ -148,7 +147,7 @@ implements FusionAlgorithm<IT,ByteType>
 
 	void extractTwoLabelsInParallel(int[] indices,
 	                                final Vector<RandomAccessibleInterval<IT>> inImgs,
-	                                final Img<ByteType> outImg)
+	                                final Img<UnsignedShortType> outImg)
 	{
 		log.info(".. extracting from "+indices[0]+" and "+indices[1]);
 		LoopBuilder.setImages(
@@ -164,7 +163,7 @@ implements FusionAlgorithm<IT,ByteType>
 
 	void extractThreeLabelsInParallel(int[] indices,
 	                                  final Vector<RandomAccessibleInterval<IT>> inImgs,
-	                                  final Img<ByteType> outImg)
+	                                  final Img<UnsignedShortType> outImg)
 	{
 		log.info(".. extracting from "+indices[0]+", "+indices[1]+" and "+indices[2]);
 		LoopBuilder.setImages(
@@ -182,7 +181,7 @@ implements FusionAlgorithm<IT,ByteType>
 
 	void extractFourLabelsInParallel(int[] indices,
 	                                 final Vector<RandomAccessibleInterval<IT>> inImgs,
-	                                 final Img<ByteType> outImg)
+	                                 final Img<UnsignedShortType> outImg)
 	{
 		log.info(".. extracting from "+indices[0]+", "+indices[1]+", "+indices[2]+" and "+indices[3]);
 		LoopBuilder.setImages(
@@ -287,7 +286,7 @@ implements FusionAlgorithm<IT,ByteType>
 				job.reportJobForTime(time, log);
 				jobIO.loadJob(job, time, 6);
 
-				final Img<ByteType> outImg = fuser.fuse(jobIO.inImgs, null);
+				final Img<UnsignedShortType> outImg = fuser.fuse(jobIO.inImgs, null);
 
 				final String outFileName = JobSpecification.expandFilenamePattern(job.outputPattern, time);
 				log.info("Going to save "+outFileName);
