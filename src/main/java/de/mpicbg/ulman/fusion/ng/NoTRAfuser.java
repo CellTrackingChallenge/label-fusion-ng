@@ -30,14 +30,17 @@ package de.mpicbg.ulman.fusion.ng;
 import de.mpicbg.ulman.fusion.JobSpecification;
 import de.mpicbg.ulman.fusion.ng.backbones.FusionAlgorithm;
 import de.mpicbg.ulman.fusion.ng.backbones.JobIO;
-import de.mpicbg.ulman.fusion.ng.postprocess.KeepLargestCCALabelPostprocessor;
 import de.mpicbg.ulman.fusion.util.ReusableMemory;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleConsoleLogger;
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.algorithm.morphology.Dilation;
+import net.imglib2.algorithm.neighborhood.HyperSphereShape;
 import net.imglib2.img.Img;
 import net.imglib2.img.planar.PlanarImgFactory;
 import net.imglib2.loops.LoopBuilder;
+import net.imglib2.parallel.DefaultTaskExecutor;
+import net.imglib2.parallel.TaskExecutor;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
@@ -51,6 +54,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
 import java.util.Vector;
+import java.util.concurrent.ForkJoinPool;
 
 public
 class NoTRAfuser<IT extends RealType<IT>>
@@ -65,6 +69,11 @@ implements FusionAlgorithm<IT,ByteType>
 	private final Logger log;
 	private int countThreshold = 1;
 	private final static ByteType ONE = new ByteType((byte)1);
+
+	private int dilationRadius = 0;
+
+	private int threadsCount = 1;
+	private TaskExecutor threadsPool = new DefaultTaskExecutor( new ForkJoinPool(threadsCount) );
 
 	@Override
 	public Img<ByteType> fuse(Vector<RandomAccessibleInterval<IT>> inImgs, Img<ByteType> markerImg)
@@ -82,7 +91,9 @@ implements FusionAlgorithm<IT,ByteType>
 		log.info("Going to fuse from "+validIndices.size()+" inputs: "+validIndices);
 
 		Img<ByteType> outImg = new PlanarImgFactory<>(new ByteType()).create(inImgs.get(validIndices.get(0)));
-		LoopBuilder.setImages(outImg).forEachPixel(ByteType::setZero);
+		LoopBuilder.setImages(outImg)
+				.multiThreaded(threadsPool)
+				.forEachPixel(ByteType::setZero);
 
 		//crank up the shared mem facility (because of CCA down below that cannot instantiate it for itself)
 		ReusableMemory.getInstanceFor(outImg, new ByteType(), new ByteType());
@@ -116,16 +127,21 @@ implements FusionAlgorithm<IT,ByteType>
 			{
 				log.info(".. extracting from "+validIndices.get(processedImgs));
 				LoopBuilder.setImages(inImgs.get(validIndices.get(processedImgs++)),outImg)
-						.multiThreaded()
+						.multiThreaded(threadsPool)
 						.forEachPixel( (i,o) -> { if (i.getRealFloat() > 0) o.add(ONE); } );
 			}
 		}
 
 		log.info(".. thresholding");
-		LoopBuilder.setImages(outImg).forEachPixel( o -> { if (o.getInteger() >= countThreshold) o.setOne(); else o.setZero(); } );
+		LoopBuilder.setImages(outImg)
+				.multiThreaded(threadsPool)
+				.forEachPixel( o -> { if (o.getInteger() >= countThreshold) o.setOne(); else o.setZero(); } );
 
-		KeepLargestCCALabelPostprocessor<ByteType> cca = new KeepLargestCCALabelPostprocessor<>();
-		cca.processLabel(outImg,1);
+		if (dilationRadius > 0) {
+			log.info(".. dilation of R="+dilationRadius+" (using "+ threadsCount +" threads)");
+			final HyperSphereShape sphereShape = new HyperSphereShape(dilationRadius);
+			outImg = Dilation.dilate(outImg, sphereShape, threadsCount);
+		}
 
 		return outImg;
 	}
@@ -139,7 +155,7 @@ implements FusionAlgorithm<IT,ByteType>
 					inImgs.get(indices[0]),
 					inImgs.get(indices[1]),
 					outImg)
-			.multiThreaded()
+			.multiThreaded(threadsPool)
 			.forEachPixel( (a,b,o) -> {
 				if (a.getRealFloat() > 0) o.add(ONE);
 				if (b.getRealFloat() > 0) o.add(ONE);
@@ -156,7 +172,7 @@ implements FusionAlgorithm<IT,ByteType>
 					inImgs.get(indices[1]),
 					inImgs.get(indices[2]),
 					outImg)
-			.multiThreaded()
+			.multiThreaded(threadsPool)
 			.forEachPixel( (a,b,c,o) -> {
 				if (a.getRealFloat() > 0) o.add(ONE);
 				if (b.getRealFloat() > 0) o.add(ONE);
@@ -175,7 +191,7 @@ implements FusionAlgorithm<IT,ByteType>
 					inImgs.get(indices[2]),
 					inImgs.get(indices[3]),
 					outImg)
-			.multiThreaded()
+			.multiThreaded(threadsPool)
 			.forEachPixel( (a,b,c,d,o) -> {
 				if (a.getRealFloat() > 0) o.add(ONE);
 				if (b.getRealFloat() > 0) o.add(ONE);
@@ -189,27 +205,50 @@ implements FusionAlgorithm<IT,ByteType>
 	{
 		countThreshold = minNumberOfVoters;
 	}
-
 	public
 	int getThreshold()
 	{
 		return countThreshold;
 	}
 
+	public
+	void setDilationRadius(final int dilationRadius)
+	{
+		this.dilationRadius = dilationRadius;
+	}
+	public
+	int getDilationRadius()
+	{
+		return dilationRadius;
+	}
+
+	public
+	void setThreadsCount(final int threadsCount)
+	{
+		this.threadsCount = threadsCount;
+		this.threadsPool = new DefaultTaskExecutor( new ForkJoinPool(threadsCount) );
+	}
+	public
+	int getThreadsCount()
+	{
+		return threadsCount;
+	}
+
 	// =================== CLI ===================
 	public static void main(String[] args)
 	{
-		if (args.length != 4)
+		if (args.length != 5)
 		{
-			System.out.println("Usage: pathToJobFile threshold pathToOutputImages timePointsRangeSpecification\n");
+			System.out.println("Usage: pathToJobFile threshold dilationRadius pathToOutputImages timePointsRangeSpecification\n");
 			System.out.println("timePointsRangeSpecification can be, e.g., 1-9,23,25");
 			return;
 		}
 
 		final File filePath = new File(args[0]);
 		final int mergeThreshold = Integer.parseInt(args[1]);
-		final File outputPath = new File(args[2]);
-		final String fileIdxStr = args[3];
+		final int dilationRadius = Integer.parseInt(args[2]);
+		final File outputPath = new File(args[3]);
+		final String fileIdxStr = args[4];
 
 		final Logger log = new SimpleConsoleLogger();
 
@@ -239,6 +278,8 @@ implements FusionAlgorithm<IT,ByteType>
 
 		final NoTRAfuser<UnsignedShortType> fuser = new NoTRAfuser<>(log);
 		fuser.setThreshold(mergeThreshold);
+		fuser.setDilationRadius(dilationRadius);
+		fuser.setThreadsCount(32);
 		final JobIO<UnsignedShortType,?> jobIO = new JobIO<>(log);
 
 		try {
