@@ -116,6 +116,7 @@ implements FusionAlgorithm<IT,ByteType>
 			{
 				log.info(".. extracting from "+validIndices.get(processedImgs));
 				LoopBuilder.setImages(inImgs.get(validIndices.get(processedImgs++)),outImg)
+						.multiThreaded()
 						.forEachPixel( (i,o) -> { if (i.getRealFloat() > 0) o.add(ONE); } );
 			}
 		}
@@ -126,7 +127,7 @@ implements FusionAlgorithm<IT,ByteType>
 		KeepLargestCCALabelPostprocessor<ByteType> cca = new KeepLargestCCALabelPostprocessor<>();
 		cca.processLabel(outImg,1);
 
-		return null;
+		return outImg;
 	}
 
 	void extractTwoLabelsInParallel(int[] indices,
@@ -135,13 +136,14 @@ implements FusionAlgorithm<IT,ByteType>
 	{
 		log.info(".. extracting from "+indices[0]+" and "+indices[1]);
 		LoopBuilder.setImages(
-				inImgs.get(indices[0]),
-				inImgs.get(indices[1]),
-				outImg)
-				.forEachPixel( (a,b,o) -> {
-					if (a.getRealFloat() > 0) o.add(ONE);
-					if (b.getRealFloat() > 0) o.add(ONE);
-				} );
+					inImgs.get(indices[0]),
+					inImgs.get(indices[1]),
+					outImg)
+			.multiThreaded()
+			.forEachPixel( (a,b,o) -> {
+				if (a.getRealFloat() > 0) o.add(ONE);
+				if (b.getRealFloat() > 0) o.add(ONE);
+			} );
 	}
 
 	void extractThreeLabelsInParallel(int[] indices,
@@ -150,15 +152,16 @@ implements FusionAlgorithm<IT,ByteType>
 	{
 		log.info(".. extracting from "+indices[0]+", "+indices[1]+" and "+indices[2]);
 		LoopBuilder.setImages(
-				inImgs.get(indices[0]),
-				inImgs.get(indices[1]),
-				inImgs.get(indices[2]),
-				outImg)
-				.forEachPixel( (a,b,c,o) -> {
-					if (a.getRealFloat() > 0) o.add(ONE);
-					if (b.getRealFloat() > 0) o.add(ONE);
-					if (c.getRealFloat() > 0) o.add(ONE);
-				} );
+					inImgs.get(indices[0]),
+					inImgs.get(indices[1]),
+					inImgs.get(indices[2]),
+					outImg)
+			.multiThreaded()
+			.forEachPixel( (a,b,c,o) -> {
+				if (a.getRealFloat() > 0) o.add(ONE);
+				if (b.getRealFloat() > 0) o.add(ONE);
+				if (c.getRealFloat() > 0) o.add(ONE);
+			} );
 	}
 
 	void extractFourLabelsInParallel(int[] indices,
@@ -167,17 +170,18 @@ implements FusionAlgorithm<IT,ByteType>
 	{
 		log.info(".. extracting from "+indices[0]+", "+indices[1]+", "+indices[2]+" and "+indices[3]);
 		LoopBuilder.setImages(
-				inImgs.get(indices[0]),
-				inImgs.get(indices[1]),
-				inImgs.get(indices[2]),
-				inImgs.get(indices[3]),
-				outImg)
-		.forEachPixel( (a,b,c,d,o) -> {
-			if (a.getRealFloat() > 0) o.add(ONE);
-			if (b.getRealFloat() > 0) o.add(ONE);
-			if (c.getRealFloat() > 0) o.add(ONE);
-			if (d.getRealFloat() > 0) o.add(ONE);
-		} );
+					inImgs.get(indices[0]),
+					inImgs.get(indices[1]),
+					inImgs.get(indices[2]),
+					inImgs.get(indices[3]),
+					outImg)
+			.multiThreaded()
+			.forEachPixel( (a,b,c,d,o) -> {
+				if (a.getRealFloat() > 0) o.add(ONE);
+				if (b.getRealFloat() > 0) o.add(ONE);
+				if (c.getRealFloat() > 0) o.add(ONE);
+				if (d.getRealFloat() > 0) o.add(ONE);
+			} );
 	}
 
 	public
