@@ -185,7 +185,7 @@
 		<dependency>
 			<groupId>net.celltrackingchallenge</groupId>
 			<artifactId>CTC-measures</artifactId>
-			<version>0.9.0</version>
+			<version>1.0.0</version>
 		</dependency>
 
 		<!-- essentially only CCA algorithm -->
