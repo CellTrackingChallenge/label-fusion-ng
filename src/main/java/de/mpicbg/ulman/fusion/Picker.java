@@ -112,9 +112,9 @@ public class Picker extends CommonGUI implements Command
 	@Parameter(description = "Provide a valid path to the SEG folder for evaluations.")
 	String SEGfolder = "CHANGE THIS PATH/dataset/video_GT/SEG";
 
-	@CommandLine.Option(names = {"-s","--save","saveFusionResults"})
+	@CommandLine.Option(names = {"-s","--save","saveFusionResults"}, description = "Use the output format parameter and do create the output files.")
 	@Parameter
-	boolean saveFusionResults = true;
+	boolean saveFusionResults = false;
 
 
 	//callbacks:
