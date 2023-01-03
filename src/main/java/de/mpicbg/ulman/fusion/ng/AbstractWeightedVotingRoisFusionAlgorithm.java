@@ -265,8 +265,10 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 			final int curMarker = marker.getKey().intValue();
 
 			//scan for not yet observed markers (and ignore background values...)
-			//NB: the following condition should always be true....
-			if ( curMarker > 0 && (!mDiscovered.contains(curMarker)) )
+			if ( curMarker > 0
+					&& !mDiscovered.contains(curMarker) //NB: this should never happen...
+					&& !ignoredMarkersTemporarily.contains(curMarker)
+					&& !ignoredMarkersPermanently.contains(curMarker) )
 			{
 				log.trace("processing next marker: "+curMarker);
 				//
@@ -468,6 +470,7 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 				} );
 		}
 
+		ignoredMarkersTemporarily.clear();
 		return outImg;
 	}
 }

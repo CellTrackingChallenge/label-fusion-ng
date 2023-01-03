@@ -165,6 +165,20 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 	 */
 	public Boolean insertTRAforCollidingOrMissingMarkers = false;
 
+	/**
+	 * For the upcoming fusion, the following TRA labels will not be processed.
+	 * This set, however, will be cleared right after the fusion (so that the
+	 * labels will be processed in the next round unless they are re-inserted
+	 * here, or added into 'ignoredMarkersPermanently').
+	 */
+	protected Set<Integer> ignoredMarkersTemporarily = new HashSet<>(500);
+	/**
+	 * For the upcoming fusion, the following TRA labels will not be processed.
+	 * Unlike to 'ignoredMarkersTemporarily', the labels listed here will not be
+	 * processed even in any follow-up rounds of fusion.
+	 */
+	protected Set<Integer> ignoredMarkersPermanently = new HashSet<>(500);
+
 	public String dbgImgFileName;
 
 	public String reportImageSize(final RandomAccessibleInterval<?> img)
@@ -246,7 +260,10 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 			final int curMarker = mCursor.next().getInteger();
 
 			//scan for not yet observed markers (and ignore background values...)
-			if ( curMarker > 0 && (!mDiscovered.contains(curMarker)) )
+			if ( curMarker > 0
+					&& !mDiscovered.contains(curMarker)
+					&& !ignoredMarkersTemporarily.contains(curMarker)
+					&& !ignoredMarkersPermanently.contains(curMarker) )
 			{
 				log.trace("discovered new marker: "+curMarker);
 				//found a new marker, determine its size and the AABB it spans
@@ -434,6 +451,7 @@ implements WeightedVotingFusionAlgorithm<IT,LT>
 				} );
 		}
 
+		ignoredMarkersTemporarily.clear();
 		return outImg;
 	}
 }
