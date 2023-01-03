@@ -229,16 +229,22 @@ public class Picker extends CommonGUI implements Command
 		final DetSegCumulativeScores runningDetSegScore = new DetSegCumulativeScores();
 
 		iterateTimePoints(fileIdxList,useGui,time -> {
-			job.reportJobForTime(time,log);
-			feeder.processJob(job,time, noOfThreads);
-			if (saveFusionResults) feeder.saveJob(job,time);
-			//
 			if (SEGevaluator.managedToLoadImageForTimepoint(time))
 			{
+				for (final SegGtImageLoader<LT>.LoadedData ld : SEGloaderAndEvaluator.getLastLoadedData())
+				{
+					//make boxes available for the cherry picking...
+					ld.calcBoxes();
+				}
+				//
+				job.reportJobForTime(time,log);
+				feeder.processJob(job,time, noOfThreads);
+				if (saveFusionResults) feeder.saveJob(job,time);
+				//
 				runningDetSegScore.startSection();
 				for (final SegGtImageLoader<LT>.LoadedData ld : SEGevaluator.getLastLoadedData())
 				{
-					ld.calcBoxes();
+					//ld.calcBoxes(); -- already done above
 					feeder.scoreJob_SEG(ld, runningDetSegScore);
 				}
 				feeder.scoreJob_DET(runningDetSegScore);
