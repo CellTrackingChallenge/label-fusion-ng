@@ -27,15 +27,23 @@
  */
 package de.mpicbg.ulman.fusion.ng;
 
+import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 import de.mpicbg.ulman.fusion.ng.fuse.LabelPicker;
 import de.mpicbg.ulman.fusion.ng.insert.CollisionsManagingLabelInsertor;
 import de.mpicbg.ulman.fusion.ng.postprocess.KeepLargestCCALabelPostprocessor;
 import de.mpicbg.ulman.fusion.util.SegGtImageLoader;
+import net.imglib2.FinalInterval;
+import net.imglib2.Interval;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.img.Img;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.ByteType;
+import net.imglib2.view.Views;
 import org.scijava.log.Logger;
+import java.util.Map;
+import java.util.Vector;
 
 public
 class CherryPicker<IT extends RealType<IT>, LT extends IntegerType<LT>>
@@ -47,9 +55,15 @@ class CherryPicker<IT extends RealType<IT>, LT extends IntegerType<LT>>
 	public CherryPicker(Logger _log, SegGtImageLoader<LT> _segImgLoader) {
 		super(_log, new ByteType());
 		segGtImageLoader = _segImgLoader;
+		segGtImageExtractor = new MajorityOverlapBasedLabelExtractor<>();
 	}
 
 	final SegGtImageLoader<LT> segGtImageLoader;
+	//
+	final LabelExtractor<LT,LT,ByteType> segGtImageExtractor;
+	final long[] minBBox = new long[2];
+	final long[] maxBBox = new long[2];
+
 	@Override
 	protected void setFusionComponents() {
 		//setup the individual stages
@@ -65,5 +79,51 @@ class CherryPicker<IT extends RealType<IT>, LT extends IntegerType<LT>>
 		this.labelFuser     = f;
 		this.labelInsertor  = i;
 		this.labelCleaner   = p;
+	}
+
+	@Override
+	public Img<LT> fuse(final Vector<RandomAccessibleInterval<IT>> inImgs,
+	                    final Img<LT> markerImg)
+	{
+		log.info("CherryPicker's outer fuse() is narrowing TRA markers to SEG segments only");
+
+		//first add all markers on the ignore list....
+		for (double marker : markerBoxes.keySet()) ignoredMarkersTemporarily.add((int)marker);
+
+		//....then remove the ones matching SEG....
+		for (SegGtImageLoader<LT>.LoadedData ld : segGtImageLoader.getLastLoadedData()) {
+			//....by considering all loaded SEG images for this timepoint....
+			final RandomAccessibleInterval<LT> markerSliceImg = ld.slicedViewOf(markerImg);
+			log.info("  dimension of markerImg: "+markerImg.numDimensions()+" (should be 2 or 3)");
+			log.info("  dimension of markerSliceImg: "+markerSliceImg.numDimensions()+" (should be 2)");
+
+			//....against the all markers
+			for (Map.Entry<Double,long[]> marker : markerBoxes.entrySet()) {
+				final long[] curBBox = marker.getValue();
+				final int idxCompensationFor2d = ld.lastLoadedIs2D ? 0 : 1;
+				minBBox[0] = curBBox[0];
+				minBBox[1] = curBBox[1];
+				maxBBox[0] = curBBox[3-idxCompensationFor2d];
+				maxBBox[1] = curBBox[4-idxCompensationFor2d];
+				final Interval mInterval = new FinalInterval(minBBox, maxBBox);
+
+				//check if there is a SEG segment overlapping with this box
+				final int curMarker = marker.getKey().intValue();
+				final float segLabel = segGtImageExtractor.findMatchingLabel(
+						Views.interval(ld.lastLoadedImage, mInterval),
+						Views.interval(markerSliceImg,     mInterval),
+						curMarker);
+
+				if (segLabel > 0) {
+					log.info("  marker "+curMarker+" coincides with SEG label "+segLabel);
+					ignoredMarkersTemporarily.remove(curMarker);
+				} else {
+					log.info("  marker "+curMarker+" is not matched in SEG");
+				}
+			}
+		}
+		log.info("CherryPicker's outer fuse() wants to skip markers: "+ignoredMarkersTemporarily);
+
+		return super.fuse(inImgs, markerImg);
 	}
 }
