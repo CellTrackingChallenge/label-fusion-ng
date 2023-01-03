@@ -9,7 +9,7 @@ import org.scijava.plugin.Plugin;
 @Plugin(type = Command.class, menuPath = "Plugins>ParamsTest")
 public class ParamsTest implements Command {
 
-	@CommandLine.Option(names = {"-p1"}, description = "param1")
+	@CommandLine.Option(names = {"-p1","param1"}, description = "parameter 1")
 	@Parameter(label = "param1")
 	int param = 0;
 
@@ -19,14 +19,7 @@ public class ParamsTest implements Command {
 	}
 
 	// ================================ CLI ==========================
-	@CommandLine.Option(arity = "0", names = {"-fiji"}, description = "should start Fiji")
-	boolean startFiji = false;
-
 	public static void main(String[] args) {
-		final ParamsTest app = CommandLine.populateCommand(new ParamsTest(), args);
-		if (!app.startFiji)
-			app.run();
-		else
-			System.out.println("bailing out 'cause Fiji GUI was requested...");
+		new CommandLine(new ParamsTest()).execute(args);
 	}
 }
