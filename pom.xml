@@ -202,6 +202,13 @@
 			<version>7.6.0</version>
 		</dependency>
 
+		<!-- CLI parser -->
+		<dependency>
+			<groupId>info.picocli</groupId>
+			<artifactId>picocli</artifactId>
+			<version>4.6.1</version>
+		</dependency>
+
 		<!-- for GTviaMarkers and to start and test plugins (from the ImageJ GUI) -->
 		<dependency>
 			<groupId>net.imagej</groupId>
