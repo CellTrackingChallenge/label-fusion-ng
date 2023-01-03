@@ -23,13 +23,9 @@ public class ParamsTest implements Command {
 	boolean startFiji = false;
 
 	public static void main(String[] args) {
-		final CommandLine cmd = new CommandLine(new ParamsTest());
-		if (cmd.parseArgs(args)
-				.matchedArgs()
-				.stream()
-				.noneMatch(p -> p.paramLabel().equals("<startFiji>"))
-		)
-			cmd.execute(args);
+		final ParamsTest app = CommandLine.populateCommand(new ParamsTest(), args);
+		if (!app.startFiji)
+			app.run();
 		else
 			System.out.println("bailing out 'cause Fiji GUI was requested...");
 	}
