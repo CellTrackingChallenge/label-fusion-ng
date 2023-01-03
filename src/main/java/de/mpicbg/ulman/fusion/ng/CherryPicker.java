@@ -29,7 +29,7 @@ package de.mpicbg.ulman.fusion.ng;
 
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 import de.mpicbg.ulman.fusion.ng.fuse.LabelPicker;
-import de.mpicbg.ulman.fusion.ng.insert.CollisionsAwareLabelInsertor;
+import de.mpicbg.ulman.fusion.ng.insert.CollisionsManagingLabelInsertor;
 import de.mpicbg.ulman.fusion.ng.postprocess.KeepLargestCCALabelPostprocessor;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
@@ -38,7 +38,7 @@ import org.scijava.log.Logger;
 
 public
 class CherryPicker<IT extends RealType<IT>, LT extends IntegerType<LT>>
-			extends AbstractWeightedVotingFusionAlgorithm<IT,LT, ByteType>
+			extends AbstractWeightedVotingRoisFusionAlgorithm<IT,LT, ByteType>
 {
 	//IT: Input type = participant's segmentation results
 	//LT: Marker file type = man_trackTTT.tif
@@ -55,7 +55,7 @@ class CherryPicker<IT extends RealType<IT>, LT extends IntegerType<LT>>
 
 		final LabelPicker<IT,ByteType> f = new LabelPicker<>();
 
-		final CollisionsAwareLabelInsertor<LT, ByteType> i = new CollisionsAwareLabelInsertor<>();
+		final CollisionsManagingLabelInsertor<LT, ByteType> i = new CollisionsManagingLabelInsertor<>();
 		final KeepLargestCCALabelPostprocessor<LT> p = new KeepLargestCCALabelPostprocessor<>();
 
 		this.labelExtractor = e;
