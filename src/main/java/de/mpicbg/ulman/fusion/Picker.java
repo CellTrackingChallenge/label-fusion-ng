@@ -42,6 +42,7 @@ import org.scijava.widget.FileWidget;
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
+import picocli.CommandLine;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,6 +50,7 @@ import java.nio.file.InvalidPathException;
 import java.text.ParseException;
 import java.util.TreeSet;
 
+@CommandLine.Command(name = "CherryPicker")
 @Plugin(type = Command.class, menuPath = "Plugins>Annotations Picker Tool")
 public class Picker extends CommonGUI implements Command
 {
@@ -75,6 +77,7 @@ public class Picker extends CommonGUI implements Command
 		 "The filename pattern is a full path to a file that includes TTT or TTTT where "
 		+"numbers should be substituted.";
 
+	@CommandLine.Option(names = {"-j","--job","jobFile"}, description = "Path to a job file, the variant with weights.")
 	@Parameter(label = "Job file:", style = FileWidget.OPEN_STYLE,
 		description = "Please, make sure that file contains filenames with TTT or TTTT included.",
 		callback = "inFileOKAY")
@@ -87,6 +90,7 @@ public class Picker extends CommonGUI implements Command
 		return JobIO.inFileOKAY(filePath,weightAvail,log,statusService,uiService);
 	}
 
+	@CommandLine.Option(names = {"-t","--tps","timepoints"}, description = "Timepoints to be processed (e.g. 1-9,23,25).")
 	@Parameter(label = "Timepoints to be processed (e.g. 1-9,23,25):",
 		description = "Comma separated list of numbers or intervals, interval is number-hyphen-number.",
 		validater = "idxChanged")
@@ -94,17 +98,21 @@ public class Picker extends CommonGUI implements Command
 	//
 	void idxChanged() { super.idxChanged(fileIdxStr); }
 
+	@CommandLine.Option(names = {"-o","--out","outputFiles"}, description = "Output filename pattern, don't forget to include TTT or TTTT into the filename.")
 	@Parameter(label = "Output filename pattern:", style = FileWidget.SAVE_STYLE,
 		description = "Please, don't forget to include TTT or TTTT into the filename.",
 		callback = "outFileOKAY")
 	private File outputPath = new File("CHANGE THIS PATH/mergedTTT.tif");
 
+	@CommandLine.Option(names = {"-n","--threads"}, description = "Level of parallelism as the no. of threads.")
 	@Parameter(label = "Level of parallelism (no. of threads):", min="1")
 	int noOfThreads = 1;
 
+	@CommandLine.Option(names = {"-g","--seg","segGtFolder"}, description = "Provide a valid path to the SEG folder for evaluations.")
 	@Parameter(description = "Provide a valid path to the SEG folder for evaluations.")
 	String SEGfolder = "CHANGE THIS PATH/dataset/video_GT/SEG";
 
+	@CommandLine.Option(names = {"-s","--save","saveFusionResults"})
 	@Parameter
 	boolean saveFusionResults = true;
 
@@ -244,5 +252,42 @@ public class Picker extends CommonGUI implements Command
 		log.info(" final complete DET = "+runningDetSegScore.getOverallDetScore()+" obtained over "
 				+runningDetSegScore.getNumberOfAllDetCases()+" markers");
 		log.info("Done picking");
+	}
+
+
+	// ================================ CLI ==========================
+	@CommandLine.Option(names = {"-h", "--help"}, usageHelp = true, description = "Display this help message.")
+	boolean usageHelpRequested;
+
+	public void printHelp() {
+		System.out.println(this.fileInfoA);
+		System.out.println(this.fileInfoB);
+		System.out.println(this.fileInfoC);
+		System.out.println(this.fileInfoE);
+		System.out.println(); //intentional line separator
+		CommandLine.usage(this, System.out);
+	}
+
+	public static void main(String[] args) {
+		Picker pickerApp;
+
+		//parse the command line and fill the object's attributes
+		try { pickerApp = CommandLine.populateCommand(new Picker(), args); }
+		catch (CommandLine.ParameterException pe) {
+			System.out.println(pe.getMessage());
+			System.out.println(); //intentional line separator
+			new Picker().printHelp();
+			return;
+		}
+
+		//parsing went well:
+		//no params given or an explicit cry for help?
+		if (args.length == 0 || pickerApp.usageHelpRequested) {
+			pickerApp.printHelp();
+			return;
+		}
+
+		pickerApp.log = new SimpleConsoleLogger();
+		pickerApp.worker(false); //false -> run without GUI
 	}
 }
