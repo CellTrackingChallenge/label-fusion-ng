@@ -31,6 +31,7 @@ import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 import de.mpicbg.ulman.fusion.ng.fuse.LabelPicker;
 import de.mpicbg.ulman.fusion.ng.insert.CollisionsManagingLabelInsertor;
 import de.mpicbg.ulman.fusion.ng.postprocess.KeepLargestCCALabelPostprocessor;
+import de.mpicbg.ulman.fusion.util.SegGtImageLoader;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.ByteType;
@@ -43,10 +44,12 @@ class CherryPicker<IT extends RealType<IT>, LT extends IntegerType<LT>>
 	//IT: Input type = participant's segmentation results
 	//LT: Marker file type = man_trackTTT.tif
 	//ByteType: is the type of the helping aux image
-	public CherryPicker(Logger _log) {
+	public CherryPicker(Logger _log, SegGtImageLoader<LT> _segImgLoader) {
 		super(_log, new ByteType());
+		segGtImageLoader = _segImgLoader;
 	}
 
+	final SegGtImageLoader<LT> segGtImageLoader;
 	@Override
 	protected void setFusionComponents() {
 		//setup the individual stages

@@ -211,9 +211,9 @@ public class Picker extends CommonGUI implements Command
 			return;
 		}
 
-		final SegGtImageLoader<LT> SEGevaluator;
+		final SegGtImageLoader<LT> SEGloaderAndEvaluator;
 		try {
-			SEGevaluator = new SegGtImageLoader<>(SEGfolder, log);
+			SEGloaderAndEvaluator = new SegGtImageLoader<>(SEGfolder, log);
 		}
 		catch (InvalidPathException e) {
 			log.error("SEG GT folder is problematic: "+e.getMessage());
@@ -224,12 +224,12 @@ public class Picker extends CommonGUI implements Command
 		// ------------ preparing for action ------------
 		ReusableMemory.setLogger(log);
 		final WeightedVotingFusionFeeder<IT,LT> feeder
-				= new WeightedVotingFusionFeeder<IT,LT>(log).setAlgorithm(new CherryPicker<>(log));
+				= new WeightedVotingFusionFeeder<IT,LT>(log).setAlgorithm(new CherryPicker<>(log, SEGloaderAndEvaluator));
 
 		final DetSegCumulativeScores runningDetSegScore = new DetSegCumulativeScores();
 
 		iterateTimePoints(fileIdxList,useGui,time -> {
-			if (SEGevaluator.managedToLoadImageForTimepoint(time))
+			if (SEGloaderAndEvaluator.managedToLoadImageForTimepoint(time))
 			{
 				for (final SegGtImageLoader<LT>.LoadedData ld : SEGloaderAndEvaluator.getLastLoadedData())
 				{
@@ -242,7 +242,7 @@ public class Picker extends CommonGUI implements Command
 				if (saveFusionResults) feeder.saveJob(job,time);
 				//
 				runningDetSegScore.startSection();
-				for (final SegGtImageLoader<LT>.LoadedData ld : SEGevaluator.getLastLoadedData())
+				for (final SegGtImageLoader<LT>.LoadedData ld : SEGloaderAndEvaluator.getLastLoadedData())
 				{
 					//ld.calcBoxes(); -- already done above
 					feeder.scoreJob_SEG(ld, runningDetSegScore);
