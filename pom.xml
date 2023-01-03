@@ -74,7 +74,7 @@
 					</descriptorRefs>
 					<archive>
 						<manifest>
-							<mainClass>de.mpicbg.ulman.fusion.Fusers</mainClass>
+							<mainClass>de.mpicbg.ulman.fusion.ParamsTest</mainClass>
 						</manifest>
 					</archive>
 				</configuration>
@@ -200,6 +200,13 @@
 			<groupId>org.jhotdraw</groupId>
 			<artifactId>jhotdraw</artifactId>
 			<version>7.6.0</version>
+		</dependency>
+
+		<!-- CLI parser -->
+		<dependency>
+			<groupId>info.picocli</groupId>
+			<artifactId>picocli</artifactId>
+			<version>4.6.1</version>
 		</dependency>
 
 		<!-- for GTviaMarkers and to start and test plugins (from the ImageJ GUI) -->
