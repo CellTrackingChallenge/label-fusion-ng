@@ -322,8 +322,11 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 					                              labelExtractor,inWeights, tmpImg, fuseInterval);
 					log.trace("fused into tmpImg");
 
+					/*
 					//save the debug image
-					//SimplifiedIO.saveImage(tmpImg, "/Users/ulman/DATA/dbgMerge__"+curMarker+".tif");
+					log.warn("saving the product of the fusion (debug) image into /tmp");
+					SimplifiedIO.saveImage(tmpImg, "/tmp/dbgMerge__"+curMarker+".tif");
+					*/
 
 					//insert the fused segment into the output image
 					labelInsertor.insertLabel(Views.interval(tmpImg,fuseInterval),

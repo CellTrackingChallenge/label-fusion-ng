@@ -131,6 +131,13 @@ class CherryPicker<IT extends RealType<IT>, LT extends IntegerType<LT>>
 		}
 		log.info("CherryPicker's outer fuse() wants to skip markers: "+ignoredMarkersTemporarily);
 
+		/*
+		log.warn("will save later fused and collision-resolved-fused images into /tmp");
+		dbgImgFileName = "/tmp/dbgMerge_tp"
+				+this.extractorForCherryPicker.segGtImageLoader.getLastLoadedData().get(0).lastLoadedTimepoint
+				+".tif";
+		*/
+
 		return super.fuse(inImgs, markerImg);
 	}
 }
