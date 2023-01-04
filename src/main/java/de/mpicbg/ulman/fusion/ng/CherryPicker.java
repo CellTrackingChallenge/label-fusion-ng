@@ -28,6 +28,7 @@
 package de.mpicbg.ulman.fusion.ng;
 
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
+import de.mpicbg.ulman.fusion.ng.extract.LabelExtractorForCherryPicker;
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
 import de.mpicbg.ulman.fusion.ng.fuse.LabelPicker;
 import de.mpicbg.ulman.fusion.ng.insert.CollisionsManagingLabelInsertor;
@@ -56,6 +57,7 @@ class CherryPicker<IT extends RealType<IT>, LT extends IntegerType<LT>>
 		super(_log, new ByteType());
 		segGtImageLoader = _segImgLoader;
 		segGtImageExtractor = new MajorityOverlapBasedLabelExtractor<>();
+		extractorForCherryPicker.segGtImageLoader = _segImgLoader;
 	}
 
 	final SegGtImageLoader<LT> segGtImageLoader;
@@ -63,19 +65,22 @@ class CherryPicker<IT extends RealType<IT>, LT extends IntegerType<LT>>
 	final LabelExtractor<LT,LT,ByteType> segGtImageExtractor;
 	final long[] minBBox = new long[2];
 	final long[] maxBBox = new long[2];
+	//
+	LabelExtractorForCherryPicker<IT,LT,ByteType> extractorForCherryPicker;
 
 	@Override
 	protected void setFusionComponents() {
 		//setup the individual stages
-		final MajorityOverlapBasedLabelExtractor<IT,LT, ByteType> e = new MajorityOverlapBasedLabelExtractor<>();
-		e.minFractionOfMarker = 0.5f;
+		//btw, this one is called _before_ the local part of the c'tor
+		extractorForCherryPicker = new LabelExtractorForCherryPicker<>();
+		extractorForCherryPicker.minFractionOfMarker = 0.5f;
 
 		final LabelPicker<IT,ByteType> f = new LabelPicker<>();
 
 		final CollisionsManagingLabelInsertor<LT, ByteType> i = new CollisionsManagingLabelInsertor<>();
 		final KeepLargestCCALabelPostprocessor<LT> p = new KeepLargestCCALabelPostprocessor<>();
 
-		this.labelExtractor = e;
+		this.labelExtractor = extractorForCherryPicker;
 		this.labelFuser     = f;
 		this.labelInsertor  = i;
 		this.labelCleaner   = p;
@@ -89,6 +94,7 @@ class CherryPicker<IT extends RealType<IT>, LT extends IntegerType<LT>>
 
 		//first add all markers on the ignore list....
 		for (double marker : markerBoxes.keySet()) ignoredMarkersTemporarily.add((int)marker);
+		extractorForCherryPicker.traToSegLabelValues.clear();
 
 		//....then remove the ones matching SEG....
 		for (SegGtImageLoader<LT>.LoadedData ld : segGtImageLoader.getLastLoadedData()) {
@@ -117,6 +123,7 @@ class CherryPicker<IT extends RealType<IT>, LT extends IntegerType<LT>>
 				if (segLabel > 0) {
 					log.info("  marker "+curMarker+" coincides with SEG label "+segLabel);
 					ignoredMarkersTemporarily.remove(curMarker);
+					extractorForCherryPicker.traToSegLabelValues.put(curMarker,(int)segLabel);
 				} else {
 					log.info("  marker "+curMarker+" is not matched in SEG");
 				}
