@@ -380,7 +380,7 @@ extends AbstractWeightedVotingFusionAlgorithm<IT,LT,ET>
 			} //after marker processing
 			else
 			{
-				log.error("SOMETHING WEIRD!");
+				log.warn("Skipping over marker "+curMarker+" (it's probably on the ignore-list)");
 			}
 		} //after all voxel looping
 
