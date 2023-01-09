@@ -43,6 +43,8 @@ import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.view.Views;
 import org.scijava.log.Logger;
+
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
 
@@ -101,6 +103,8 @@ class CherryPicker<IT extends RealType<IT>, LT extends IntegerType<LT>>
 		//....by considering all loaded SEG images in this timepoint....
 		for (SegGtImageLoader<LT>.LoadedData ld : segGtImageLoader.getLastLoadedData()) {
 			//....against the all markers....
+			final Map<Integer,Long> bestSegToTraDistances = new HashMap<>(100);
+			final Map<Integer,Integer> bestSegToTraMarkers = new HashMap<>(100);
 			for (Map.Entry<Double,long[]> marker : markerBoxes.entrySet()) {
 				//.... by comparing overlap of the marker (at its middle 2D slice) with the SEG
 				final int curMarker = marker.getKey().intValue();
@@ -127,8 +131,39 @@ class CherryPicker<IT extends RealType<IT>, LT extends IntegerType<LT>>
 
 				if (segLabel > 0) {
 					log.info("  marker "+curMarker+" coincides with SEG label "+segLabel);
-					ignoredMarkersTemporarily.remove(curMarker);
-					extractorForCherryPicker.traToSegLabelValues.put(curMarker,segLabel);
+					boolean wantUse = false;
+
+					long curZdist = 0;
+					if (idxOFmaxXcoord == 3) {
+						//3D, check if more markers can answer this SEG label, and keep the closer one
+						curZdist = Math.abs(markerZslice - ld.lastLoaded2DSlice);
+						if (curZdist < bestSegToTraDistances.getOrDefault(segLabel, Long.MAX_VALUE)) {
+							final int prevMarker = bestSegToTraMarkers.getOrDefault(segLabel, -1);
+							if (prevMarker != -1) {
+								log.info("  (3D case) Replacing marker "+prevMarker+" (dist="+bestSegToTraDistances.get(segLabel)
+									+") because of closer dist="+curZdist);
+								ignoredMarkersTemporarily.add(prevMarker);
+							}
+							wantUse = true;
+						}
+						else log.info("  (3D case) Keeping earlier marker "+bestSegToTraMarkers.get(segLabel)
+								+" (dist="+bestSegToTraDistances.get(segLabel)+") because now at further dist="+curZdist);
+					} else {
+						//2D, sanity check: there shall never be two markers for the same SEG label
+						final int prevMarker = bestSegToTraMarkers.getOrDefault(segLabel, -1);
+						if (prevMarker != -1) {
+							log.error("  (2D case) There is an earlier-found marker "+prevMarker
+									+" that coincides also with this SEG label!");
+						}
+						else wantUse = true;
+					}
+
+					if (wantUse) {
+						bestSegToTraDistances.put(segLabel, curZdist);
+						bestSegToTraMarkers.put(segLabel, curMarker);
+						ignoredMarkersTemporarily.remove(curMarker);
+						extractorForCherryPicker.traToSegLabelValues.put(curMarker,segLabel);
+					}
 				} else {
 					log.info("  marker "+curMarker+" is not matched in SEG");
 				}
