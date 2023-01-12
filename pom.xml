@@ -144,6 +144,13 @@
 		<system>Travis CI</system>
 		<url>https://travis-ci.com/CellTrackingChallenge/label-fusion-ng</url>
 	</ciManagement>
+	<distributionManagement>
+		<repository>
+			<id>it4i</id>
+			<url>https://artifactory.cs.vsb.cz/it4i/</url>
+		</repository>
+	</distributionManagement>
+
 
 	<properties>
 		<package-name>de.mpicbg.ulman.fusion</package-name>
