@@ -27,6 +27,7 @@
  */
 package de.mpicbg.ulman.fusion.ng.fuse;
 
+import de.mpicbg.ulman.fusion.util.loggers.RestrictedConsoleLogger;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
 import net.imglib2.loops.LoopBuilder;
@@ -39,6 +40,7 @@ import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 import net.celltrackingchallenge.measures.util.Jaccard;
 import net.imglib2.type.operators.SetZero;
 import net.imglib2.view.Views;
+import org.scijava.log.Logger;
 import sc.fiji.simplifiedio.SimplifiedIO;
 
 public class SIMPLELabelFuser<IT extends RealType<IT>, ET extends RealType<ET>>
@@ -68,7 +70,7 @@ implements LabelFuser<IT,ET>
 	                        final Vector<Float> inLabels,
 	                        final LabelExtractor<IT,?,ET> le,
 	                        final Vector<Double> inWeights,
-	                        final Img<ET> outImg)
+	                        final RandomAccessibleInterval<ET> outImg)
 	{
 		//da plan:
 		// outImg will contain the current candidate fusion segment
@@ -385,4 +387,10 @@ implements LabelFuser<IT,ET>
 		resetPlaces(myPlaces);
 		resetPlaces(truePlaces);
 	}
+
+	// ---------------- logging ----------------
+	Logger log = new RestrictedConsoleLogger();
+	@Override
+	public void useNowThisLog(final Logger log)
+	{ this.log = log; }
 }
