@@ -362,7 +362,7 @@ public class Fusers extends CommonGUI implements Command
 				final SIMPLE<IT,LT> fuser_SIMPLE = new SIMPLE<>(logger);
 				//"forward" the parameters values
 				fuser_SIMPLE.getFuserReference().maxIters = (int)fuserParamsObj.getInput("maxIters");
-				fuser_SIMPLE.getFuserReference().noOfNoUpdateIters = (int)fuserParamsObj.getInput("noOfNoUpdateIters");
+				fuser_SIMPLE.getFuserReference().noOfNoPruneIters = (int)fuserParamsObj.getInput("noOfNoPruneIters");
 				fuser_SIMPLE.getFuserReference().initialQualityThreshold = (double)fuserParamsObj.getInput("initialQualityThreshold");
 				fuser_SIMPLE.getFuserReference().stepDownInQualityThreshold = (double)fuserParamsObj.getInput("stepDownInQualityThreshold");
 				fuser_SIMPLE.getFuserReference().minimalQualityThreshold = (double)fuserParamsObj.getInput("minimalQualityThreshold");
