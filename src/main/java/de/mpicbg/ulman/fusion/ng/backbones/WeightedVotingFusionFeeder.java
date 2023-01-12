@@ -301,8 +301,7 @@ extends JobIO<IT,LT>
 		final RandomAccessibleInterval<LT> gtImg = ld.lastLoadedImage;
 		final Map<Double,long[]> gtBoxes = ld.calculatedBoxes;
 		//
-		final RandomAccessibleInterval<LT> resImg = ld.lastLoadedIs2D ?
-				Views.hyperSlice(outFusedImg, 2, ld.lastLoaded2DSlice) : outFusedImg;
+		final RandomAccessibleInterval<LT> resImg = ld.slicedViewOf(outFusedImg);
 
 		//check res and gt images are of the same size/dimensionality
 		if (!Arrays.equals(gtImg.minAsLongArray(), resImg.minAsLongArray())

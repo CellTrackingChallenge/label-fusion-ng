@@ -1,7 +1,10 @@
 package de.mpicbg.ulman.fusion.util;
 
+import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
+import net.imglib2.view.Views;
 import net.imglib2.type.numeric.IntegerType;
+import net.imglib2.type.numeric.RealType;
 import sc.fiji.simplifiedio.SimplifiedIO;
 import sc.fiji.simplifiedio.SimplifiedIOException;
 import java.io.IOException;
@@ -146,6 +149,12 @@ public class SegGtImageLoader<LT extends IntegerType<LT>>
 		{
 			calculatedBoxes = AbstractWeightedVotingRoisFusionAlgorithm.findBoxes(
 					lastLoadedImage,log,"SEG GT");
+		}
+
+		public <A extends RealType<A>>
+		RandomAccessibleInterval<A> slicedViewOf(final RandomAccessibleInterval<A> img)
+		{
+			return lastLoadedIs2D ? Views.hyperSlice(img, 2, lastLoaded2DSlice) : img;
 		}
 	}
 
