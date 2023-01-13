@@ -81,13 +81,13 @@ abstract class CommonGUI
 		the SIMPLE algorithm. The parameters here should be mirrored in
 		the SIMPLE public attributes. */
 	@Plugin(type = Command.class)
-	static class SIMPLE_params implements Command
+	static public class SIMPLE_params implements Command
 	{
 		@Parameter
 		int maxIters = 4;
 
 		@Parameter
-		int noOfNoUpdateIters = 2;
+		int noOfNoPruneIters = 2;
 
 		@Parameter
 		double initialQualityThreshold = 0.7;
