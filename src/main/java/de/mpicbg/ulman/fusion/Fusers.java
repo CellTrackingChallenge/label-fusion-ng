@@ -34,6 +34,7 @@ import net.imglib2.type.numeric.RealType;
 import org.scijava.ItemVisibility;
 import org.scijava.command.CommandModule;
 import org.scijava.command.CommandService;
+import org.scijava.log.LogLevel;
 import org.scijava.widget.FileWidget;
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
@@ -820,7 +821,7 @@ public class Fusers extends CommonGUI implements Command
 					: ((FilebasedLogger)log).subLogger(c);
 		}
 
-		return log.subLogger(c.code+" ");
+		return log.subLogger(c.code+" ", LogLevel.TRACE);
 	}
 
 
