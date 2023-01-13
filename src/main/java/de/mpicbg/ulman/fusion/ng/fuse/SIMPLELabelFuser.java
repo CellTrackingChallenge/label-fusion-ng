@@ -28,8 +28,8 @@
 package de.mpicbg.ulman.fusion.ng.fuse;
 
 import de.mpicbg.ulman.fusion.util.loggers.RestrictedConsoleLogger;
+import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.img.Img;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.RealType;
 
@@ -39,7 +39,6 @@ import java.util.Vector;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 import net.celltrackingchallenge.measures.util.Jaccard;
 import net.imglib2.type.operators.SetZero;
-import net.imglib2.view.Views;
 import org.scijava.log.Logger;
 import sc.fiji.simplifiedio.SimplifiedIO;
 
@@ -56,7 +55,7 @@ implements LabelFuser<IT,ET>
 	public
 	String reportSettings()
 	{
-		return String.format("maxIters = %d, noOfNoPruneIters = %d, initialQualityThreshold = %f, stepDownInQualityThreshold = %f, minimalQualityThreshold = %f",
+		return String.format("maxIters = %d, noOfNoPruneIters = %d, initialQualityThreshold = %.2f, stepDownInQualityThreshold = %.2f, minimalQualityThreshold = %.2f",
 			maxIters, noOfNoPruneIters, initialQualityThreshold, stepDownInQualityThreshold, minimalQualityThreshold);
 	}
 
@@ -79,36 +78,17 @@ implements LabelFuser<IT,ET>
 		// inputs that get below the quality threshold will be "erased" by
 		//   setting their respective inImgs[i] to null
 
-		//DEBUG (block starts for gnuplot)
-		System.out.println();
-		System.out.println();
-
+		//TODO DEBUG (block starts for gnuplot)
+		log.debug("\n\n");
 		//DEBUG -- report-only Oracle weights (something we normally don't have at hand)
-		System.out.print("it: -2.5 0.0 ");
-		reportCurrentWeights(inImgs,inWeights);
+		log.debug("it: -1.5 0.0 " + reportCurrentWeights(inImgs,inWeights));
 
-		//Jaccards of the inputs for this particular marker
 		//prepare flat local weights
 		final Vector<Double> myWeights = new Vector<>(inWeights);
-		for (int i=0; i < inImgs.size(); ++i)
-		{
-			if (inImgs.get(i) == null) continue;
-			myWeights.set(i, Jaccard.Jaccard(GT_segRefSlice(inImgs.get(i)),inLabels.get(i), GT_segImage,GT_currentLabel) );
-		}
-
-		//DEBUG -- report-only our estimated weights
-		System.out.print("it: -1.5 0.0 ");
-		reportCurrentWeights(inImgs,myWeights);
-
-		System.out.println("# PLACES: scores from Jaccard");
-		reportInOrder(inImgs,myWeights, truePlaces);
-
-		//prepare flat local weights
-		for (int i=0; i < myWeights.size(); ++i) myWeights.set(i, 1.0);
+		myWeights.replaceAll(ignored -> 1.0);
 
 		//report the flat weights, just to be on the safe side
-		System.out.print("it: 0.0 0.0 ");
-		reportCurrentWeights(inImgs,myWeights);
+		log.debug("it: 0.0 0.0 " + reportCurrentWeights(inImgs,inWeights));
 
 		//make sure the majorityFuser is available
 		if (majorityFuser == null) majorityFuser = new WeightedVotingLabelFuser<>();
@@ -116,13 +96,13 @@ implements LabelFuser<IT,ET>
 		//initial candidate segment
 		majorityFuser.minAcceptableWeight = getMajorityThreshold(inImgs,myWeights); //majority?? or, 1/3??
 		majorityFuser.fuseMatchingLabels(inImgs,inLabels, le, myWeights,outImg);
+		log.trace("#it: 0, voting thres: "+majorityFuser.minAcceptableWeight);
 
-		//DEBUG: report...
-		System.out.println("#it: 0, voting thres: "+majorityFuser.minAcceptableWeight);
-
+		/*
 		//DEBUG
 		if (inLabels.get(1) == 7290)
-			SimplifiedIO.saveImage(outImg, "/temp/CE_02/tmp/SIMPLEcase"+dbgImageCounter+"_1_initialSegment.tif");
+			SimplifiedIO.saveImage(outImg, "/temp/CE_02/tmp/SIMPLEcase1_1_initialSegment.tif");
+		*/
 
 		double currentQualityThreshold = initialQualityThreshold;
 		int iterationCnt = 1; //how many times a candidate was created
@@ -141,10 +121,11 @@ implements LabelFuser<IT,ET>
 			}
 
 			//DEBUG: report updated weights based on the current candidate
-			double jaccard = Jaccard.Jaccard(GT_segRefSlice(outImg),1, GT_segImage,GT_currentLabel);
-			System.out.print("it: "+(iterationCnt-0.1)+" "+jaccard+" ");
-			reportCurrentWeights(inImgs,myWeights);
-			System.out.println("#it: "+iterationCnt+", prunning thres: "+currentQualityThreshold);
+			double jaccard = 0; //TODO Jaccard.Jaccard(GT_segRefSlice(outImg),1, GT_segImage,GT_currentLabel);
+			log.debug("it: "+(iterationCnt-0.1)+" "
+					+ jaccard+" "
+					+ reportCurrentWeights(inImgs,myWeights));
+			log.trace("#it: "+iterationCnt+", prunning thres: "+currentQualityThreshold);
 
 			//prune poor inputs
 			for (int i=0; i < inImgs.size(); ++i)
@@ -157,21 +138,22 @@ implements LabelFuser<IT,ET>
 			}
 
 			//DEBUG: report how the prunning ended up
-			System.out.print("it: "+(iterationCnt+0.0)+" ");
-			System.out.print(jaccard+" ");
-			reportCurrentWeights(inImgs,myWeights);
+			log.debug("it: "+(iterationCnt+0.0)+" "
+					+ jaccard+" "
+					+ reportCurrentWeights(inImgs,myWeights));
 
 			//create a new candidate
 			LoopBuilder.setImages(outImg).forEachPixel(SetZero::setZero);
 			majorityFuser.minAcceptableWeight = getMajorityThreshold(inImgs,myWeights);
 			majorityFuser.fuseMatchingLabels(inImgs,inLabels, le, myWeights,outImg);
+			log.trace("#it: "+iterationCnt+", voting thres: "+majorityFuser.minAcceptableWeight);
 			//TODO stopping flag when new outImg is different from the previous one
 
+			/*
 			//DEBUG
 			if (inLabels.get(1) == 7290)
 				SimplifiedIO.saveImage(outImg, "/temp/CE_02/tmp/SIMPLEcase"+dbgImageCounter+"_"+(iterationCnt+1)+"_candidateSegment.tif");
-			//DEBUG: report...
-			System.out.println("#it: "+iterationCnt+", voting thres: "+majorityFuser.minAcceptableWeight);
+			*/
 
 			//update the quality threshold
 			++iterationCnt;
@@ -182,33 +164,19 @@ implements LabelFuser<IT,ET>
 
 		//compute Jaccard for the final candidate segment
 		//LoopBuilder.setImages(outImg).forEachPixel( (a) -> { if (a.getRealFloat() > 0) a.setOne(); else a.setZero(); } );
-		double jaccard = Jaccard.Jaccard(GT_segRefSlice(outImg),1, GT_segImage,GT_currentLabel);
-		System.out.print("it: "+(iterationCnt-0.3)+" ");
-		System.out.print(jaccard+" ");
-		reportCurrentWeights(inImgs,myWeights);
-		System.out.println("# GT_label="+GT_currentLabel+" SEG "+jaccard);
+		double jaccard = 0; //Jaccard.Jaccard(GT_segRefSlice(outImg),1, GT_segImage,GT_currentLabel);
+		log.debug("it: "+(iterationCnt-0.3)+" "
+				+ jaccard+" "
+				+ reportCurrentWeights(inImgs,myWeights));
+		//TODO log.debug("# GT_label="+GT_currentLabel+" SEG "+jaccard);
 
 		//DEBUG (will appear just before "TRA marker: .....")
+		/*
 		System.out.println("# PLACES: scores estimated from this code");
 		reportInOrder(inImgs,myWeights, myPlaces);
 		System.out.println("# (reported with counter "+(dbgImageCounter++)+")");
 		System.out.print("# ");
-	}
-
-	private
-	int dbgImageCounter = 1;
-
-	public int GT_currentLabel = -1;
-	public RandomAccessibleInterval<IT> GT_segImage;
-	public int GT_sliceNo = 1;
-
-	<T>
-	RandomAccessibleInterval<T> GT_segRefSlice(final RandomAccessibleInterval<T> testImg)
-	{
-		if (GT_sliceNo == -1)
-			return testImg;
-
-		return Views.hyperSlice(testImg, 2, GT_sliceNo);
+		*/
 	}
 
 	private
@@ -236,14 +204,14 @@ implements LabelFuser<IT,ET>
 
 
 	private
-	void reportCurrentWeights(final Vector<RandomAccessibleInterval<IT>> inImgs,
+	String reportCurrentWeights(final Vector<RandomAccessibleInterval<IT>> inImgs,
 	                          final Vector<Double> inWeights)
 	{
-		System.out.print("weights: ");
+		final StringBuilder sb = new StringBuilder("weights: ");
 		for (int i=0; i < inImgs.size(); ++i)
-			System.out.printf("%+.3f\t",inImgs.get(i) != null ? inWeights.get(i).floatValue() : -0.2f);
+			sb.append(String.format("%+.3f\t",inImgs.get(i) != null ? inWeights.get(i).floatValue() : -0.2f));
 			//NB: -0.2 is to indicate we dropped it (Jaccard cannot get below 0.0)
-		System.out.println();
+		return sb.toString();
 	}
 
 
