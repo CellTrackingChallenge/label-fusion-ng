@@ -1,5 +1,6 @@
 package de.mpicbg.ulman.fusion.util;
 
+import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccessibleInterval;
@@ -50,5 +51,18 @@ public class JaccardWithROIs {
 		});
 
 		return (double)sizeBandA.get() / (double)(sizeA.get() + sizeBalone.get());
+	}
+
+	static public <TA extends RealType<TA>, TB extends RealType<TB>>
+	double JaccardLB(final RandomAccessibleInterval<TA> imgA,
+	                 final double labelA,
+	                 final long[] roiA,
+	                 final RandomAccessibleInterval<TB> imgB,
+	                 final double labelB,
+	                 final long[] roiB)
+	{
+		return JaccardLB(
+				imgA,labelA, new FinalInterval(roiA),
+				imgB,labelB, new FinalInterval(roiB) );
 	}
 }
