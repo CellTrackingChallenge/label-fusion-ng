@@ -69,7 +69,8 @@ implements LabelFuser<IT,ET>
 	                        final Vector<Float> inLabels,
 	                        final LabelExtractor<IT,?,ET> le,
 	                        final Vector<Double> inWeights,
-	                        final RandomAccessibleInterval<ET> outImg)
+	                        final RandomAccessibleInterval<ET> outImg,
+	                        final Interval fuseROI)
 	{
 		//da plan:
 		// outImg will contain the current candidate fusion segment
@@ -354,6 +355,17 @@ implements LabelFuser<IT,ET>
 		//prepare for another image
 		resetPlaces(myPlaces);
 		resetPlaces(truePlaces);
+	}
+
+	@Override
+	public
+	void fuseMatchingLabels(final Vector<RandomAccessibleInterval<IT>> inImgs,
+	                        final Vector<Float> inLabels,
+	                        final LabelExtractor<IT,?,ET> le,
+	                        final Vector<Double> inWeights,
+	                        final RandomAccessibleInterval<ET> outImg)
+	{
+		log.error("unimplemented fusion regime");
 	}
 
 	// ---------------- logging ----------------
