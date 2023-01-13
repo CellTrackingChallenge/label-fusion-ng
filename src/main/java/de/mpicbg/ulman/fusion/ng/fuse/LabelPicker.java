@@ -31,14 +31,14 @@ import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractorForCherryPicker;
 import de.mpicbg.ulman.fusion.util.SegGtImageLoader;
 import de.mpicbg.ulman.fusion.util.loggers.RestrictedConsoleLogger;
-import net.celltrackingchallenge.measures.util.Jaccard;
+import de.mpicbg.ulman.fusion.util.JaccardWithROIs;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.ByteType;
-import net.imglib2.view.IntervalView;
+import net.imglib2.util.Intervals;
 import net.imglib2.view.Views;
 import org.scijava.log.Logger;
 import java.util.Vector;
@@ -75,6 +75,11 @@ implements LabelFuser<IT,ET>
 		//   (based on the context: there shall be always at one such)
 		//
 		//where current_SEG is taken from the "secret channel" -> reachable from 'le'
+
+		//copy of 'fuseROI' projected (from possibly 3D) to 2D,
+		//this an interval, in essence, just around the union of prospective input labels
+		final Interval fuseROIforSegGT = fuseROI.numDimensions() == 3 ? Intervals.hyperSlice(fuseROI,2) : fuseROI;
+
 		final Vector<Double> scores = new Vector<>(inLabels.size());
 		for (SegGtImageLoader<LT>.LoadedData ld : extractorForCherryPicker.segGtImageLoader.getLastLoadedData())
 		{
@@ -83,23 +88,23 @@ implements LabelFuser<IT,ET>
 			final long[] segBBox = ld.calculatedBoxes.getOrDefault((double)segLabel,null);
 			if (segBBox == null) continue;
 
-			//setup a new (2D) ROI-interval as the union of the fuseROI and SEG label ROI
-			minBBox[0] = Math.min( segBBox[0], fuseROI.min(0) );
-			minBBox[1] = Math.min( segBBox[1], fuseROI.min(1) );
-			maxBBox[0] = Math.max( segBBox[2], fuseROI.max(0) );
-			maxBBox[1] = Math.max( segBBox[3], fuseROI.max(1) );
-			final Interval roi = new FinalInterval(minBBox,maxBBox);
-			final IntervalView<LT> viewAroundSEG = Views.interval(ld.lastLoadedImage, roi);
+			//setup a new (2D) ROI-interval just around the SEG label
+			//NB: works well with ld.lastLoadedImage
+			minBBox[0] = segBBox[0]; minBBox[1] = segBBox[1];
+			maxBBox[0] = segBBox[2]; maxBBox[1] = segBBox[3];
+			final Interval segBBoxInterval2D = new FinalInterval(minBBox,maxBBox);
 
 			for (int i = 0; i < inImgs.size(); ++i)
 				if (inImgs.get(i) != null)
 				{
 					final RandomAccessibleInterval<IT> inImgSlice = ld.slicedViewOf(inImgs.get(i));
-					scores.add( Jaccard.Jaccard(
-							Views.interval(inImgSlice, roi),
+					scores.add( JaccardWithROIs.JaccardLB(
+							inImgSlice,
 							inLabels.get(i),
-							viewAroundSEG,
-							extractorForCherryPicker.traToSegLabelValues.get(extractorForCherryPicker.lastlyExtractedMarkerValue)
+							fuseROIforSegGT,
+							ld.lastLoadedImage,
+							extractorForCherryPicker.traToSegLabelValues.get(extractorForCherryPicker.lastlyExtractedMarkerValue),
+							segBBoxInterval2D
 					) );
 				}
 				else scores.add( -2.0 );
