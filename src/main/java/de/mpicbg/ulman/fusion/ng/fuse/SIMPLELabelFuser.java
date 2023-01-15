@@ -98,6 +98,7 @@ implements LabelFuser<IT,ET>
 		if (majorityFuser == null) majorityFuser = new WeightedVotingLabelFuser<>();
 
 		//initial candidate segment
+		final double auxFusedLabel = WeightedVotingLabelFuser.FUSION_LABEL;
 		majorityFuser.minAcceptableWeight = getMajorityThreshold(inImgs,myWeights); //majority?? or, 1/3??
 		majorityFuser.fuseMatchingLabels(inImgs,inLabels, le, myWeights,outImg);
 		log.trace("#it: 0, voting thres: "+majorityFuser.minAcceptableWeight);
@@ -120,12 +121,16 @@ implements LabelFuser<IT,ET>
 				if (inImgs.get(i) == null) continue;
 
 				//adapt the weight
-				final double newWeight = Jaccard.Jaccard(inImgs.get(i),inLabels.get(i), outImg,1.0);
+				final double newWeight = Jaccard.Jaccard(inImgs.get(i),inLabels.get(i), outImg,auxFusedLabel);
 				myWeights.set(i,newWeight);
 			}
 
 			//DEBUG: report updated weights based on the current candidate
-			double jaccard = 0; //TODO Jaccard.Jaccard(GT_segRefSlice(outImg),1, GT_segImage,GT_currentLabel);
+			double jaccard = 0;
+			if (segGTlabel > 0) { //shall we do any debug Jaccarding?
+				log.trace("Doing debug Jaccards for SEG label "+segGTlabel);
+				jaccard = getJaccard(outImg, auxFusedLabel, fuseROI);
+			}
 			log.debug("it: "+(iterationCnt-0.1)+" "
 					+ jaccard+" "
 					+ reportCurrentWeights(inImgs,myWeights));
@@ -168,7 +173,10 @@ implements LabelFuser<IT,ET>
 
 		//compute Jaccard for the final candidate segment
 		//LoopBuilder.setImages(outImg).forEachPixel( (a) -> { if (a.getRealFloat() > 0) a.setOne(); else a.setZero(); } );
-		double jaccard = 0; //Jaccard.Jaccard(GT_segRefSlice(outImg),1, GT_segImage,GT_currentLabel);
+		double jaccard = 0;
+		if (segGTlabel > 0) { //shall we do any debug Jaccarding?
+			jaccard = getJaccard(outImg, auxFusedLabel, fuseROI);
+		}
 		log.debug("it: "+(iterationCnt-0.3)+" "
 				+ jaccard+" "
 				+ reportCurrentWeights(inImgs,myWeights));
