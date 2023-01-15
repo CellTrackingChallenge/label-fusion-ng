@@ -27,7 +27,7 @@
  */
 package de.mpicbg.ulman.fusion;
 
-import de.mpicbg.ulman.fusion.ng.CherryPicker;
+import de.mpicbg.ulman.fusion.ng.CherryPickerWithSIMPLE;
 import de.mpicbg.ulman.fusion.ng.backbones.JobIO;
 import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionFeeder;
 import de.mpicbg.ulman.fusion.util.DetSegCumulativeScores;
@@ -35,10 +35,10 @@ import de.mpicbg.ulman.fusion.util.ReusableMemory;
 import de.mpicbg.ulman.fusion.util.SegGtImageLoader;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleConsoleLogger;
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
-import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
 import org.scijava.ItemVisibility;
+import org.scijava.log.LogLevel;
 import org.scijava.widget.FileWidget;
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
@@ -224,8 +224,18 @@ public class Picker extends CommonGUI implements Command
 
 		// ------------ preparing for action ------------
 		ReusableMemory.setLogger(log);
+		final CherryPickerWithSIMPLE<IT,LT> alg = new CherryPickerWithSIMPLE<>(
+						log.subLogger("picker and SIMPLE", LogLevel.TRACE),
+						SEGloaderAndEvaluator);
+		alg.getFuserReference().maxIters = 6;
+		alg.getFuserReference().noOfNoPruneIters = 2;
+		alg.getFuserReference().initialQualityThreshold = 0.5;
+		alg.getFuserReference().stepDownInQualityThreshold = 0.1;
+		alg.getFuserReference().minimalQualityThreshold = 0.7;
+
 		final WeightedVotingFusionFeeder<IT,LT> feeder
-				= new WeightedVotingFusionFeeder<IT,LT>(log).setAlgorithm(new CherryPicker<>(log, new ByteType(), SEGloaderAndEvaluator));
+				//= new WeightedVotingFusionFeeder<IT,LT>(log).setAlgorithm(new CherryPicker<>(log, new ByteType(), SEGloaderAndEvaluator));
+				= new WeightedVotingFusionFeeder<IT,LT>(log).setAlgorithm( alg );
 
 		final DetSegCumulativeScores runningDetSegScore = new DetSegCumulativeScores();
 
