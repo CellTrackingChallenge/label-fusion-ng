@@ -35,6 +35,7 @@ import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 
+import java.util.Arrays;
 import java.util.Vector;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 import net.celltrackingchallenge.measures.util.Jaccard;
@@ -256,7 +257,34 @@ implements LabelFuser<IT,ET>
 			sb.append(String.format(JACCARD_REPORT_FORMAT,inImgs.get(i) != null ? inWeights.get(i).floatValue() : -0.2f));
 			//NB: -0.2 is to indicate we dropped it (Jaccard cannot get below 0.0)
 
+		sb.append("\t\t");
+		sb.append( reportLetterRanks(inImgs,inWeights) );
 		return sb.toString();
+	}
+
+	private
+	String reportLetterRanks(final Vector<RandomAccessibleInterval<IT>> inImgs,
+	                         final Vector<Double> inWeights)
+	{
+		final char[] rankCode = new char[ inImgs.size() ];
+		Arrays.fill(rankCode, '-');
+
+		//over all inputs, find for each how many are smaller than the current one
+		for (int i=0; i < inImgs.size(); ++i) {
+			if (inImgs.get(i) == null) continue;
+
+			int noOfOthersThatAreBetter = 0;
+			for (int j=0; j < inImgs.size(); ++j)
+			{
+				if (inImgs.get(j) == null) continue; //skip invalid
+				if (j == i) continue;                //skip myself
+				if (inWeights.get(j) >= inWeights.get(i)) ++noOfOthersThatAreBetter;
+			}
+
+			rankCode[noOfOthersThatAreBetter] = (char)(65+i);
+		}
+
+		return String.valueOf(rankCode);
 	}
 
 	@Override
