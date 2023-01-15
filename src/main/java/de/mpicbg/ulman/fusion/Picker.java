@@ -35,6 +35,7 @@ import de.mpicbg.ulman.fusion.util.ReusableMemory;
 import de.mpicbg.ulman.fusion.util.SegGtImageLoader;
 import de.mpicbg.ulman.fusion.util.loggers.SimpleConsoleLogger;
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
+import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
 import org.scijava.ItemVisibility;
@@ -224,7 +225,7 @@ public class Picker extends CommonGUI implements Command
 		// ------------ preparing for action ------------
 		ReusableMemory.setLogger(log);
 		final WeightedVotingFusionFeeder<IT,LT> feeder
-				= new WeightedVotingFusionFeeder<IT,LT>(log).setAlgorithm(new CherryPicker<>(log, SEGloaderAndEvaluator));
+				= new WeightedVotingFusionFeeder<IT,LT>(log).setAlgorithm(new CherryPicker<>(log, new ByteType(), SEGloaderAndEvaluator));
 
 		final DetSegCumulativeScores runningDetSegScore = new DetSegCumulativeScores();
 

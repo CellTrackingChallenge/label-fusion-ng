@@ -40,7 +40,6 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.view.Views;
 import org.scijava.log.Logger;
 
@@ -49,14 +48,14 @@ import java.util.Map;
 import java.util.Vector;
 
 public
-class CherryPicker<IT extends RealType<IT>, LT extends IntegerType<LT>>
-			extends AbstractWeightedVotingRoisFusionAlgorithm<IT,LT, ByteType>
+class CherryPicker<IT extends RealType<IT>, LT extends IntegerType<LT>, ET extends RealType<ET>>
+			extends AbstractWeightedVotingRoisFusionAlgorithm<IT,LT,ET>
 {
 	//IT: Input type = participant's segmentation results
 	//LT: Marker file type = man_trackTTT.tif
-	//ByteType: is the type of the helping aux image
-	public CherryPicker(Logger _log, SegGtImageLoader<LT> _segImgLoader) {
-		super(_log, new ByteType());
+	//ET: is the type of the helping aux image
+	public CherryPicker(Logger _log, final ET refType, SegGtImageLoader<LT> _segImgLoader) {
+		super(_log, refType);
 		segGtImageLoader = _segImgLoader;
 		segGtImageExtractor = new MajorityOverlapBasedLabelExtractor<>();
 		extractorForCherryPicker.segGtImageLoader = _segImgLoader;
@@ -64,11 +63,11 @@ class CherryPicker<IT extends RealType<IT>, LT extends IntegerType<LT>>
 
 	final SegGtImageLoader<LT> segGtImageLoader;
 	//
-	final LabelExtractor<LT,LT,ByteType> segGtImageExtractor;
+	final LabelExtractor<LT,LT,ET> segGtImageExtractor;
 	final long[] minBBox = new long[2];
 	final long[] maxBBox = new long[2];
 	//
-	LabelExtractorForCherryPicker<IT,LT,ByteType> extractorForCherryPicker;
+	LabelExtractorForCherryPicker<IT,LT,ET> extractorForCherryPicker;
 
 	@Override
 	protected void setFusionComponents() {
@@ -77,9 +76,9 @@ class CherryPicker<IT extends RealType<IT>, LT extends IntegerType<LT>>
 		extractorForCherryPicker = new LabelExtractorForCherryPicker<>();
 		extractorForCherryPicker.minFractionOfMarker = 0.5f;
 
-		final LabelPicker<IT,ByteType> f = new LabelPicker<>();
+		final LabelPicker<IT,ET> f = new LabelPicker<>();
 
-		final CollisionsManagingLabelInsertor<LT, ByteType> i = new CollisionsManagingLabelInsertor<>();
+		final CollisionsManagingLabelInsertor<LT,ET> i = new CollisionsManagingLabelInsertor<>();
 		final KeepLargestCCALabelPostprocessor<LT> p = new KeepLargestCCALabelPostprocessor<>();
 
 		this.labelExtractor = extractorForCherryPicker;
