@@ -50,6 +50,8 @@ implements LabelFuser<IT,ET>
 	public
 	double minAcceptableWeight = 0.01f;
 
+	public static final double FUSION_LABEL = 1.0;
+
 	/**
 	 * Input images are cummulated into "a certainty" how strongly a given
 	 * voxel should appear in the final fused segment. The output image is
@@ -79,7 +81,7 @@ implements LabelFuser<IT,ET>
 
 		//finalize the current fused segment
 		LoopBuilder.setImages(outImg).forEachPixel(
-			(a) -> a.setReal( a.getRealFloat() >= minAcceptableWeight ? 1 : 0 ) );
+			(a) -> a.setReal( a.getRealFloat() >= minAcceptableWeight ? FUSION_LABEL : 0 ) );
 	}
 
 	// ---------------- logging ----------------
