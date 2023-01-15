@@ -27,7 +27,10 @@
  */
 package de.mpicbg.ulman.fusion.ng.fuse;
 
+import de.mpicbg.ulman.fusion.util.JaccardWithROIs;
+import de.mpicbg.ulman.fusion.util.SegGtImageLoader;
 import de.mpicbg.ulman.fusion.util.loggers.RestrictedConsoleLogger;
+import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.loops.LoopBuilder;
@@ -182,6 +185,35 @@ implements LabelFuser<IT,ET>
 
 	private
 	WeightedVotingLabelFuser<IT,ET> majorityFuser = null;
+
+	// =================== GT debug ===================
+	SegGtImageLoader<?> segGT = null;
+	int segGTlabel = 0;
+	final long[] min = new long[2];
+	final long[] max = new long[2];
+
+	private double getJaccard(final RandomAccessibleInterval<ET> outImg,
+	                          final double outImgLabel,
+	                          final Interval fuseROI )
+	{
+		//go over all GT available and try to find the one including the current SEG GT label
+		for (SegGtImageLoader<?>.LoadedData ld : segGT.getLastLoadedData()) {
+			if (ld.calculatedBoxes.containsKey((double)segGTlabel)) {
+				//...found the right SEG GT record
+				final long[] gtBBox = ld.calculatedBoxes.get((double)segGTlabel);
+				min[0] = gtBBox[0]; min[1] = gtBBox[1];
+				max[0] = gtBBox[2]; max[1] = gtBBox[3];
+				return JaccardWithROIs.JaccardLB(
+						ld.slicedViewOf(outImg), outImgLabel,
+						fuseROI,
+						ld.lastLoadedImage, segGTlabel,
+						new FinalInterval(min,max)
+				);
+			}
+		}
+		return 0;
+	}
+	// =================== GT debug ===================
 
 	/** Calculates a "0.5 threshold" given non-normalized weights w_i:
 	    Given S = \Sum_i w_i -- a normalization yielding \Sum_i w_i/S = 1.0,

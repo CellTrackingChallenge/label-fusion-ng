@@ -112,7 +112,11 @@ implements LabelFuser<IT,ET>
 			}
 		}
 
+		//passes SEG GT ref to the SIMPLE fuser (and enables this way its debug scoring and reporting)
+		SIMPLEfuser.segGT = extractorForCherryPicker.segGtImageLoader;
+		SIMPLEfuser.segGTlabel = segLabel;
 		SIMPLEfuser.fuseMatchingLabels(inImgs,inLabels,le, scores, outImg,fuseROI);
+		SIMPLEfuser.segGTlabel = 0;
 	}
 
 	@Override
