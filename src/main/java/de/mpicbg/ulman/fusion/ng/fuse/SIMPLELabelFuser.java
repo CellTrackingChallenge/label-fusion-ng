@@ -79,16 +79,17 @@ implements LabelFuser<IT,ET>
 		//   setting their respective inImgs[i] to null
 
 		//TODO DEBUG (block starts for gnuplot)
-		log.debug("\n\n");
+		log.debug("\n");
+		log.debug("\n");
 		//DEBUG -- report-only Oracle weights (something we normally don't have at hand)
-		log.debug("it: -1.5 0.0 " + reportCurrentWeights(inImgs,inWeights));
+		log.debug("it: -1.5 0.000\t" + reportCurrentWeights(inImgs,inWeights));
 
 		//prepare flat local weights
 		final Vector<Double> myWeights = new Vector<>(inWeights);
 		myWeights.replaceAll(ignored -> 1.0);
 
 		//report the flat weights, just to be on the safe side
-		log.debug("it: 0.0 0.0 " + reportCurrentWeights(inImgs,inWeights));
+		log.debug("it: 0.0  0.000\t" + reportCurrentWeights(inImgs,inWeights));
 
 		//make sure the majorityFuser is available
 		if (majorityFuser == null) majorityFuser = new WeightedVotingLabelFuser<>();
@@ -122,14 +123,15 @@ implements LabelFuser<IT,ET>
 			}
 
 			//DEBUG: report updated weights based on the current candidate
-			double jaccard = 0;
+			String jaccard_str = "0\t";
 			if (segGTlabel > 0) { //shall we do any debug Jaccarding?
 				log.trace("Doing debug Jaccards for SEG label "+segGTlabel);
-				jaccard = getJaccard(outImg, auxFusedLabel, fuseROI);
+				jaccard_str = String.format(JACCARD_REPORT_FORMAT,
+						getJaccard(outImg, auxFusedLabel, fuseROI));
 			}
 
 			log.debug("it: "+(iterationCnt-0.1)+" "
-					+ jaccard+" "
+					+ jaccard_str
 					+ reportCurrentWeights(inImgs,myWeights));
 
 			//prune poor inputs
@@ -144,8 +146,8 @@ implements LabelFuser<IT,ET>
 			}
 
 			//DEBUG: report how the pruning ended up
-			log.debug("it: "+iterationCnt+" "
-					+ jaccard+" "
+			log.debug("it: "+iterationCnt+"   "
+					+ jaccard_str
 					+ reportCurrentWeights(inImgs,myWeights));
 
 			//create a new candidate, this particular fuser resets
@@ -169,13 +171,18 @@ implements LabelFuser<IT,ET>
 		}
 
 		//compute Jaccard for the final candidate segment
-		double jaccard = 0;
+		String jaccard_str = "0\t";
 		if (segGTlabel > 0) { //shall we do any debug Jaccarding?
-			jaccard = getJaccard(outImg, auxFusedLabel, fuseROI);
+			jaccard_str = String.format(JACCARD_REPORT_FORMAT,
+					getJaccard(outImg, auxFusedLabel, fuseROI));
 		}
 		log.debug("it: "+(iterationCnt-0.3)+" "
-				+ jaccard+" "
+				+ jaccard_str
 				+ reportCurrentWeights(inImgs,myWeights));
+		//reports-only again the Oracle weights (for better gnuplot-ing)
+		log.debug("it: "+(iterationCnt+0.5)+" "
+				+ jaccard_str
+				+ reportCurrentWeights(inImgs,inWeights));
 
 		//DEBUG (will appear just before "TRA marker: .....")
 		/*
@@ -239,13 +246,14 @@ implements LabelFuser<IT,ET>
 	}
 
 
+	private final static String JACCARD_REPORT_FORMAT = "%+.3f\t";
 	private
 	String reportCurrentWeights(final Vector<RandomAccessibleInterval<IT>> inImgs,
 	                            final Vector<Double> inWeights)
 	{
 		final StringBuilder sb = new StringBuilder("weights: ");
 		for (int i=0; i < inImgs.size(); ++i)
-			sb.append(String.format("%+.3f\t",inImgs.get(i) != null ? inWeights.get(i).floatValue() : -0.2f));
+			sb.append(String.format(JACCARD_REPORT_FORMAT,inImgs.get(i) != null ? inWeights.get(i).floatValue() : -0.2f));
 			//NB: -0.2 is to indicate we dropped it (Jaccard cannot get below 0.0)
 
 		return sb.toString();
