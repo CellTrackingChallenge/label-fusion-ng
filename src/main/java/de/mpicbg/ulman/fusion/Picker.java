@@ -28,6 +28,7 @@
 package de.mpicbg.ulman.fusion;
 
 import de.mpicbg.ulman.fusion.ng.CherryPicker;
+import de.mpicbg.ulman.fusion.ng.CherryPickerOfSourceIDs;
 import de.mpicbg.ulman.fusion.ng.backbones.JobIO;
 import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionFeeder;
 import de.mpicbg.ulman.fusion.util.DetSegCumulativeScores;
@@ -224,7 +225,7 @@ public class Picker extends CommonGUI implements Command
 		// ------------ preparing for action ------------
 		ReusableMemory.setLogger(log);
 		final WeightedVotingFusionFeeder<IT,LT> feeder
-				= new WeightedVotingFusionFeeder<IT,LT>(log).setAlgorithm(new CherryPicker<>(log, SEGloaderAndEvaluator));
+				= new WeightedVotingFusionFeeder<IT,LT>(log).setAlgorithm(new CherryPickerOfSourceIDs<>(log, SEGloaderAndEvaluator));
 
 		final DetSegCumulativeScores runningDetSegScore = new DetSegCumulativeScores();
 
