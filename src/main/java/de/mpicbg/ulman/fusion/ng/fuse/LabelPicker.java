@@ -127,6 +127,7 @@ implements LabelFuser<IT,ET>
 		//take the best...
 		if (bestScoreIdx > -1) {
 			log.info("Inserting idx = "+bestScoreIdx+" (because of its score "+bestScore+")");
+			ONE.setInteger(bestScoreIdx+1);
 			le.isolateGivenLabel(
 					Views.interval(inImgs.get(bestScoreIdx),fuseROI),inLabels.get(bestScoreIdx),
 					Views.interval(outImg,fuseROI), (ET)ONE
