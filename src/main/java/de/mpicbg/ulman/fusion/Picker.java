@@ -27,6 +27,7 @@
  */
 package de.mpicbg.ulman.fusion;
 
+import de.mpicbg.ulman.fusion.ng.CherryPicker;
 import de.mpicbg.ulman.fusion.ng.CherryPickerWithSIMPLE;
 import de.mpicbg.ulman.fusion.ng.backbones.JobIO;
 import de.mpicbg.ulman.fusion.ng.backbones.WeightedVotingFusionFeeder;
@@ -37,6 +38,7 @@ import de.mpicbg.ulman.fusion.util.loggers.SimpleConsoleLogger;
 import net.celltrackingchallenge.measures.util.NumberSequenceHandler;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.integer.ByteType;
 import org.scijava.ItemVisibility;
 import org.scijava.log.LogLevel;
 import org.scijava.widget.FileWidget;
@@ -234,8 +236,11 @@ public class Picker extends CommonGUI implements Command
 		alg.getFuserReference().minimalQualityThreshold = 0.7;
 
 		final WeightedVotingFusionFeeder<IT,LT> feeder
-				//= new WeightedVotingFusionFeeder<IT,LT>(log).setAlgorithm(new CherryPicker<>(log, new ByteType(), SEGloaderAndEvaluator));
-				= new WeightedVotingFusionFeeder<IT,LT>(log).setAlgorithm( alg );
+				= new WeightedVotingFusionFeeder<IT,LT>(log).setAlgorithm(
+						new CherryPicker<>(
+								log.subLogger("CMV picker", LogLevel.TRACE),
+								new ByteType(), SEGloaderAndEvaluator ) );
+		//= new WeightedVotingFusionFeeder<IT,LT>(log).setAlgorithm( alg );
 
 		final DetSegCumulativeScores runningDetSegScore = new DetSegCumulativeScores();
 

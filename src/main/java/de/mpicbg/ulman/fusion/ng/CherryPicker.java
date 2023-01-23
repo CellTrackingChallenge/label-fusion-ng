@@ -30,7 +30,7 @@ package de.mpicbg.ulman.fusion.ng;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractor;
 import de.mpicbg.ulman.fusion.ng.extract.LabelExtractorForCherryPicker;
 import de.mpicbg.ulman.fusion.ng.extract.MajorityOverlapBasedLabelExtractor;
-import de.mpicbg.ulman.fusion.ng.fuse.LabelPicker;
+import de.mpicbg.ulman.fusion.ng.fuse.LabelPickerWithCMV;
 import de.mpicbg.ulman.fusion.ng.insert.CollisionsManagingLabelInsertor;
 import de.mpicbg.ulman.fusion.ng.postprocess.KeepLargestCCALabelPostprocessor;
 import de.mpicbg.ulman.fusion.util.SegGtImageLoader;
@@ -76,7 +76,7 @@ class CherryPicker<IT extends RealType<IT>, LT extends IntegerType<LT>, ET exten
 		extractorForCherryPicker = new LabelExtractorForCherryPicker<>();
 		extractorForCherryPicker.minFractionOfMarker = 0.5f;
 
-		final LabelPicker<IT,ET> f = new LabelPicker<>();
+		final LabelPickerWithCMV<IT,ET> f = new LabelPickerWithCMV<>();
 
 		final CollisionsManagingLabelInsertor<LT,ET> i = new CollisionsManagingLabelInsertor<>();
 		final KeepLargestCCALabelPostprocessor<LT> p = new KeepLargestCCALabelPostprocessor<>();
