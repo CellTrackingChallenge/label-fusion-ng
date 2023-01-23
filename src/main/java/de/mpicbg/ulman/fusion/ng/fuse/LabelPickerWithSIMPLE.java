@@ -37,7 +37,6 @@ import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.util.Intervals;
 import org.scijava.log.Logger;
 import java.util.Vector;
@@ -45,7 +44,6 @@ import java.util.Vector;
 public class LabelPickerWithSIMPLE<IT extends RealType<IT>, ET extends RealType<ET>>
 implements LabelFuser<IT,ET>
 {
-	final ByteType ONE = new ByteType((byte)1);
 	final long[] minBBox = new long[2];
 	final long[] maxBBox = new long[2];
 
