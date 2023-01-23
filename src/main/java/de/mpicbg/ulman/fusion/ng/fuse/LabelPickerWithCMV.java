@@ -38,6 +38,7 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.util.Intervals;
+import net.imglib2.view.Views;
 import org.scijava.log.Logger;
 
 import java.util.Objects;
@@ -54,25 +55,19 @@ implements LabelFuser<IT,ET>
 	{
 		CombinationData(final Vector<RandomAccessibleInterval<IT>> inImgSlices,
 		                final Vector<Float> inLabels,
-		                final Interval fuseROIforSegGT,
 		                final RandomAccessibleInterval<LT> segGtImg,
-		                final int segGtLabel,
-		                final Interval segBBoxInterval2D)
+		                final int segGtLabel)
 		{
 			this.inImgSlices = inImgSlices;
 			this.inLabels = inLabels;
-			this.fuseROIforSegGT = fuseROIforSegGT;
 			this.segGtImg = segGtImg;
 			this.segGtLabel = segGtLabel;
-			this.segBBoxInterval2D = segBBoxInterval2D;
 		}
 
 		final Vector<RandomAccessibleInterval<IT>> inImgSlices;
 		final Vector<Float> inLabels;
-		final Interval fuseROIforSegGT;
 		final RandomAccessibleInterval<LT> segGtImg;
 		final int segGtLabel;
-		final Interval segBBoxInterval2D;
 	}
 
 	private
@@ -101,8 +96,8 @@ implements LabelFuser<IT,ET>
 		log.info("  total "+noOfActiveBits+" -> threshold "+(noOfActiveBits/2));
 
 		return JaccardWithROIs.JaccardLB(
-				fusedOutput, 1.0, cd.fuseROIforSegGT,
-				cd.segGtImg, cd.segGtLabel, cd.segBBoxInterval2D
+				fusedOutput, 1.0, cd.inImgSlices.firstElement(),
+				cd.segGtImg, cd.segGtLabel, cd.segGtImg
 			);
 	}
 
@@ -145,14 +140,13 @@ implements LabelFuser<IT,ET>
 			final Vector<Float> tmpInLabels = new Vector<>(noOfAvailableInputs);
 			for (int i = 0; i < inImgs.size(); ++i)
 				if (inImgs.get(i) != null) {
-					tmpInSlices.add( ld.slicedViewOf(inImgs.get(i)) );
+					tmpInSlices.add( Views.interval( ld.slicedViewOf(inImgs.get(i)), fuseROIforSegGT ) );
 					tmpInLabels.add( inLabels.get(i) );
 				}
 			final CombinationData<LT> cData = new CombinationData<>(
-					tmpInSlices, tmpInLabels, fuseROIforSegGT,
-					ld.lastLoadedImage,
-					extractorForCherryPicker.traToSegLabelValues.get(extractorForCherryPicker.lastlyExtractedMarkerValue),
-					segBBoxInterval2D );
+					tmpInSlices, tmpInLabels,
+					Views.interval( ld.lastLoadedImage, segBBoxInterval2D ),
+					extractorForCherryPicker.traToSegLabelValues.get(extractorForCherryPicker.lastlyExtractedMarkerValue) );
 			for (int combination = 1; combination < (1 << noOfAvailableInputs); combination++)
 			{
 				double score = processOneCombination(combination, cData, outImg);
