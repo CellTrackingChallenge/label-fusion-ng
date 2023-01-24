@@ -35,18 +35,23 @@ import de.mpicbg.ulman.fusion.util.JaccardWithROIs;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.util.Intervals;
+import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import org.scijava.log.Logger;
 
 import java.util.Objects;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.Vector;
 
 public class LabelPickerWithCMV<IT extends RealType<IT>, ET extends RealType<ET>>
 implements LabelFuser<IT,ET>
 {
+	ET ONE = null;
 	final long[] minBBox = new long[2];
 	final long[] maxBBox = new long[2];
 
@@ -71,34 +76,61 @@ implements LabelFuser<IT,ET>
 	}
 
 	private
-	//<LT extends IntegerType<LT>>
 	double processOneCombination(final int c,
 	                             final CombinationData<?> cd,
 	                             final RandomAccessibleInterval<ET> fusedOutput)
 	{
+		if (ONE == null) {
+			ONE = fusedOutput.getAt( fusedOutput.minAsPoint() ).createVariable();
+			ONE.setOne();
+		}
+
 		int selectorBit = 0;
 		int noOfActiveBits = 0;
+		StringBuilder sb = new StringBuilder();
 
 		//iterate over inputs and append the active ones
 		while ( (1 << selectorBit) <= c ) {
 			if ( ((1 << selectorBit) & c) > 0 ) {
 				++noOfActiveBits;
+				sb.append('Y');
+				final float inPxVal = cd.inLabels.get(selectorBit);
 				if (noOfActiveBits == 1) {
 					//first fuse input
-					log.info("  in "+selectorBit+" (first fuser)");
+					LoopBuilder
+							.setImages(cd.inImgSlices.get(selectorBit), fusedOutput)
+							.forEachPixel( (i,o) -> { if (i.getRealFloat() == inPxVal) o.setOne(); else o.setZero(); } );
 				} else {
 					//some next fuse input
-					log.info("  in "+selectorBit+" (next fuser)");
+					LoopBuilder
+							.setImages(cd.inImgSlices.get(selectorBit), fusedOutput)
+							.forEachPixel( (i,o) -> { if (i.getRealFloat() == inPxVal) o.add(ONE); } );
 				}
 			}
+			else sb.append('-');
+
 			++selectorBit;
 		}
-		log.info("  total "+noOfActiveBits+" -> threshold "+(noOfActiveBits/2));
 
-		return JaccardWithROIs.JaccardLB(
-				fusedOutput, 1.0, cd.inImgSlices.firstElement(),
-				cd.segGtImg, cd.segGtLabel, cd.segGtImg
-			);
+		//finish the combination-signature with '-'
+		while (selectorBit < cd.inLabels.size()) { sb.append('-'); ++selectorBit; }
+
+		//voting here:
+		noOfActiveBits /= 2;
+		final float requiredVotingMinimum = noOfActiveBits+1;
+		sb.append(" ; threshold >= ");
+		sb.append(requiredVotingMinimum);
+		LoopBuilder.setImages(fusedOutput).forEachPixel(
+				o -> { if (o.getRealFloat() >= requiredVotingMinimum) o.setOne(); else o.setZero(); } );
+
+		final double score = JaccardWithROIs.JaccardLB(
+				fusedOutput, ONE.getRealFloat(), fusedOutput,
+				cd.segGtImg, cd.segGtLabel, cd.segGtImg );
+
+		log.info("SEG = "+ String.format("%.06f",score)
+				+" <-- Combination " + String.format("%4d",c)
+				+" : "+sb);
+		return score;
 	}
 
 	<LT extends IntegerType<LT>>
