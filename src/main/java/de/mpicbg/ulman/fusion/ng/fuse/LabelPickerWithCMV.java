@@ -179,11 +179,37 @@ implements LabelFuser<IT,ET>
 					tmpInSlices, tmpInLabels,
 					Views.interval( ld.lastLoadedImage, segBBoxInterval2D ),
 					extractorForCherryPicker.traToSegLabelValues.get(extractorForCherryPicker.lastlyExtractedMarkerValue) );
-			for (int combination = 1; combination < (1 << noOfAvailableInputs); combination++)
-			{
-				double score = processOneCombination(combination, cData, outImg);
-				log.info("Combination "+combination+" yields SEG = "+score);
+
+			final IntervalView<ET> outImgView = Views.interval( ld.slicedViewOf(outImg), fuseROIforSegGT );
+
+			//iterate first over single inputs, then do groups of them
+			//NB: this is only for log parsing purposes
+			int bestCombination = -1;
+			double bestScore = -1;
+			//
+			final Set<Integer> examinedCombinations = new HashSet<>(noOfAvailableInputs);
+			for (int i = 0; i < noOfAvailableInputs; ++i) {
+				int combination = 1 << i;
+				examinedCombinations.add(combination);
+				double score = processOneCombination(combination, cData, outImgView);
+				if (score > bestScore) {
+					bestScore = score;
+					bestCombination = combination;
+				}
 			}
+			//
+			for (int combination = 3; combination < (1 << noOfAvailableInputs); combination++)
+			{
+				if (examinedCombinations.contains(combination)) continue;
+				double score = processOneCombination(combination, cData, outImgView);
+				if (score > bestScore) {
+					bestScore = score;
+					bestCombination = combination;
+				}
+			}
+
+			log.info("Best combination "+bestCombination+" got SEG "+bestScore);
+			processOneCombination(bestCombination, cData, outImgView);
 		}
 	}
 
