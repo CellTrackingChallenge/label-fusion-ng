@@ -92,7 +92,7 @@ implements LabelInsertor<LT,ET>
 	 * in the output image.
 	 *
 	 * The 'status' is left untouched, just like it is done in the
-	 * {@link OverwriteLabelInsertor::insertLabel()}.
+	 * {@link OverwriteLabelInsertor#insertLabel(RandomAccessibleInterval, RandomAccessibleInterval, int, InsertionStatus)}.
 	 */
 	@Override
 	public

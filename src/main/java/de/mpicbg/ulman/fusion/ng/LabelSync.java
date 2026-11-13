@@ -280,7 +280,7 @@ extends JobIO<IT,LT>
 	public class ImagesWithOrigin
 	implements Enumeration<ImgWithOrigin>
 	{
-		/** the thread in which this::generateSyncedImagesIteratively() is executed */
+		/** the thread in which this#generateSyncedImagesIteratively() is executed */
 		private final Thread worker;
 
 		public ImagesWithOrigin()
