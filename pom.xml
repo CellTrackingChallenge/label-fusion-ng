@@ -139,8 +139,8 @@
 
 
 	<scm>
-		<connection>scm:git:git://github.com/CellTrackingChallenge/label-fusion-ng</connection>
-		<developerConnection>scm:git:git://github.com/CellTrackingChallenge/label-fusion-ng</developerConnection>
+		<connection>scm:git:https://github.com/CellTrackingChallenge/label-fusion-ng</connection>
+		<developerConnection>scm:git:https://github.com/CellTrackingChallenge/label-fusion-ng</developerConnection>
 		<tag>HEAD</tag>
 		<url>https://github.com/CellTrackingChallenge/label-fusion-ng</url>
 	</scm>
@@ -149,8 +149,7 @@
 		<url>http://github.com/CellTrackingChallenge/label-fusion-ng/issues</url>
 	</issueManagement>
 	<ciManagement>
-		<system>Travis CI</system>
-		<url>https://travis-ci.com/CellTrackingChallenge/label-fusion-ng</url>
+		<system>none</system>
 	</ciManagement>
 
 	<properties>
