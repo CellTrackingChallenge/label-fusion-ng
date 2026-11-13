@@ -65,7 +65,14 @@
 					</target>
 				</configuration>
 			</plugin>
-
+			<plugin>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<configuration>
+					<!-- turbojpeg (via bio-formats) has classes in the unnamed package,
+					     which breaks javadoc's module-path handling -->
+					<legacyMode>true</legacyMode>
+				</configuration>
+			</plugin>
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
 				<version>3.3.0</version>
