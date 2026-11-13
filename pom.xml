@@ -154,23 +154,21 @@
 
 
 	<properties>
-		<package-name>de.mpicbg.ulman.fusion</package-name>
-		<license.licenseName>BSD 2-Clause</license.licenseName>
-		<license.copyrightOwners>xulman</license.copyrightOwners>
+		<package-name>net.celltrackingchallenge.fusion</package-name>
+
+		<license.licenseName>bsd_2</license.licenseName>
 		<license.projectName>label-fusion-ng</license.projectName>
+		<license.organizationName>Cell Tracking Challenge</license.organizationName>
+		<license.copyrightOwners>Vladimír Ulman</license.copyrightOwners>
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
-		<releaseProfiles>deploy-to-scijava</releaseProfiles>
+		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
 	</properties>
 
 	<repositories>
 		<repository>
 			<id>scijava.public</id>
 			<url>https://maven.scijava.org/content/groups/public</url>
-		</repository>
-		<repository>
-			<id>it4i</id>
-			<url>https://artifactory.cs.vsb.cz/it4i/</url>
 		</repository>
 	</repositories>
 
@@ -179,8 +177,7 @@
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>simplified-io</artifactId>
-			<version>1.0.1</version>
-
+			<version>1.0.3</version>
 			<exclusions>
 				<exclusion>
 					<groupId>xalan</groupId>
@@ -193,14 +190,13 @@
 		<dependency>
 			<groupId>net.celltrackingchallenge</groupId>
 			<artifactId>CTC-measures</artifactId>
-			<version>1.0.0</version>
+			<version>1.0.4</version>
 		</dependency>
 
 		<!-- essentially only CCA algorithm -->
 		<dependency>
 			<groupId>net.imglib2</groupId>
 			<artifactId>imglib2-algorithm</artifactId>
-			<version>0.12.1</version>
 		</dependency>
 
 		<!-- 3rd party dependency (to display progress bar) -->
@@ -214,7 +210,6 @@
 		<dependency>
 			<groupId>info.picocli</groupId>
 			<artifactId>picocli</artifactId>
-			<version>4.6.1</version>
 		</dependency>
 
 		<!-- for GTviaMarkers and to start and test plugins (from the ImageJ GUI) -->
